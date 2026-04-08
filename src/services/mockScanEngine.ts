@@ -13,6 +13,25 @@
 
 import type { ScanResult, ModelName } from "@/types/database";
 
+// Deterministic hash → seeded RNG so the same business always produces the same base score
+function hashString(str: string): number {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+  }
+  return h >>> 0;
+}
+
+function makeSeededRng(seed: number) {
+  let s = seed === 0 ? 1 : seed;
+  return function (): number {
+    s ^= s << 13;
+    s ^= s >> 17;
+    s ^= s << 5;
+    return (s >>> 0) / 0xffffffff;
+  };
+}
+
 const PROMPT_TEMPLATES = [
   "What are the best {industry}s in {location}?",
   "Can you recommend a good {industry} near {location}?",
@@ -93,19 +112,22 @@ export function runMockScan(input: MockScanInput): MockScanOutput {
   const { businessName, industry, city, state, competitors } = input;
   const prompts = generatePrompts(industry, city, state);
 
+  // Seed from stable business identity so the base score never changes per business
+  const seed = hashString(`${businessName}|${industry}|${city}|${state}`);
+  const rng = makeSeededRng(seed);
+
   const results: Omit<ScanResult, "id" | "scan_id" | "created_at">[] = [];
   let mentionCount = 0;
   const totalPossible = prompts.length * MODELS.length;
 
   for (const prompt of prompts) {
     for (const model of MODELS) {
-      // ~40% chance of being mentioned per prompt per model
-      const mentioned = Math.random() < 0.4;
+      const mentioned = rng() < 0.4;
       if (mentioned) mentionCount++;
 
       const competitorMentions: Record<string, boolean> = {};
       for (const comp of competitors) {
-        competitorMentions[comp] = Math.random() < 0.35;
+        competitorMentions[comp] = rng() < 0.35;
       }
 
       const responseText = generateMockResponse(
@@ -126,7 +148,10 @@ export function runMockScan(input: MockScanInput): MockScanOutput {
     }
   }
 
-  const visibilityScore = Math.round((mentionCount / totalPossible) * 100);
+  const baseScore = Math.round((mentionCount / totalPossible) * 100);
+  // Add ±1.5% real noise so repeated scans feel live without wild swings
+  const noise = Math.round((Math.random() - 0.5) * 3);
+  const visibilityScore = Math.max(0, Math.min(100, baseScore + noise));
 
   return { visibilityScore, results };
 }
