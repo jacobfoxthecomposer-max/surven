@@ -18,7 +18,7 @@ import { INDUSTRIES, US_STATES } from "@/utils/constants";
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [competitors, setCompetitors] = useState<string[]>([]);
@@ -48,6 +48,7 @@ export default function OnboardingPage() {
   }
 
   async function onSubmit(data: OnboardingInput) {
+    if (authLoading) return;
     if (!user) {
       toast("Please sign in first", "error");
       router.push("/login");
@@ -71,7 +72,7 @@ export default function OnboardingPage() {
       router.push("/dashboard");
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : "Failed to save. Please try again.";
+        (err as { message?: string })?.message ?? "Failed to save. Please try again.";
       toast(message, "error");
     } finally {
       setLoading(false);
