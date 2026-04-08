@@ -4,6 +4,7 @@ import { type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Settings, LogOut } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/services/supabase";
 import { PageTransition } from "./PageTransition";
 import { cn } from "@/utils/cn";
@@ -16,9 +17,11 @@ const navItems = [
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   async function handleSignOut() {
     await supabase.auth.signOut();
+    queryClient.clear();
     router.push("/login");
   }
 
