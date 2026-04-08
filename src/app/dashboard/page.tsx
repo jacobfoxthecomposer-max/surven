@@ -30,7 +30,7 @@ export default function DashboardPage() {
     if (!authLoading && !bizLoading && !bizFetching && !bizError && user && !business) {
       router.push("/onboarding");
     }
-  }, [authLoading, bizLoading, bizFetching, bizError, user, business, router]);
+  }, [authLoading, bizLoading, bizFetching, bizError, user, business]);
 
   async function handleRunScan() {
     toast("Scan started — querying AI models...", "info");

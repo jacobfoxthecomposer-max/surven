@@ -28,7 +28,7 @@ export default function OnboardingPage() {
     if (!authLoading && !bizLoading && business) {
       router.replace("/dashboard");
     }
-  }, [authLoading, bizLoading, business, router]);
+  }, [authLoading, bizLoading, business]);
   const [loading, setLoading] = useState(false);
   const [competitors, setCompetitors] = useState<string[]>([]);
   const [competitorInput, setCompetitorInput] = useState("");
