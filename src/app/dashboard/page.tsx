@@ -18,19 +18,19 @@ import { HistorySection } from "@/features/dashboard/pages/HistorySection";
 export default function DashboardPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { business, competitors, isLoading: bizLoading } = useBusiness();
+  const { business, competitors, isLoading: bizLoading, error: bizError } = useBusiness();
   const { latestScan, history, scanning, isLoading: scanLoading, runScan } = useScan(
     business,
     competitors
   );
   const { toast } = useToast();
 
-  // Redirect to onboarding if no business
+  // Redirect to onboarding only if business confirmed missing (no error)
   useEffect(() => {
-    if (!authLoading && !bizLoading && user && !business) {
+    if (!authLoading && !bizLoading && !bizError && user && !business) {
       router.push("/onboarding");
     }
-  }, [authLoading, bizLoading, user, business, router]);
+  }, [authLoading, bizLoading, bizError, user, business, router]);
 
   async function handleRunScan() {
     toast("Scan started — querying AI models...", "info");

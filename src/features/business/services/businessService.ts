@@ -19,9 +19,10 @@ export async function getBusiness(userId: string): Promise<Business | null> {
     .from("businesses")
     .select("*")
     .eq("user_id", userId)
-    .single();
-  if (error && error.code !== "PGRST116") throw error;
-  return data;
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  return data?.[0] ?? null;
 }
 
 export async function updateBusiness(
