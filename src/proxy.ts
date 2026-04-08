@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
 
 const protectedRoutes = ["/dashboard", "/onboarding", "/settings"];
 const authRoutes = ["/login", "/signup"];
@@ -14,14 +14,27 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check for Supabase session
-  const supabase = createClient(
+  let response = NextResponse.next({ request });
+
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      global: {
-        headers: {
-          cookie: request.headers.get("cookie") ?? "",
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet, headers) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            request.cookies.set(name, value)
+          );
+          response = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
+          Object.entries(headers).forEach(([key, value]) =>
+            response.headers.set(key, value)
+          );
         },
       },
     }
@@ -46,5 +59,5 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  return response;
 }
