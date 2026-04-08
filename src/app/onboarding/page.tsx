@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,6 +12,7 @@ import { Select } from "@/components/atoms/Select";
 import { Button } from "@/components/atoms/Button";
 import { useToast } from "@/components/molecules/Toast";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useBusiness } from "@/features/business/hooks/useBusiness";
 import { createBusiness, addCompetitors } from "@/features/business/services/businessService";
 import { onboardingSchema, type OnboardingInput } from "@/types/auth";
 import { INDUSTRIES, US_STATES } from "@/utils/constants";
@@ -19,7 +20,15 @@ import { INDUSTRIES, US_STATES } from "@/utils/constants";
 export default function OnboardingPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { business, isLoading: bizLoading } = useBusiness();
   const { toast } = useToast();
+
+  // If user already has a business, skip to dashboard
+  useEffect(() => {
+    if (!authLoading && !bizLoading && business) {
+      router.replace("/dashboard");
+    }
+  }, [authLoading, bizLoading, business, router]);
   const [loading, setLoading] = useState(false);
   const [competitors, setCompetitors] = useState<string[]>([]);
   const [competitorInput, setCompetitorInput] = useState("");

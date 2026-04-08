@@ -53,7 +53,21 @@ export default function DashboardPage() {
     );
   }
 
-  if (!business) return null;
+  if (!business) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+          <p className="text-[var(--color-fg-secondary)]">No business found.</p>
+          <button
+            onClick={() => router.push("/onboarding")}
+            className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg text-sm"
+          >
+            Set up your business
+          </button>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   const score = latestScan?.visibility_score ?? 0;
   const results = latestScan?.results ?? [];
