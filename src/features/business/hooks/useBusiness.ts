@@ -26,7 +26,7 @@ export function useBusiness() {
   return {
     business: businessQuery.data ?? null,
     competitors: competitorsQuery.data ?? [],
-    isLoading: authLoading || businessQuery.isLoading,
+    isLoading: !!user && !businessQuery.isSuccess && !businessQuery.isError,
     error: businessQuery.error,
   };
 }
