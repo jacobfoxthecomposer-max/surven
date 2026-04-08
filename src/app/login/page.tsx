@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,18 +14,16 @@ import { loginSchema, type LoginInput } from "@/types/auth";
 
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { signIn, user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  // If user is already authenticated, redirect to dashboard or redirect param
+  // If user is already authenticated, redirect to dashboard
   useEffect(() => {
     if (user && !authLoading) {
-      const redirect = searchParams.get("redirect") || "/dashboard";
-      router.push(redirect);
+      router.push("/dashboard");
     }
-  }, [user, authLoading, router, searchParams]);
+  }, [user, authLoading, router]);
 
   const {
     register,
