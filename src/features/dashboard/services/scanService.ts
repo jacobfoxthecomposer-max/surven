@@ -37,20 +37,41 @@ export async function createScanForBusiness(
   businessId: string,
   input: MockScanInput
 ): Promise<ScanWithResults> {
-  const mockOutput = runMockScan(input);
+  type ResultRow = Omit<ScanResult, "id" | "scan_id" | "created_at">;
+  let scanOutput: { visibilityScore: number; results: ResultRow[] };
+
+  try {
+    const res = await fetch("/api/scan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    if (res.ok) {
+      const json = await res.json();
+      if (json.useMock) {
+        scanOutput = runMockScan(input);
+      } else {
+        scanOutput = { visibilityScore: json.visibilityScore, results: json.results };
+      }
+    } else {
+      scanOutput = runMockScan(input);
+    }
+  } catch {
+    scanOutput = runMockScan(input);
+  }
 
   const { data: scan, error: scanError } = await supabase
     .from("scans")
     .insert({
       business_id: businessId,
-      visibility_score: mockOutput.visibilityScore,
+      visibility_score: scanOutput.visibilityScore,
     })
     .select()
     .single();
 
   if (scanError) throw scanError;
 
-  const resultRows = mockOutput.results.map((r) => ({
+  const resultRows = scanOutput.results.map((r) => ({
     scan_id: scan.id,
     ...r,
   }));
