@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,15 +19,13 @@ import { INDUSTRIES, US_STATES } from "@/utils/constants";
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const redirected = useRef(false);
   const { user, loading: authLoading } = useAuth();
   const { business, isLoading: bizLoading } = useBusiness();
   const { toast } = useToast();
 
   // If user already has a business, skip to dashboard
   useEffect(() => {
-    if (!redirected.current && !authLoading && !bizLoading && business) {
-      redirected.current = true;
+    if (!authLoading && !bizLoading && business) {
       router.replace("/dashboard");
     }
   }, [authLoading, bizLoading, business]);

@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Spinner } from "@/components/atoms/Spinner";
@@ -17,22 +16,13 @@ import { HistorySection } from "@/features/dashboard/pages/HistorySection";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const redirected = useRef(false);
   const { user, loading: authLoading } = useAuth();
-  const { business, competitors, isLoading: bizLoading, isFetching: bizFetching, error: bizError } = useBusiness();
+  const { business, competitors, isLoading: bizLoading } = useBusiness();
   const { latestScan, history, scanning, isLoading: scanLoading, runScan } = useScan(
     business,
     competitors
   );
   const { toast } = useToast();
-
-  // Redirect to onboarding only if business confirmed missing (no error)
-  useEffect(() => {
-    if (!redirected.current && !authLoading && !bizLoading && !bizFetching && !bizError && user && !business) {
-      redirected.current = true;
-      router.push("/onboarding");
-    }
-  }, [authLoading, bizLoading, bizFetching, bizError, user, business]);
 
   async function handleRunScan() {
     toast("Scan started — querying AI models...", "info");
