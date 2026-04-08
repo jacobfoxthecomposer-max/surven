@@ -1,26 +1,122 @@
 @import "tailwindcss";
 
+/* ==========================================================
+   Surven Design Tokens — UI/UX Pro Max Design System
+   Style: Premium Dark Minimalism
+   Colors: Navy + Electric Blue + Teal
+   Typography: Inter, 16px base, 1.5 line-height
+   ========================================================== */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Background layers */
+  --color-bg: #0f172a;
+  --color-surface: #1e293b;
+  --color-surface-alt: #334155;
+
+  /* Text */
+  --color-fg: #f1f5f9;
+  --color-fg-secondary: #cbd5e1;
+  --color-fg-muted: #94a3b8;
+
+  /* Brand accents */
+  --color-primary: #4361ee;
+  --color-primary-hover: #3651d4;
+  --color-secondary: #06d6a0;
+  --color-secondary-hover: #05b889;
+
+  /* Semantic states */
+  --color-danger: #ef4444;
+  --color-warning: #f97316;
+  --color-success: #06d6a0;
+  --color-info: #4361ee;
+
+  /* Score gauge colors */
+  --color-score-red: #ef4444;
+  --color-score-orange: #f97316;
+  --color-score-yellow: #84cc16;
+  --color-score-green: #06d6a0;
+
+  /* Borders & dividers */
+  --color-border: #334155;
+  --color-border-hover: #475569;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+  --shadow-glow-primary: 0 0 20px rgb(67 97 238 / 0.3);
+  --shadow-glow-secondary: 0 0 20px rgb(6 214 160 / 0.3);
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  /* Animation durations */
+  --duration-micro: 150ms;
+  --duration-fast: 250ms;
+  --duration-normal: 350ms;
+  --duration-slow: 600ms;
+  --duration-gauge: 1200ms;
+
+  /* Font */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-fg);
+  --font-sans: var(--font-sans);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* Base styles */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar styling for premium feel */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-hover);
+}
+
+/* Focus ring for accessibility (WCAG AA) */
+*:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Selection styling */
+::selection {
+  background: rgb(67 97 238 / 0.3);
+  color: var(--color-fg);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
