@@ -1,6 +1,4 @@
-import { proxy } from "./src/proxy";
-
-export const middleware = proxy;
+export { proxy } from "./src/proxy";
 
 export const config = {
   matcher: [
