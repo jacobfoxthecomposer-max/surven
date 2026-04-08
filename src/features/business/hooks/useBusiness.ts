@@ -12,6 +12,7 @@ export function useBusiness() {
     queryKey: ["business", user?.id],
     queryFn: () => (user ? getBusiness(user.id) : Promise.resolve(null)),
     enabled: !!user,
+    staleTime: 5 * 60 * 1000,
   });
 
   const competitorsQuery = useQuery<Competitor[]>({
@@ -21,12 +22,14 @@ export function useBusiness() {
         ? getCompetitors(businessQuery.data.id)
         : Promise.resolve([]),
     enabled: !!businessQuery.data,
+    staleTime: 5 * 60 * 1000,
   });
 
   return {
     business: businessQuery.data ?? null,
     competitors: competitorsQuery.data ?? [],
     isLoading: !!user && !businessQuery.isSuccess && !businessQuery.isError,
+    isFetching: businessQuery.isFetching,
     error: businessQuery.error,
   };
 }

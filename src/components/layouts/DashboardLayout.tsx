@@ -2,9 +2,9 @@
 
 import { type ReactNode } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Settings, LogOut } from "lucide-react";
-import { useAuth } from "@/features/auth/hooks/useAuth";
+import { supabase } from "@/services/supabase";
 import { PageTransition } from "./PageTransition";
 import { cn } from "@/utils/cn";
 
@@ -15,7 +15,12 @@ const navItems = [
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { signOut } = useAuth();
+  const router = useRouter();
+
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    router.push("/login");
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -51,7 +56,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               );
             })}
             <button
-              onClick={() => signOut()}
+              onClick={handleSignOut}
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--color-fg-muted)] hover:text-[var(--color-danger)] hover:bg-[var(--color-surface)] transition-colors cursor-pointer ml-2"
             >
               <LogOut className="h-4 w-4" />
