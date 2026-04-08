@@ -6,7 +6,7 @@ import { getBusiness, getCompetitors } from "@/features/business/services/busine
 import type { Business, Competitor } from "@/types/database";
 
 export function useBusiness() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const businessQuery = useQuery<Business | null>({
     queryKey: ["business", user?.id],
@@ -26,7 +26,7 @@ export function useBusiness() {
   return {
     business: businessQuery.data ?? null,
     competitors: competitorsQuery.data ?? [],
-    isLoading: businessQuery.isLoading,
+    isLoading: authLoading || businessQuery.isLoading,
     error: businessQuery.error,
   };
 }
