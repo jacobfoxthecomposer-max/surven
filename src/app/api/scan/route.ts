@@ -123,6 +123,16 @@ function isMentioned(response: string, name: string): boolean {
   return response.toLowerCase().includes(name.toLowerCase());
 }
 
+function extractCitations(text: string): string[] {
+  const urlRegex = /https?:\/\/(?:www\.)?([a-zA-Z0-9-]+(?:\.[a-zA-Z]{2,})+)/g;
+  const domains = new Set<string>();
+  let match;
+  while ((match = urlRegex.exec(text)) !== null) {
+    domains.add(match[1].toLowerCase());
+  }
+  return Array.from(domains);
+}
+
 type RawResult = {
   prompt_text: string;
   model_name: ModelName;
@@ -130,6 +140,7 @@ type RawResult = {
   business_mentioned: boolean;
   competitor_mentions: Record<string, boolean>;
   sentiment: Sentiment | null;
+  citations: string[] | null;
 };
 
 export async function POST(request: NextRequest) {
@@ -188,6 +199,7 @@ export async function POST(request: NextRequest) {
             business_mentioned: businessMentioned,
             competitor_mentions: competitorMentions,
             sentiment: null as Sentiment | null, // filled in below
+            citations: responseText ? extractCitations(responseText) : null,
           };
         })()
       );

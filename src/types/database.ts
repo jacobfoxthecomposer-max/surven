@@ -41,6 +41,7 @@ export interface ScanResult {
   business_mentioned: boolean;
   competitor_mentions: Record<string, boolean>;
   sentiment: "positive" | "neutral" | "negative" | null;
+  citations: string[] | null;
   created_at: string;
 }
 

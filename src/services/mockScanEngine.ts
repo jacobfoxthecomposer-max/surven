@@ -92,6 +92,29 @@ export interface MockScanOutput {
   results: Omit<ScanResult, "id" | "scan_id" | "created_at">[];
 }
 
+const MOCK_CITATION_DOMAINS = [
+  "yelp.com",
+  "google.com",
+  "tripadvisor.com",
+  "bbb.org",
+  "angi.com",
+  "thumbtack.com",
+  "yellowpages.com",
+  "houzz.com",
+  "facebook.com",
+  "nextdoor.com",
+];
+
+function getMockCitations(seed: number, count: number): string[] {
+  const result: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const idx = hashString(`${seed}|citation|${i}`) % MOCK_CITATION_DOMAINS.length;
+    const domain = MOCK_CITATION_DOMAINS[idx];
+    if (!result.includes(domain)) result.push(domain);
+  }
+  return result;
+}
+
 export function runMockScan(input: MockScanInput): MockScanOutput {
   const { businessName, industry, city, state, competitors, customPrompts = [] } = input;
   const prompts = [...generatePrompts(industry, city, state), ...customPrompts];
@@ -146,6 +169,7 @@ export function runMockScan(input: MockScanInput): MockScanOutput {
         competitorMentions
       );
 
+      const citationCount = 1 + (hashString(`${hash}|citcount|${slot}`) % 4);
       results.push({
         prompt_text: prompt,
         model_name: model,
@@ -153,6 +177,7 @@ export function runMockScan(input: MockScanInput): MockScanOutput {
         business_mentioned: mentioned,
         competitor_mentions: competitorMentions,
         sentiment: mentioned ? mockSentiment(hashString(`${hash}|sentiment|${slot}`)) : null,
+        citations: getMockCitations(hashString(`${hash}|${slot}`), citationCount),
       });
 
       slot++;

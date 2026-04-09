@@ -14,6 +14,7 @@ import { PromptResultsSection } from "@/features/dashboard/pages/PromptResultsSe
 import { ComparisonSection } from "@/features/dashboard/pages/ComparisonSection";
 import { HistorySection } from "@/features/dashboard/pages/HistorySection";
 import { SentimentSection } from "@/features/dashboard/pages/SentimentSection";
+import { CitationGapSection } from "@/features/dashboard/pages/CitationGapSection";
 import { exportScanResultsAsCsv } from "@/utils/csvExport";
 import { Button } from "@/components/atoms/Button";
 import { Download } from "lucide-react";
@@ -120,7 +121,14 @@ export default function DashboardPage() {
           </motion.div>
         )}
 
-        {/* Section 4: Competitor Comparison */}
+        {/* Section 4: Citation Gap Analysis */}
+        {results.length > 0 && (
+          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
+            <CitationGapSection results={results} businessName={business.name} />
+          </motion.div>
+        )}
+
+        {/* Section 5: Competitor Comparison */}
         {results.length > 0 && competitorNames.length > 0 && (
           <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
             <ComparisonSection
