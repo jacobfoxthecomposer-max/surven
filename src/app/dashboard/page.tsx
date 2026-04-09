@@ -12,6 +12,7 @@ import { GaugeSection } from "@/features/dashboard/pages/GaugeSection";
 import { ModelBreakdownSection } from "@/features/dashboard/pages/ModelBreakdownSection";
 import { PromptResultsSection } from "@/features/dashboard/pages/PromptResultsSection";
 import { ComparisonSection } from "@/features/dashboard/pages/ComparisonSection";
+import { CompetitorBenchmarkSection } from "@/features/dashboard/pages/CompetitorBenchmarkSection";
 import { HistorySection } from "@/features/dashboard/pages/HistorySection";
 import { SentimentSection } from "@/features/dashboard/pages/SentimentSection";
 import { CitationGapSection } from "@/features/dashboard/pages/CitationGapSection";
@@ -128,10 +129,22 @@ export default function DashboardPage() {
           </motion.div>
         )}
 
-        {/* Section 5: Competitor Comparison */}
+        {/* Section 5: Competitor Comparison (overview) */}
         {results.length > 0 && competitorNames.length > 0 && (
           <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
             <ComparisonSection
+              results={results}
+              businessScore={score}
+              businessName={business.name}
+              competitors={competitorNames}
+            />
+          </motion.div>
+        )}
+
+        {/* Section 6: Competitor Benchmarking (per-model breakdown) */}
+        {results.length > 0 && competitorNames.length > 0 && (
+          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
+            <CompetitorBenchmarkSection
               results={results}
               businessScore={score}
               businessName={business.name}
