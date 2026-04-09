@@ -81,6 +81,14 @@ export async function deleteCompetitors(businessId: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function deleteBusiness(businessId: string): Promise<void> {
+  const { error } = await supabase
+    .from("businesses")
+    .delete()
+    .eq("id", businessId);
+  if (error) throw error;
+}
+
 export async function addCompetitor(
   businessId: string,
   name: string

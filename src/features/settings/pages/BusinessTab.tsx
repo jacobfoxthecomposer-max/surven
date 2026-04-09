@@ -5,8 +5,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Trash2, Plus, Building2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useSettings } from "../hooks/useSettings";
 import { useCompetitors } from "@/features/business/hooks/useCompetitors";
+import { useActiveBusiness } from "@/features/business/hooks/useActiveBusiness";
+import { deleteBusiness } from "@/features/business/services/businessService";
 import { useToast } from "@/components/molecules/Toast";
 import { Button } from "@/components/atoms/Button";
 import { Input } from "@/components/atoms/Input";
@@ -27,9 +30,13 @@ export function BusinessTab() {
   const { business, updateBusinessAsync, isPending } = useSettings();
   const { competitors, isLoading: competitorsLoading, addCompetitor, deleteCompetitor, isAdding, isDeleting } =
     useCompetitors(business?.id);
+  const { businesses, setActiveBusinessId, refetchBusinesses } = useActiveBusiness();
   const { toast } = useToast();
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [newCompetitor, setNewCompetitor] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const {
     register,
@@ -45,6 +52,28 @@ export function BusinessTab() {
       state: business?.state ?? "",
     },
   });
+
+  const handleDeleteBusiness = async () => {
+    if (!business) return;
+    setDeleting(true);
+    try {
+      await deleteBusiness(business.id);
+      await refetchBusinesses();
+      const remaining = businesses.filter((b) => b.id !== business.id);
+      if (remaining.length > 0) {
+        setActiveBusinessId(remaining[0].id);
+        router.push("/dashboard");
+      } else {
+        router.push("/onboarding");
+      }
+      toast("Business deleted", "success");
+    } catch {
+      toast("Failed to delete business", "error");
+    } finally {
+      setDeleting(false);
+      setConfirmDelete(false);
+    }
+  };
 
   const handleAddCompetitor = async () => {
     const name = newCompetitor.trim();
@@ -241,6 +270,41 @@ export function BusinessTab() {
         <p className="text-xs text-[var(--color-fg-muted)]">
           {competitors.length} competitor{competitors.length !== 1 ? "s" : ""} tracked
         </p>
+      </div>
+
+      {/* Danger zone */}
+      <div className="space-y-3 pt-4 border-t border-[var(--color-border)]">
+        <h3 className="text-sm font-semibold text-[var(--color-danger)]">Danger Zone</h3>
+        {confirmDelete ? (
+          <div className="p-4 rounded-lg border border-red-500/40 bg-red-500/5 space-y-3">
+            <p className="text-sm text-[var(--color-fg)]">
+              Delete <span className="font-semibold">{business.name}</span>? This removes all scans, results, and data for this business. This cannot be undone.
+            </p>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)} disabled={deleting}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleDeleteBusiness}
+                loading={deleting}
+                className="bg-red-500 hover:bg-red-600 text-white border-red-500"
+              >
+                Yes, delete it
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setConfirmDelete(true)}
+            className="text-[var(--color-danger)] hover:bg-red-500/10"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete this business
+          </Button>
+        )}
       </div>
     </div>
   );
