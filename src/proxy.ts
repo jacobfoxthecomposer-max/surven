@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const protectedRoutes = ["/dashboard", "/settings"];
+const protectedRoutes = ["/dashboard", "/settings", "/onboarding"];
 const authRoutes = ["/login", "/signup"];
 
 export async function proxy(request: NextRequest) {
@@ -24,36 +24,33 @@ export async function proxy(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet, headers) {
-          cookiesToSet.forEach(({ name, value, options }) =>
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
           response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           );
-          Object.entries(headers).forEach(([key, value]) =>
-            response.headers.set(key, value)
-          );
         },
       },
     }
   );
 
+  // getUser() re-validates the JWT with Supabase — more reliable than getSession()
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // Redirect unauthenticated users away from protected routes
-  if (isProtected && !session) {
+  // Unauthenticated user trying to access a protected route → send to login
+  if (isProtected && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }
 
-  // Redirect authenticated users away from auth routes
-  if (isAuthRoute && session) {
+  // Authenticated user visiting login/signup → send to dashboard
+  if (isAuthRoute && user) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
