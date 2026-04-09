@@ -115,7 +115,14 @@ export default function DashboardPage() {
           </motion.div>
         )}
 
-        {/* 4: Competitor Comparison */}
+        {/* 4: Prompt Results */}
+        {results.length > 0 && (
+          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
+            <PromptResultsSection results={results} businessName={business.name} />
+          </motion.div>
+        )}
+
+        {/* 5: Competitor Comparison */}
         {results.length > 0 && competitorNames.length > 0 && (
           <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
             <ComparisonSection
@@ -127,7 +134,7 @@ export default function DashboardPage() {
           </motion.div>
         )}
 
-        {/* 5: Competitor Benchmarking */}
+        {/* 6: Competitor Benchmarking */}
         {results.length > 0 && competitorNames.length > 0 && (
           <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
             <CompetitorBenchmarkSection
@@ -136,13 +143,6 @@ export default function DashboardPage() {
               businessName={business.name}
               competitors={competitorNames}
             />
-          </motion.div>
-        )}
-
-        {/* 6: Prompt Results */}
-        {results.length > 0 && (
-          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
-            <PromptResultsSection results={results} businessName={business.name} />
           </motion.div>
         )}
 
