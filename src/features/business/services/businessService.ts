@@ -70,3 +70,24 @@ export async function deleteCompetitors(businessId: string): Promise<void> {
     .eq("business_id", businessId);
   if (error) throw error;
 }
+
+export async function addCompetitor(
+  businessId: string,
+  name: string
+): Promise<Competitor> {
+  const { data, error } = await supabase
+    .from("competitors")
+    .insert({ business_id: businessId, name })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteCompetitor(competitorId: string): Promise<void> {
+  const { error } = await supabase
+    .from("competitors")
+    .delete()
+    .eq("id", competitorId);
+  if (error) throw error;
+}
