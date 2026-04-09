@@ -4,13 +4,28 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/atoms/Button";
-import { useAnimationEnabled } from "@/hooks/useAnimation";
+import { ShaderAnimation } from "@/components/ui/shader-animation";
 
 export function HeroSection() {
-  const animEnabled = useAnimationEnabled();
-
   return (
-    <section className="relative min-h-[90vh] flex flex-col items-center justify-center px-4 text-center">
+    <section className="relative min-h-screen flex flex-col items-center justify-center px-4 text-center overflow-hidden">
+      {/* Full-screen shader animation background */}
+      <div className="absolute inset-0">
+        <ShaderAnimation className="w-full h-full" />
+      </div>
+
+      {/* Dark overlay so text remains readable */}
+      <div className="absolute inset-0 bg-[#0f172a]/55" />
+
+      {/* Vignette edges */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse 70% 70% at 50% 50%, transparent 40%, rgb(15 23 42 / 0.6) 100%)",
+        }}
+      />
+
       <div className="relative z-10 max-w-4xl mx-auto space-y-6">
         {/* Eyebrow badge */}
         <motion.div
