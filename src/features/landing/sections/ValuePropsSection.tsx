@@ -3,6 +3,7 @@
 import { Scan, BarChart3, TrendingUp } from "lucide-react";
 import { ScrollReveal } from "@/components/molecules/ScrollReveal";
 import { Card } from "@/components/atoms/Card";
+import { ImageAutoSlider } from "@/components/ui/image-auto-slider";
 
 const props = [
   {
@@ -66,6 +67,11 @@ export function ValuePropsSection() {
             );
           })}
         </div>
+
+        {/* Auto-sliding image gallery */}
+        <ScrollReveal delay={0.2} className="mt-16 -mx-4">
+          <ImageAutoSlider />
+        </ScrollReveal>
       </div>
     </section>
   );
