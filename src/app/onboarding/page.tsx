@@ -12,7 +12,7 @@ import { Select } from "@/components/atoms/Select";
 import { Button } from "@/components/atoms/Button";
 import { useToast } from "@/components/molecules/Toast";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { useBusiness } from "@/features/business/hooks/useBusiness";
+import { useActiveBusiness } from "@/features/business/hooks/useActiveBusiness";
 import { createBusiness, addCompetitors } from "@/features/business/services/businessService";
 import { onboardingSchema, type OnboardingInput } from "@/types/auth";
 import { INDUSTRIES, US_STATES } from "@/utils/constants";
@@ -20,15 +20,15 @@ import { INDUSTRIES, US_STATES } from "@/utils/constants";
 export default function OnboardingPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { business, isLoading: bizLoading } = useBusiness();
+  const { businesses, isLoading: bizLoading, setActiveBusinessId, refetchBusinesses } = useActiveBusiness();
   const { toast } = useToast();
 
   // If user already has a business, skip to dashboard
   useEffect(() => {
-    if (!authLoading && !bizLoading && business) {
+    if (!authLoading && !bizLoading && businesses.length > 0) {
       router.replace("/dashboard");
     }
-  }, [authLoading, bizLoading, business]);
+  }, [authLoading, bizLoading, businesses]);
   const [loading, setLoading] = useState(false);
   const [competitors, setCompetitors] = useState<string[]>([]);
   const [competitorInput, setCompetitorInput] = useState("");
@@ -77,6 +77,8 @@ export default function OnboardingPage() {
         await addCompetitors(business.id, competitors);
       }
 
+      await refetchBusinesses();
+      setActiveBusinessId(business.id);
       toast("Business added! Running your first scan...", "success");
       router.push("/dashboard");
     } catch (err: unknown) {

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { ToastProvider } from "@/components/molecules/Toast";
 import { AuthProvider } from "@/features/auth/hooks/useAuth";
+import { ActiveBusinessProvider } from "@/features/business/hooks/useActiveBusiness";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -21,7 +22,9 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ToastProvider>{children}</ToastProvider>
+        <ActiveBusinessProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </ActiveBusinessProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

@@ -25,6 +25,16 @@ export async function getBusiness(userId: string): Promise<Business | null> {
   return data?.[0] ?? null;
 }
 
+export async function getAllBusinesses(userId: string): Promise<Business[]> {
+  const { data, error } = await supabase
+    .from("businesses")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function updateBusiness(
   businessId: string,
   data: Partial<Pick<Business, "name" | "industry" | "city" | "state">>

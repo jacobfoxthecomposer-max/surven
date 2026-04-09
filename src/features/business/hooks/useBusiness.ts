@@ -1,35 +1,25 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/features/auth/hooks/useAuth";
-import { getBusiness, getCompetitors } from "@/features/business/services/businessService";
-import type { Business, Competitor } from "@/types/database";
+import { useActiveBusiness } from "@/features/business/hooks/useActiveBusiness";
+import { getCompetitors } from "@/features/business/services/businessService";
+import type { Competitor } from "@/types/database";
 
 export function useBusiness() {
-  const { user, loading: authLoading } = useAuth();
-
-  const businessQuery = useQuery<Business | null>({
-    queryKey: ["business", user?.id],
-    queryFn: () => (user ? getBusiness(user.id) : Promise.resolve(null)),
-    enabled: !!user,
-    staleTime: 5 * 60 * 1000,
-  });
+  const { activeBusiness, isLoading: bizLoading } = useActiveBusiness();
 
   const competitorsQuery = useQuery<Competitor[]>({
-    queryKey: ["competitors", businessQuery.data?.id],
-    queryFn: () =>
-      businessQuery.data
-        ? getCompetitors(businessQuery.data.id)
-        : Promise.resolve([]),
-    enabled: !!businessQuery.data,
+    queryKey: ["competitors", activeBusiness?.id],
+    queryFn: () => getCompetitors(activeBusiness!.id),
+    enabled: !!activeBusiness,
     staleTime: 5 * 60 * 1000,
   });
 
   return {
-    business: businessQuery.data ?? null,
+    business: activeBusiness ?? null,
     competitors: competitorsQuery.data ?? [],
-    isLoading: !!user && !businessQuery.isSuccess && !businessQuery.isError,
-    isFetching: businessQuery.isFetching,
-    error: businessQuery.error,
+    isLoading: bizLoading,
+    isFetching: competitorsQuery.isFetching,
+    error: competitorsQuery.error,
   };
 }
