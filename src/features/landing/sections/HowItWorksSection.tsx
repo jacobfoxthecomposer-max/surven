@@ -1,86 +1,135 @@
 "use client";
 
-import { Building2, Radar, LineChart } from "lucide-react";
+import React, { useState } from "react";
+import { Building2, Target, LineChart } from "lucide-react";
 import { ScrollReveal } from "@/components/molecules/ScrollReveal";
 
-const steps = [
+interface TimelineStep {
+  id: number;
+  number: string;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  iconBg: string;
+  badgeBg: string;
+  glow: string;
+}
+
+const timelineSteps: TimelineStep[] = [
   {
+    id: 1,
     number: "01",
-    icon: Building2,
-    color: "#4361ee",
     title: "Add your business",
     description:
       "Enter your business name, industry, and location. Optionally add competitors you want to track alongside.",
+    icon: <Building2 className="w-7 h-7" />,
+    iconBg: "bg-[#4361ee]",
+    badgeBg: "bg-[#4361ee]",
+    glow: "rgb(67 97 238 / 0.25)",
   },
   {
+    id: 2,
     number: "02",
-    icon: Radar,
-    color: "#06d6a0",
     title: "Run a scan",
     description:
       "Surven generates realistic consumer prompts and queries ChatGPT, Claude, and Perplexity to see who gets recommended.",
+    icon: <Target className="w-7 h-7" />,
+    iconBg: "bg-[#06d6a0]",
+    badgeBg: "bg-[#06d6a0]",
+    glow: "rgb(6 214 160 / 0.2)",
   },
   {
+    id: 3,
     number: "03",
-    icon: LineChart,
-    color: "#8b5cf6",
     title: "See your results",
     description:
       "Get a Visibility Score, per-model breakdown, and the exact prompts that mentioned — or missed — your business.",
+    icon: <LineChart className="w-7 h-7" />,
+    iconBg: "bg-[#8b5cf6]",
+    badgeBg: "bg-[#8b5cf6]",
+    glow: "rgb(139 92 246 / 0.2)",
   },
 ];
 
 export function HowItWorksSection() {
+  const [hoveredStep, setHoveredStep] = useState<number | null>(null);
+
   return (
-    <section className="py-24 px-4 bg-[var(--color-surface)]/40">
+    <section className="py-24 px-4 bg-[#0f172a]">
       <div className="max-w-5xl mx-auto">
+        {/* Header */}
         <ScrollReveal className="text-center mb-16">
-          <span className="text-xs font-semibold uppercase tracking-widest text-[var(--color-primary)] mb-3 block">
+          <span className="text-xs font-semibold uppercase tracking-widest text-[#4361ee] mb-3 block">
             How it works
           </span>
-          <h2 className="text-3xl sm:text-4xl font-bold">
+          <h2 className="text-3xl sm:text-4xl font-bold text-white">
             From setup to insights in minutes
           </h2>
         </ScrollReveal>
 
-        <div className="relative">
-          {/* Connector line (desktop) */}
-          <div className="hidden md:block absolute top-8 left-[calc(16.67%+1rem)] right-[calc(16.67%+1rem)] h-px bg-gradient-to-r from-[#4361ee] via-[#06d6a0] to-[#8b5cf6] opacity-30" />
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-6">
-            {steps.map((step, i) => {
-              const Icon = step.icon;
-              return (
-                <ScrollReveal key={step.number} delay={i * 0.12} direction="up">
-                  <div className="flex flex-col items-center md:items-start text-center md:text-left gap-4">
-                    {/* Icon bubble */}
-                    <div className="relative">
+        {/* Timeline */}
+        <ScrollReveal delay={0.1}>
+          <div className="relative flex flex-col md:flex-row items-stretch md:items-center justify-center gap-6 md:gap-0">
+            {timelineSteps.map((step, index) => (
+              <React.Fragment key={step.id}>
+                {/* Card */}
+                <div
+                  className="relative md:w-72 lg:w-80"
+                  onMouseEnter={() => setHoveredStep(step.id)}
+                  onMouseLeave={() => setHoveredStep(null)}
+                  style={{ zIndex: hoveredStep === step.id ? 10 : 1 }}
+                >
+                  <div
+                    className="h-full p-6 rounded-2xl border border-[#334155] bg-[#1e293b]/70 backdrop-blur-sm cursor-pointer"
+                    style={{
+                      transition: "transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease",
+                      transform:
+                        hoveredStep === step.id
+                          ? "scale(1.06) translateY(-6px)"
+                          : "scale(1) translateY(0)",
+                      boxShadow:
+                        hoveredStep === step.id
+                          ? `0 24px 48px -8px rgb(0 0 0 / 0.5), 0 0 0 1px ${step.glow}`
+                          : "0 4px 12px -2px rgb(0 0 0 / 0.3)",
+                      borderColor:
+                        hoveredStep === step.id ? "rgba(255,255,255,0.12)" : "#334155",
+                    }}
+                  >
+                    {/* Icon + badge */}
+                    <div className="relative w-fit mb-6">
                       <div
-                        className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                        style={{ backgroundColor: `${step.color}18`, border: `1px solid ${step.color}30` }}
+                        className={`${step.iconBg} rounded-2xl p-4 text-white`}
+                        style={{
+                          transition: "transform 0.3s ease",
+                          transform: hoveredStep === step.id ? "scale(1.12)" : "scale(1)",
+                        }}
                       >
-                        <Icon className="h-7 w-7" style={{ color: step.color }} />
+                        {step.icon}
                       </div>
                       <span
-                        className="absolute -top-2 -right-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                        style={{ backgroundColor: step.color, color: "#fff" }}
+                        className={`absolute -top-2 -right-2 ${step.badgeBg} text-white text-[10px] font-bold px-2 py-0.5 rounded-full`}
                       >
                         {step.number}
                       </span>
                     </div>
 
-                    <div>
-                      <h3 className="text-lg font-semibold mb-2">{step.title}</h3>
-                      <p className="text-sm text-[var(--color-fg-secondary)] leading-relaxed">
-                        {step.description}
-                      </p>
-                    </div>
+                    {/* Text */}
+                    <h3 className="text-lg font-semibold text-white mb-2">{step.title}</h3>
+                    <p className="text-sm text-[#94a3b8] leading-relaxed">{step.description}</p>
                   </div>
-                </ScrollReveal>
-              );
-            })}
+                </div>
+
+                {/* Connector */}
+                {index < timelineSteps.length - 1 && (
+                  <div className="hidden md:flex items-center mx-4 flex-shrink-0">
+                    <div className="w-16 h-px bg-gradient-to-r from-[#4361ee]/40 via-[#06d6a0]/40 to-[#8b5cf6]/40" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#334155] -ml-px" />
+                  </div>
+                )}
+              </React.Fragment>
+            ))}
           </div>
-        </div>
+        </ScrollReveal>
       </div>
     </section>
   );
