@@ -75,6 +75,7 @@ export interface MockScanInput {
   city: string;
   state: string;
   competitors: string[];
+  customPrompts?: string[];
 }
 
 export interface MockScanOutput {
@@ -83,8 +84,8 @@ export interface MockScanOutput {
 }
 
 export function runMockScan(input: MockScanInput): MockScanOutput {
-  const { businessName, industry, city, state, competitors } = input;
-  const prompts = generatePrompts(industry, city, state);
+  const { businessName, industry, city, state, competitors, customPrompts = [] } = input;
+  const prompts = [...generatePrompts(industry, city, state), ...customPrompts];
 
   // Derive a stable base score directly from the business identity — no RNG involved
   const hash = hashString(`${businessName}|${industry}|${city}|${state}`);

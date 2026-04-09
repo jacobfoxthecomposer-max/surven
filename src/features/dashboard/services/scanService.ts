@@ -24,7 +24,7 @@ export async function createScanForBusiness(
     if (res.ok) {
       const json = await res.json();
       if (json.useMock) {
-        scanOutput = runMockScan(input);
+        scanOutput = runMockScan({ ...input, customPrompts });
       } else {
         scanOutput = {
           visibilityScore: json.visibilityScore,
@@ -33,10 +33,10 @@ export async function createScanForBusiness(
         };
       }
     } else {
-      scanOutput = runMockScan(input);
+      scanOutput = runMockScan({ ...input, customPrompts });
     }
   } catch {
-    scanOutput = runMockScan(input);
+    scanOutput = runMockScan({ ...input, customPrompts });
   }
 
   const { data: scan, error: scanError } = await supabase
