@@ -10,45 +10,7 @@ export function HeroSection() {
   const animEnabled = useAnimationEnabled();
 
   return (
-    <section className="relative min-h-[90vh] flex flex-col items-center justify-center px-4 text-center overflow-hidden">
-      {/* Animated background grid */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, rgb(67 97 238 / 0.06) 1px, transparent 1px),
-            linear-gradient(to bottom, rgb(67 97 238 / 0.06) 1px, transparent 1px)
-          `,
-          backgroundSize: "64px 64px",
-          maskImage: "radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)",
-          WebkitMaskImage: "radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)",
-        }}
-      />
-
-      {/* Pulsing radial glow */}
-      <motion.div
-        animate={animEnabled ? { opacity: [0.6, 1, 0.6], scale: [1, 1.08, 1] } : {}}
-        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full pointer-events-none"
-        style={{ background: "radial-gradient(circle, rgb(67 97 238 / 0.12) 0%, transparent 65%)" }}
-      />
-
-      {/* Floating orb — blue top-left */}
-      <motion.div
-        animate={animEnabled ? { y: [0, -24, 0], x: [0, 12, 0], opacity: [0.4, 0.7, 0.4] } : { opacity: 0.4 }}
-        transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-[15%] left-[10%] w-72 h-72 rounded-full pointer-events-none"
-        style={{ background: "radial-gradient(circle, rgb(67 97 238 / 0.18) 0%, transparent 70%)", filter: "blur(40px)" }}
-      />
-
-      {/* Floating orb — teal bottom-right */}
-      <motion.div
-        animate={animEnabled ? { y: [0, 20, 0], x: [0, -16, 0], opacity: [0.3, 0.6, 0.3] } : { opacity: 0.3 }}
-        transition={{ duration: 11, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-        className="absolute bottom-[15%] right-[8%] w-64 h-64 rounded-full pointer-events-none"
-        style={{ background: "radial-gradient(circle, rgb(6 214 160 / 0.15) 0%, transparent 70%)", filter: "blur(40px)" }}
-      />
-
+    <section className="relative min-h-[90vh] flex flex-col items-center justify-center px-4 text-center">
       <div className="relative z-10 max-w-4xl mx-auto space-y-6">
         {/* Eyebrow badge */}
         <motion.div

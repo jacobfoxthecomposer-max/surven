@@ -76,19 +76,23 @@ export default function DashboardPage() {
   const results = latestScan?.results ?? [];
   const competitorNames = competitors.map((c) => c.name);
 
+  const ease = [0.16, 1, 0.3, 1] as const;
+  const reveal = {
+    initial: { opacity: 0, y: 28, filter: "blur(4px)" },
+    whileInView: { opacity: 1, y: 0, filter: "blur(0px)" },
+    viewport: { once: true, margin: "-80px" },
+    transition: { duration: 0.65, ease },
+  } as const;
+
   return (
     <DashboardLayout>
-      <motion.div
-        className="space-y-10"
-        initial="hidden"
-        animate="visible"
-        variants={{
-          hidden: {},
-          visible: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } },
-        }}
-      >
-        {/* 1: Visibility Gauge */}
-        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
+      <div className="space-y-10">
+        {/* 1: Visibility Gauge — animates on mount (first thing visible) */}
+        <motion.div
+          initial={{ opacity: 0, y: 24, filter: "blur(4px)" }}
+          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+        >
           <GaugeSection
             businessName={business.name}
             industry={business.industry}
@@ -103,28 +107,28 @@ export default function DashboardPage() {
 
         {/* 2: AI Model Breakdown */}
         {results.length > 0 && (
-          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
+          <motion.div {...reveal}>
             <ModelBreakdownSection results={results} />
           </motion.div>
         )}
 
         {/* 3: Brand Sentiment */}
         {results.length > 0 && (
-          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
+          <motion.div {...reveal}>
             <SentimentSection results={results} />
           </motion.div>
         )}
 
         {/* 4: Prompt Results */}
         {results.length > 0 && (
-          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
+          <motion.div {...reveal}>
             <PromptResultsSection results={results} businessName={business.name} />
           </motion.div>
         )}
 
         {/* 5: Competitor Comparison */}
         {results.length > 0 && competitorNames.length > 0 && (
-          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
+          <motion.div {...reveal}>
             <ComparisonSection
               results={results}
               businessScore={score}
@@ -136,7 +140,7 @@ export default function DashboardPage() {
 
         {/* 6: Competitor Benchmarking */}
         {results.length > 0 && competitorNames.length > 0 && (
-          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
+          <motion.div {...reveal}>
             <CompetitorBenchmarkSection
               results={results}
               businessScore={score}
@@ -148,14 +152,14 @@ export default function DashboardPage() {
 
         {/* 7: Citation Gap Analysis */}
         {results.length > 0 && (
-          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
+          <motion.div {...reveal}>
             <CitationGapSection results={results} businessName={business.name} />
           </motion.div>
         )}
 
         {/* 8: History */}
         {history.length > 0 && (
-          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
+          <motion.div {...reveal}>
             <HistorySection scans={history} />
           </motion.div>
         )}
@@ -163,7 +167,8 @@ export default function DashboardPage() {
         {/* 9: Export CSV */}
         {results.length > 0 && (
           <motion.div
-            variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0, transition: { duration: 0.35 } } }}
+            {...reveal}
+            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
             className="flex justify-end"
           >
             <Button variant="secondary" size="sm" onClick={handleExport}>
@@ -176,7 +181,9 @@ export default function DashboardPage() {
         {/* Empty state */}
         {results.length === 0 && !scanLoading && (
           <motion.div
-            variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4 } } }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
             className="text-center py-16 space-y-3"
           >
             <p className="text-lg text-[var(--color-fg-secondary)]">
@@ -187,7 +194,7 @@ export default function DashboardPage() {
             </p>
           </motion.div>
         )}
-      </motion.div>
+      </div>
     </DashboardLayout>
   );
 }
