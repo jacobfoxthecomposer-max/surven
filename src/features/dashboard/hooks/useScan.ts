@@ -50,7 +50,7 @@ export function useScan(business: Business | null, competitors: Competitor[]) {
     } finally {
       setScanning(false);
     }
-  }, [business, competitors, scanning, queryClient]);
+  }, [business, competitors, scanning, queryClient, prompts]);
 
   return {
     latestScan: latestScanQuery.data ?? null,
