@@ -7,9 +7,11 @@ import {
   getScanHistory,
   createScanForBusiness,
 } from "@/features/dashboard/services/scanService";
+import { useSearchPrompts } from "@/features/business/hooks/useSearchPrompts";
 import type { Business, Competitor, ScanWithResults, Scan } from "@/types/database";
 
 export function useScan(business: Business | null, competitors: Competitor[]) {
+  const { prompts } = useSearchPrompts(business?.id);
   const queryClient = useQueryClient();
   const [scanning, setScanning] = useState(false);
 
@@ -30,13 +32,17 @@ export function useScan(business: Business | null, competitors: Competitor[]) {
 
     setScanning(true);
     try {
-      await createScanForBusiness(business.id, {
-        businessName: business.name,
-        industry: business.industry,
-        city: business.city,
-        state: business.state,
-        competitors: competitors.map((c) => c.name),
-      });
+      await createScanForBusiness(
+        business.id,
+        {
+          businessName: business.name,
+          industry: business.industry,
+          city: business.city,
+          state: business.state,
+          competitors: competitors.map((c) => c.name),
+        },
+        prompts.map((p) => p.prompt_text)
+      );
 
       // Invalidate queries to refetch fresh data
       await queryClient.invalidateQueries({ queryKey: ["latestScan", business.id] });

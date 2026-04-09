@@ -5,6 +5,7 @@ import type { Scan, ScanResult, ScanWithResults } from "@/types/database";
 export async function createScanForBusiness(
   businessId: string,
   input: MockScanInput,
+  customPrompts: string[] = [],
   scanType: "manual" | "automated" = "manual"
 ): Promise<ScanWithResults> {
   type ResultRow = Omit<ScanResult, "id" | "scan_id" | "created_at">;
@@ -18,7 +19,7 @@ export async function createScanForBusiness(
     const res = await fetch("/api/scan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...input, businessId }),
+      body: JSON.stringify({ ...input, customPrompts }),
     });
     if (res.ok) {
       const json = await res.json();

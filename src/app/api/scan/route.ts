@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { ModelName } from "@/types/database";
-import { createServerClient } from "@/services/supabaseServer";
 
 const PROMPT_TEMPLATES = [
   "What are the best {industry}s in {location}?",
@@ -95,31 +94,15 @@ type RawResult = {
 };
 
 export async function POST(request: NextRequest) {
-  const { businessName, industry, city, state, competitors, businessId } =
+  const { businessName, industry, city, state, competitors, customPrompts = [] } =
     await request.json() as {
       businessName: string;
       industry: string;
       city: string;
       state: string;
       competitors: string[];
-      businessId?: string;
+      customPrompts?: string[];
     };
-
-  // Fetch custom prompts server-side using service role (bypasses RLS)
-  let customPrompts: string[] = [];
-  if (businessId) {
-    try {
-      const supabase = createServerClient();
-      const { data } = await supabase
-        .from("search_prompts")
-        .select("prompt_text")
-        .eq("business_id", businessId)
-        .eq("active", true);
-      customPrompts = data?.map((r) => r.prompt_text) ?? [];
-    } catch {
-      // non-fatal
-    }
-  }
 
   const hasOpenAI = !!process.env.OPENAI_API_KEY;
   const hasClaude = !!process.env.ANTHROPIC_API_KEY;
