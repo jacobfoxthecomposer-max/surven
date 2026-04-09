@@ -1,6 +1,5 @@
 import { supabase } from "@/services/supabase";
 import { runMockScan, type MockScanInput } from "@/services/mockScanEngine";
-import { getSearchPrompts } from "@/features/business/services/promptService";
 import type { Scan, ScanResult, ScanWithResults } from "@/types/database";
 
 export async function createScanForBusiness(
@@ -15,20 +14,11 @@ export async function createScanForBusiness(
     modelScores?: Record<string, number>;
   };
 
-  // Fetch custom prompts to include in scan
-  let customPrompts: string[] = [];
-  try {
-    const prompts = await getSearchPrompts(businessId);
-    customPrompts = prompts.map((p) => p.prompt_text);
-  } catch {
-    // Non-fatal: fall back to template prompts only
-  }
-
   try {
     const res = await fetch("/api/scan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...input, customPrompts }),
+      body: JSON.stringify({ ...input, businessId }),
     });
     if (res.ok) {
       const json = await res.json();
