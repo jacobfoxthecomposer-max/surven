@@ -87,7 +87,7 @@ export default function DashboardPage() {
           visible: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } },
         }}
       >
-        {/* Section 1: Visibility Gauge */}
+        {/* 1: Visibility Gauge */}
         <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
           <GaugeSection
             businessName={business.name}
@@ -101,35 +101,21 @@ export default function DashboardPage() {
           />
         </motion.div>
 
-        {/* Section 2: Sentiment */}
-        {results.length > 0 && (
-          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
-            <SentimentSection results={results} />
-          </motion.div>
-        )}
-
-        {/* Section 3: AI Model Breakdown */}
+        {/* 2: AI Model Breakdown */}
         {results.length > 0 && (
           <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
             <ModelBreakdownSection results={results} />
           </motion.div>
         )}
 
-        {/* Section 3: Prompt Results */}
+        {/* 3: Brand Sentiment */}
         {results.length > 0 && (
           <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
-            <PromptResultsSection results={results} businessName={business.name} />
+            <SentimentSection results={results} />
           </motion.div>
         )}
 
-        {/* Section 4: Citation Gap Analysis */}
-        {results.length > 0 && (
-          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
-            <CitationGapSection results={results} businessName={business.name} />
-          </motion.div>
-        )}
-
-        {/* Section 5: Competitor Comparison (overview) */}
+        {/* 4: Competitor Comparison */}
         {results.length > 0 && competitorNames.length > 0 && (
           <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
             <ComparisonSection
@@ -141,7 +127,7 @@ export default function DashboardPage() {
           </motion.div>
         )}
 
-        {/* Section 6: Competitor Benchmarking (per-model breakdown) */}
+        {/* 5: Competitor Benchmarking */}
         {results.length > 0 && competitorNames.length > 0 && (
           <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
             <CompetitorBenchmarkSection
@@ -153,7 +139,28 @@ export default function DashboardPage() {
           </motion.div>
         )}
 
-        {/* CSV Export */}
+        {/* 6: Prompt Results */}
+        {results.length > 0 && (
+          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
+            <PromptResultsSection results={results} businessName={business.name} />
+          </motion.div>
+        )}
+
+        {/* 7: Citation Gap Analysis */}
+        {results.length > 0 && (
+          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
+            <CitationGapSection results={results} businessName={business.name} />
+          </motion.div>
+        )}
+
+        {/* 8: History */}
+        {history.length > 0 && (
+          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
+            <HistorySection scans={history} />
+          </motion.div>
+        )}
+
+        {/* 9: Export CSV */}
         {results.length > 0 && (
           <motion.div
             variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0, transition: { duration: 0.35 } } }}
@@ -163,13 +170,6 @@ export default function DashboardPage() {
               <Download className="h-4 w-4" />
               Export CSV
             </Button>
-          </motion.div>
-        )}
-
-        {/* Section 5: History */}
-        {history.length > 0 && (
-          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
-            <HistorySection scans={history} />
           </motion.div>
         )}
 
