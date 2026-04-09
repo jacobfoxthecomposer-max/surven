@@ -13,6 +13,7 @@ import { ModelBreakdownSection } from "@/features/dashboard/pages/ModelBreakdown
 import { PromptResultsSection } from "@/features/dashboard/pages/PromptResultsSection";
 import { ComparisonSection } from "@/features/dashboard/pages/ComparisonSection";
 import { HistorySection } from "@/features/dashboard/pages/HistorySection";
+import { SentimentSection } from "@/features/dashboard/pages/SentimentSection";
 import { exportScanResultsAsCsv } from "@/utils/csvExport";
 import { Button } from "@/components/atoms/Button";
 import { Download } from "lucide-react";
@@ -98,7 +99,14 @@ export default function DashboardPage() {
           />
         </motion.div>
 
-        {/* Section 2: AI Model Breakdown */}
+        {/* Section 2: Sentiment */}
+        {results.length > 0 && (
+          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
+            <SentimentSection results={results} />
+          </motion.div>
+        )}
+
+        {/* Section 3: AI Model Breakdown */}
         {results.length > 0 && (
           <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}>
             <ModelBreakdownSection results={results} />

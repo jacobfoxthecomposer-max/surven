@@ -3,6 +3,12 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Check, X } from "lucide-react";
+
+const SENTIMENT_STYLES = {
+  positive: "bg-emerald-500/15 text-emerald-400",
+  neutral:  "bg-slate-500/15 text-slate-400",
+  negative: "bg-red-500/15 text-red-400",
+} as const;
 import { cn } from "@/utils/cn";
 import type { ScanResult, ModelName } from "@/types/database";
 
@@ -107,6 +113,14 @@ export function PromptResultItem({
                         <Check className="h-3 w-3 text-emerald-400" />
                       ) : (
                         <X className="h-3 w-3 text-red-400" />
+                      )}
+                      {result.business_mentioned && result.sentiment && (
+                        <span className={cn(
+                          "text-[10px] px-1.5 py-0.5 rounded-full font-medium capitalize",
+                          SENTIMENT_STYLES[result.sentiment]
+                        )}>
+                          {result.sentiment}
+                        </span>
                       )}
                     </div>
                     <p className="text-xs text-[var(--color-fg-muted)] leading-relaxed whitespace-pre-line">

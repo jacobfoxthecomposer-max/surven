@@ -1,6 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { ModelName } from "@/types/database";
 
+type Sentiment = "positive" | "neutral" | "negative";
+
+async function analyzeSentiment(
+  responseText: string,
+  businessName: string
+): Promise<Sentiment> {
+  if (!process.env.ANTHROPIC_API_KEY) return "neutral";
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 5,
+        temperature: 0,
+        messages: [
+          {
+            role: "user",
+            content: `How is "${businessName}" portrayed in the following AI response? Reply with exactly one word: positive, neutral, or negative.\n\nResponse: ${responseText.slice(0, 600)}`,
+          },
+        ],
+      }),
+    });
+    if (!res.ok) return "neutral";
+    const data = await res.json();
+    const text = (data.content?.[0]?.text ?? "").toLowerCase().trim();
+    if (text.includes("positive")) return "positive";
+    if (text.includes("negative")) return "negative";
+    return "neutral";
+  } catch {
+    return "neutral";
+  }
+}
+
 const PROMPT_TEMPLATES = [
   "What are the best {industry}s in {location}?",
   "Can you recommend a good {industry} near {location}?",
@@ -91,6 +129,7 @@ type RawResult = {
   response_text: string;
   business_mentioned: boolean;
   competitor_mentions: Record<string, boolean>;
+  sentiment: Sentiment | null;
 };
 
 export async function POST(request: NextRequest) {
@@ -140,12 +179,15 @@ export async function POST(request: NextRequest) {
             competitorMentions[comp] = responseText ? isMentioned(responseText, comp) : false;
           }
 
+          const businessMentioned = responseText ? isMentioned(responseText, businessName) : false;
+
           return {
             prompt_text: prompt,
             model_name: model,
             response_text: responseText,
-            business_mentioned: responseText ? isMentioned(responseText, businessName) : false,
+            business_mentioned: businessMentioned,
             competitor_mentions: competitorMentions,
+            sentiment: null as Sentiment | null, // filled in below
           };
         })()
       );
@@ -153,6 +195,16 @@ export async function POST(request: NextRequest) {
   }
 
   const results = await Promise.all(tasks);
+
+  // Run sentiment analysis in parallel for all mentions
+  await Promise.all(
+    results.map(async (r) => {
+      if (r.business_mentioned && r.response_text) {
+        r.sentiment = await analyzeSentiment(r.response_text, businessName);
+      }
+    })
+  );
+
   const mentionCount = results.filter((r) => r.business_mentioned).length;
   const visibilityScore = Math.round((mentionCount / results.length) * 100);
 

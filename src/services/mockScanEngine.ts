@@ -1,5 +1,14 @@
 import type { ScanResult, ModelName } from "@/types/database";
 
+type Sentiment = "positive" | "neutral" | "negative";
+
+function mockSentiment(seed: number): Sentiment {
+  const v = seed % 10;
+  if (v < 6) return "positive";
+  if (v < 9) return "neutral";
+  return "negative";
+}
+
 function hashString(str: string): number {
   let h = 0;
   for (let i = 0; i < str.length; i++) {
@@ -143,6 +152,7 @@ export function runMockScan(input: MockScanInput): MockScanOutput {
         response_text: responseText,
         business_mentioned: mentioned,
         competitor_mentions: competitorMentions,
+        sentiment: mentioned ? mockSentiment(hashString(`${hash}|sentiment|${slot}`)) : null,
       });
 
       slot++;
