@@ -1,35 +1,11 @@
-/**
- * Mock Scan Engine — Surven MVP
- *
- * Generates realistic AI visibility scan results.
- * Clearly separated so it can be swapped for real API calls later.
- *
- * Each scan:
- * 1. Generates 6 natural consumer prompts
- * 2. Simulates responses from ChatGPT, Claude, Perplexity
- * 3. Randomly includes/excludes business & competitor mentions
- * 4. Calculates visibility score
- */
-
 import type { ScanResult, ModelName } from "@/types/database";
 
-// Deterministic hash → seeded RNG so the same business always produces the same base score
 function hashString(str: string): number {
   let h = 0;
   for (let i = 0; i < str.length; i++) {
     h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
   }
   return h >>> 0;
-}
-
-function makeSeededRng(seed: number) {
-  let s = seed === 0 ? 1 : seed;
-  return function (): number {
-    s ^= s << 13;
-    s ^= s >> 17;
-    s ^= s << 5;
-    return (s >>> 0) / 0xffffffff;
-  };
 }
 
 const PROMPT_TEMPLATES = [
@@ -64,7 +40,6 @@ function generateMockResponse(
     if (isMentioned) allBusinesses.push(name);
   }
 
-  // Add some generic filler names
   const fillers = [
     "Summit Services",
     "Premier Solutions",
@@ -72,27 +47,26 @@ function generateMockResponse(
     "Eastside Group",
     "Valley Experts",
   ];
-  const extraCount = Math.floor(Math.random() * 3) + 1;
+  const extraCount = (Math.floor(Math.random() * 3) + 1);
   for (let i = 0; i < extraCount; i++) {
     allBusinesses.push(fillers[i % fillers.length]);
   }
 
   const shuffled = allBusinesses.sort(() => Math.random() - 0.5);
 
-  const intro = [
+  const intros = [
     "Based on customer reviews and local reputation, here are some top options:",
     "There are several highly-rated options in the area. Here are my recommendations:",
     "I'd suggest looking into the following well-reviewed businesses:",
     "Here are some of the most recommended options based on online reviews and ratings:",
   ];
 
-  const selectedIntro = intro[Math.floor(Math.random() * intro.length)];
-
+  const intro = intros[Math.floor(Math.random() * intros.length)];
   const list = shuffled
     .map((name, i) => `${i + 1}. **${name}** — Known for excellent service and strong customer reviews.`)
     .join("\n");
 
-  return `${selectedIntro}\n\n${list}\n\nI'd recommend checking recent reviews and contacting them directly to see which one best fits your needs.`;
+  return `${intro}\n\n${list}\n\nI'd recommend checking recent reviews and contacting them directly to see which one best fits your needs.`;
 }
 
 export interface MockScanInput {
@@ -112,22 +86,46 @@ export function runMockScan(input: MockScanInput): MockScanOutput {
   const { businessName, industry, city, state, competitors } = input;
   const prompts = generatePrompts(industry, city, state);
 
-  // Seed from stable business identity so the base score never changes per business
-  const seed = hashString(`${businessName}|${industry}|${city}|${state}`);
-  const rng = makeSeededRng(seed);
+  // Derive a stable base score directly from the business identity — no RNG involved
+  const hash = hashString(`${businessName}|${industry}|${city}|${state}`);
+  const baseScore = 22 + (hash % 57); // always 22–78% for this business
+
+  // Determine how many of the 18 slots count as "mentioned" to match the base score
+  const total = prompts.length * MODELS.length;
+  const targetMentions = Math.round((baseScore / 100) * total);
+
+  // Assign mentions to specific prompt+model slots using the hash so it's deterministic
+  const mentionSlots = new Set<number>();
+  let attempt = 0;
+  while (mentionSlots.size < targetMentions) {
+    const slot = hashString(`${hash}|${attempt++}`) % total;
+    mentionSlots.add(slot);
+  }
+
+  // Similarly assign competitor mentions per slot
+  const competitorSlotMaps: Record<string, Set<number>> = {};
+  for (const comp of competitors) {
+    const compHash = hashString(`${hash}|${comp}`);
+    const compMentions = new Set<number>();
+    let ca = 0;
+    const compTarget = Math.round(0.35 * total);
+    while (compMentions.size < compTarget) {
+      const slot = hashString(`${compHash}|${ca++}`) % total;
+      compMentions.add(slot);
+    }
+    competitorSlotMaps[comp] = compMentions;
+  }
 
   const results: Omit<ScanResult, "id" | "scan_id" | "created_at">[] = [];
-  let mentionCount = 0;
-  const totalPossible = prompts.length * MODELS.length;
+  let slot = 0;
 
   for (const prompt of prompts) {
     for (const model of MODELS) {
-      const mentioned = rng() < 0.4;
-      if (mentioned) mentionCount++;
+      const mentioned = mentionSlots.has(slot);
 
       const competitorMentions: Record<string, boolean> = {};
       for (const comp of competitors) {
-        competitorMentions[comp] = rng() < 0.35;
+        competitorMentions[comp] = competitorSlotMaps[comp].has(slot);
       }
 
       const responseText = generateMockResponse(
@@ -145,12 +143,13 @@ export function runMockScan(input: MockScanInput): MockScanOutput {
         business_mentioned: mentioned,
         competitor_mentions: competitorMentions,
       });
+
+      slot++;
     }
   }
 
-  const baseScore = Math.round((mentionCount / totalPossible) * 100);
-  // Add ±1.5% real noise so repeated scans feel live without wild swings
-  const noise = Math.round((Math.random() - 0.5) * 3);
+  // Add ±1% noise so it feels like a live scan without actually moving
+  const noise = Math.round((Math.random() - 0.5) * 2);
   const visibilityScore = Math.max(0, Math.min(100, baseScore + noise));
 
   return { visibilityScore, results };
