@@ -82,6 +82,22 @@ export async function deleteCompetitors(businessId: string): Promise<void> {
 }
 
 export async function deleteBusiness(businessId: string): Promise<void> {
+  // Delete scan_results for all scans belonging to this business
+  const { data: scans } = await supabase
+    .from("scans")
+    .select("id")
+    .eq("business_id", businessId);
+
+  if (scans && scans.length > 0) {
+    const scanIds = scans.map((s) => s.id);
+    await supabase.from("scan_results").delete().in("scan_id", scanIds);
+  }
+
+  // Delete in dependency order
+  await supabase.from("scans").delete().eq("business_id", businessId);
+  await supabase.from("search_prompts").delete().eq("business_id", businessId);
+  await supabase.from("competitors").delete().eq("business_id", businessId);
+
   const { error } = await supabase
     .from("businesses")
     .delete()

@@ -56,7 +56,7 @@ export default function NewClientPage() {
 
   return (
     <AuthLayout
-      title="Add new client"
+      title="Add new business"
       subtitle="Set up a new business to track its AI visibility"
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">

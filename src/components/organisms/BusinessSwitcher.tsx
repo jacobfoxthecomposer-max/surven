@@ -67,7 +67,7 @@ export function BusinessSwitcher() {
               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-[var(--color-primary)] hover:bg-[var(--color-surface-alt)] transition-colors"
             >
               <Plus className="h-3.5 w-3.5 shrink-0" />
-              Add new client
+              Add new business
             </button>
           </div>
         </div>
