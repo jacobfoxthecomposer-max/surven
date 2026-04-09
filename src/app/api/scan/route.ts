@@ -10,11 +10,17 @@ const PROMPT_TEMPLATES = [
   "Which {industry}s in {location} do you recommend for someone new to the area?",
 ];
 
-function generatePrompts(industry: string, city: string, state: string): string[] {
+function generatePrompts(
+  industry: string,
+  city: string,
+  state: string,
+  customPrompts: string[]
+): string[] {
   const location = `${city}, ${state}`;
-  return PROMPT_TEMPLATES.map((t) =>
+  const generated = PROMPT_TEMPLATES.map((t) =>
     t.replace("{industry}", industry.toLowerCase()).replace("{location}", location)
   );
+  return [...generated, ...customPrompts];
 }
 
 async function queryOpenAI(prompt: string): Promise<string> {
@@ -88,13 +94,15 @@ type RawResult = {
 };
 
 export async function POST(request: NextRequest) {
-  const { businessName, industry, city, state, competitors } = await request.json() as {
-    businessName: string;
-    industry: string;
-    city: string;
-    state: string;
-    competitors: string[];
-  };
+  const { businessName, industry, city, state, competitors, customPrompts = [] } =
+    await request.json() as {
+      businessName: string;
+      industry: string;
+      city: string;
+      state: string;
+      competitors: string[];
+      customPrompts?: string[];
+    };
 
   const hasOpenAI = !!process.env.OPENAI_API_KEY;
   const hasClaude = !!process.env.ANTHROPIC_API_KEY;
@@ -104,7 +112,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ useMock: true });
   }
 
-  const prompts = generatePrompts(industry, city, state);
+  const prompts = generatePrompts(industry, city, state, customPrompts);
   const models: { name: ModelName; enabled: boolean }[] = [
     { name: "chatgpt", enabled: hasOpenAI },
     { name: "claude", enabled: hasClaude },
@@ -148,5 +156,16 @@ export async function POST(request: NextRequest) {
   const mentionCount = results.filter((r) => r.business_mentioned).length;
   const visibilityScore = Math.round((mentionCount / results.length) * 100);
 
-  return NextResponse.json({ results, visibilityScore });
+  // Compute per-model visibility scores
+  const enabledModels = models.filter((m) => m.enabled);
+  const modelScores: Record<string, number> = {};
+  for (const { name } of enabledModels) {
+    const modelResults = results.filter((r) => r.model_name === name);
+    const mentioned = modelResults.filter((r) => r.business_mentioned).length;
+    modelScores[name] = modelResults.length > 0
+      ? Math.round((mentioned / modelResults.length) * 100)
+      : 0;
+  }
+
+  return NextResponse.json({ results, visibilityScore, modelScores });
 }

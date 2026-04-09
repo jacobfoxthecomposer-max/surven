@@ -9,9 +9,10 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
+  Legend,
   Area,
 } from "recharts";
-import { COLORS } from "@/utils/constants";
+import { COLORS, AI_MODELS } from "@/utils/constants";
 import type { Scan } from "@/types/database";
 
 interface HistoryChartProps {
@@ -19,17 +20,29 @@ interface HistoryChartProps {
 }
 
 export function HistoryChart({ scans }: HistoryChartProps) {
-  const data = useMemo(
-    () =>
-      scans.map((s) => ({
+  const { data, hasModelData } = useMemo(() => {
+    const chartData = scans.map((s) => {
+      const point: Record<string, string | number> = {
         date: new Date(s.created_at).toLocaleDateString("en-US", {
           month: "short",
           day: "numeric",
         }),
         score: s.visibility_score,
-      })),
-    [scans]
-  );
+      };
+      if (s.model_scores) {
+        for (const model of AI_MODELS) {
+          if (s.model_scores[model.id] !== undefined) {
+            point[model.id] = s.model_scores[model.id];
+          }
+        }
+      }
+      return point;
+    });
+
+    const anyModelData = scans.some((s) => s.model_scores != null);
+
+    return { data: chartData, hasModelData: anyModelData };
+  }, [scans]);
 
   if (data.length === 0) {
     return (
@@ -75,7 +88,20 @@ export function HistoryChart({ scans }: HistoryChartProps) {
               fontSize: 13,
             }}
             labelStyle={{ color: COLORS.fgSecondary }}
+            formatter={(value, name) => {
+              const model = AI_MODELS.find((m) => m.id === (name as string));
+              return [`${value}%`, model ? model.name : "Overall"];
+            }}
           />
+          {hasModelData && (
+            <Legend
+              wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
+              formatter={(value) => {
+                const model = AI_MODELS.find((m) => m.id === value);
+                return model ? model.name : "Overall";
+              }}
+            />
+          )}
           <Area
             type="monotone"
             dataKey="score"
@@ -85,12 +111,29 @@ export function HistoryChart({ scans }: HistoryChartProps) {
           <Line
             type="monotone"
             dataKey="score"
+            name="score"
             stroke={COLORS.primary}
             strokeWidth={2.5}
             dot={{ fill: COLORS.primary, r: 4, strokeWidth: 0 }}
             activeDot={{ r: 6, fill: COLORS.primary, stroke: COLORS.fg, strokeWidth: 2 }}
             animationDuration={1000}
           />
+          {hasModelData &&
+            AI_MODELS.map((model) => (
+              <Line
+                key={model.id}
+                type="monotone"
+                dataKey={model.id}
+                name={model.id}
+                stroke={model.color}
+                strokeWidth={1.5}
+                strokeDasharray="4 2"
+                dot={false}
+                activeDot={{ r: 4, fill: model.color, strokeWidth: 0 }}
+                animationDuration={1000}
+                connectNulls
+              />
+            ))}
         </LineChart>
       </ResponsiveContainer>
     </div>

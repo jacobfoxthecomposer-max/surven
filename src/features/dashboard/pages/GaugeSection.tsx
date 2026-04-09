@@ -12,6 +12,7 @@ interface GaugeSectionProps {
   industry: string;
   score: number;
   lastScanDate: string | null;
+  scanType?: "manual" | "automated";
   scanning: boolean;
   isLoading: boolean;
   onRunScan: () => void;
@@ -22,6 +23,7 @@ export function GaugeSection({
   industry,
   score,
   lastScanDate,
+  scanType,
   scanning,
   isLoading,
   onRunScan,
@@ -65,7 +67,12 @@ export function GaugeSection({
       <div className="flex-1 text-center sm:text-left space-y-3">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">{businessName}</h1>
-          <Badge variant="info" className="mt-1.5">{industry}</Badge>
+          <div className="flex flex-wrap gap-1.5 mt-1.5">
+            <Badge variant="info">{industry}</Badge>
+            {scanType === "automated" && (
+              <Badge variant="neutral">Auto</Badge>
+            )}
+          </div>
         </div>
 
         {lastScanDate && (

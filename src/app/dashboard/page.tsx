@@ -13,6 +13,9 @@ import { ModelBreakdownSection } from "@/features/dashboard/pages/ModelBreakdown
 import { PromptResultsSection } from "@/features/dashboard/pages/PromptResultsSection";
 import { ComparisonSection } from "@/features/dashboard/pages/ComparisonSection";
 import { HistorySection } from "@/features/dashboard/pages/HistorySection";
+import { exportScanResultsAsCsv } from "@/utils/csvExport";
+import { Button } from "@/components/atoms/Button";
+import { Download } from "lucide-react";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -23,6 +26,11 @@ export default function DashboardPage() {
     competitors
   );
   const { toast } = useToast();
+
+  function handleExport() {
+    if (!latestScan || !business) return;
+    exportScanResultsAsCsv(latestScan, business.name);
+  }
 
   async function handleRunScan() {
     toast("Scan started — querying AI models...", "info");
@@ -83,6 +91,7 @@ export default function DashboardPage() {
             industry={business.industry}
             score={score}
             lastScanDate={latestScan?.created_at ?? null}
+            scanType={latestScan?.scan_type}
             scanning={scanning}
             isLoading={scanLoading}
             onRunScan={handleRunScan}
@@ -112,6 +121,19 @@ export default function DashboardPage() {
               businessName={business.name}
               competitors={competitorNames}
             />
+          </motion.div>
+        )}
+
+        {/* CSV Export */}
+        {results.length > 0 && (
+          <motion.div
+            variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0, transition: { duration: 0.35 } } }}
+            className="flex justify-end"
+          >
+            <Button variant="secondary" size="sm" onClick={handleExport}>
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
           </motion.div>
         )}
 

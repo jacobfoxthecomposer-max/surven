@@ -5,13 +5,15 @@ import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { BusinessTab } from "@/features/settings/pages/BusinessTab";
 import { AccountTab } from "@/features/settings/pages/AccountTab";
 import { IntegrationsTab } from "@/features/settings/pages/IntegrationsTab";
+import { PromptsTab } from "@/features/settings/pages/PromptsTab";
 import { cn } from "@/utils/cn";
 
-type Tab = "business" | "account" | "integrations";
+type Tab = "business" | "account" | "prompts" | "integrations";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "business", label: "Business" },
   { id: "account", label: "Account" },
+  { id: "prompts", label: "Prompts" },
   { id: "integrations", label: "Integrations" },
 ];
 
@@ -53,6 +55,7 @@ export default function SettingsPage() {
         <div className="max-w-2xl">
           {activeTab === "business" && <BusinessTab />}
           {activeTab === "account" && <AccountTab />}
+          {activeTab === "prompts" && <PromptsTab />}
           {activeTab === "integrations" && <IntegrationsTab />}
         </div>
       </div>

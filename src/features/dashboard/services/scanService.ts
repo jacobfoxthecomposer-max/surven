@@ -1,57 +1,45 @@
 import { supabase } from "@/services/supabase";
 import { runMockScan, type MockScanInput } from "@/services/mockScanEngine";
+import { getSearchPrompts } from "@/features/business/services/promptService";
 import type { Scan, ScanResult, ScanWithResults } from "@/types/database";
-
-export async function createScan(input: MockScanInput): Promise<ScanWithResults> {
-  const mockOutput = runMockScan(input);
-
-  // Insert the scan
-  const { data: scan, error: scanError } = await supabase
-    .from("scans")
-    .insert({
-      business_id: input.businessName, // Will be replaced with actual business_id
-      visibility_score: mockOutput.visibilityScore,
-    })
-    .select()
-    .single();
-
-  if (scanError) throw scanError;
-
-  // Insert all results
-  const resultRows = mockOutput.results.map((r) => ({
-    scan_id: scan.id,
-    ...r,
-  }));
-
-  const { data: results, error: resultsError } = await supabase
-    .from("scan_results")
-    .insert(resultRows)
-    .select();
-
-  if (resultsError) throw resultsError;
-
-  return { ...scan, results: results ?? [] };
-}
 
 export async function createScanForBusiness(
   businessId: string,
-  input: MockScanInput
+  input: MockScanInput,
+  scanType: "manual" | "automated" = "manual"
 ): Promise<ScanWithResults> {
   type ResultRow = Omit<ScanResult, "id" | "scan_id" | "created_at">;
-  let scanOutput: { visibilityScore: number; results: ResultRow[] };
+  let scanOutput: {
+    visibilityScore: number;
+    results: ResultRow[];
+    modelScores?: Record<string, number>;
+  };
+
+  // Fetch custom prompts to include in scan
+  let customPrompts: string[] = [];
+  try {
+    const prompts = await getSearchPrompts(businessId);
+    customPrompts = prompts.map((p) => p.prompt_text);
+  } catch {
+    // Non-fatal: fall back to template prompts only
+  }
 
   try {
     const res = await fetch("/api/scan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
+      body: JSON.stringify({ ...input, customPrompts }),
     });
     if (res.ok) {
       const json = await res.json();
       if (json.useMock) {
         scanOutput = runMockScan(input);
       } else {
-        scanOutput = { visibilityScore: json.visibilityScore, results: json.results };
+        scanOutput = {
+          visibilityScore: json.visibilityScore,
+          results: json.results,
+          modelScores: json.modelScores,
+        };
       }
     } else {
       scanOutput = runMockScan(input);
@@ -65,6 +53,8 @@ export async function createScanForBusiness(
     .insert({
       business_id: businessId,
       visibility_score: scanOutput.visibilityScore,
+      scan_type: scanType,
+      model_scores: scanOutput.modelScores ?? null,
     })
     .select()
     .single();

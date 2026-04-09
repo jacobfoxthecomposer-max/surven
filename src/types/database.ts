@@ -15,10 +15,20 @@ export interface Competitor {
   created_at: string;
 }
 
+export interface SearchPrompt {
+  id: string;
+  business_id: string;
+  prompt_text: string;
+  active: boolean;
+  created_at: string;
+}
+
 export interface Scan {
   id: string;
   business_id: string;
   visibility_score: number;
+  scan_type: "manual" | "automated";
+  model_scores: Record<string, number> | null;
   created_at: string;
 }
 
