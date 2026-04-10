@@ -39,8 +39,8 @@ export default function LoginPage() {
     try {
       await signIn(data.email, data.password);
       toast("Welcome back!", "success");
-      // Wait for session to sync before navigating
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait for session to sync and user context to update
+      await new Promise(resolve => setTimeout(resolve, 800));
       router.push("/dashboard");
     } catch (err: unknown) {
       const message =
