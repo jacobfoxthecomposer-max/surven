@@ -34,9 +34,9 @@ const timelineSteps: TimelineStep[] = [
     description:
       "Surven generates realistic consumer prompts and queries ChatGPT, Claude, and Perplexity to see who gets recommended.",
     icon: <Target className="w-7 h-7" />,
-    iconBg: "bg-[#f97316]",
-    badgeBg: "bg-[#f97316]",
-    glow: "rgb(249 115 22 / 0.25)",
+    iconBg: "bg-[#d946ef]",
+    badgeBg: "bg-[#d946ef]",
+    glow: "rgb(217 70 239 / 0.25)",
   },
   {
     id: 3,
@@ -122,7 +122,7 @@ export function HowItWorksSection() {
                 {/* Connector */}
                 {index < timelineSteps.length - 1 && (
                   <div className="hidden md:flex items-center mx-4 flex-shrink-0">
-                    <div className="w-16 h-px bg-gradient-to-r from-[#7c3aed]/50 via-[#f97316]/50 to-[#fbbf24]/50" />
+                    <div className="w-16 h-px bg-gradient-to-r from-[#7c3aed]/50 via-[#d946ef]/50 to-[#f97316]/50" />
                     <div className="w-1.5 h-1.5 rounded-full bg-[#334155] -ml-px" />
                   </div>
                 )}
