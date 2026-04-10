@@ -40,13 +40,13 @@ export function HeroBackground() {
         }}
       />
 
-      {/* Teal orb — bottom-right */}
+      {/* Orange orb — bottom-right */}
       <motion.div
         animate={{ y: [0, 22, 0], x: [0, -18, 0], opacity: [0.25, 0.55, 0.25] }}
         transition={{ duration: 11, repeat: Infinity, ease: "easeInOut", delay: 2 }}
         className="absolute bottom-[10%] right-[6%] w-72 h-72 rounded-full"
         style={{
-          background: "radial-gradient(circle, rgb(217 70 239 / 0.18) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgb(249 115 22 / 0.22) 0%, transparent 70%)",
           filter: "blur(50px)",
         }}
       />
@@ -62,13 +62,13 @@ export function HeroBackground() {
         }}
       />
 
-      {/* Teal orb — left-center */}
+      {/* Yellow orb — left-center */}
       <motion.div
         animate={{ y: [0, -16, 0], opacity: [0.12, 0.3, 0.12] }}
         transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
         className="absolute top-[55%] left-[3%] w-56 h-56 rounded-full"
         style={{
-          background: "radial-gradient(circle, rgb(217 70 239 / 0.14) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgb(251 191 36 / 0.16) 0%, transparent 70%)",
           filter: "blur(45px)",
         }}
       />

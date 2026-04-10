@@ -21,7 +21,7 @@ export function ShaderSection() {
             />
 
             <div className="relative z-10 text-center px-4 space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-[#d946ef]">
+              <p className="text-xs font-semibold uppercase tracking-widest text-[#f97316]">
                 Real-time intelligence
               </p>
               <h3 className="text-3xl sm:text-4xl font-bold text-white leading-tight">

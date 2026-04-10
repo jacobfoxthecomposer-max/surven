@@ -45,7 +45,8 @@
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.4);
   --shadow-glow-primary: 0 0 20px rgb(124 58 237 / 0.3);
-  --shadow-glow-secondary: 0 0 20px rgb(217 70 239 / 0.3);
+  --shadow-glow-secondary: 0 0 20px rgb(249 115 22 / 0.4);
+  --shadow-glow-thermal: 0 0 20px rgb(251 191 36 / 0.25);
 
   /* Radius */
   --radius-sm: 6px;

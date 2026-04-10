@@ -22,9 +22,9 @@ interface ComparisonChartProps {
 
 const BAR_COLORS = [
   COLORS.primary,
-  "#d946ef",
   "#f97316",
   "#fbbf24",
+  "#ef4444",
 ];
 
 export function ComparisonChart({

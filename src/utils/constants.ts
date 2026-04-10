@@ -23,6 +23,12 @@ export const COLORS = {
   scoreOrange: "#f97316",
   scoreYellow: "#fbbf24",
   scoreGreen: "#fbbf24",
+  // Thermal gradient colors
+  thermal0: "#6d28d9",  // Coolest (deep purple)
+  thermal1: "#7c3aed",  // Cool (purple)
+  thermal2: "#d946ef",  // Cool-warm (magenta)
+  thermal3: "#f97316",  // Warm (orange)
+  thermal4: "#fbbf24",  // Very warm (yellow)
 } as const;
 
 export const ANIMATION = {

@@ -147,7 +147,7 @@ export function FeaturesSection() {
         <ScrollReveal className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold">
             Complete AI visibility{" "}
-            <span className="text-[#d946ef]">intelligence</span>
+            <span className="text-[#f97316]">intelligence</span>
           </h2>
           <p className="mt-4 text-[#cbd5e1] max-w-xl mx-auto text-sm sm:text-base">
             Surven monitors every signal that determines whether AI recommends your
