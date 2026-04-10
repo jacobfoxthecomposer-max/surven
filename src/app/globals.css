@@ -62,6 +62,7 @@
 
   /* Font */
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-ovo), "Georgia", serif;
 }
 
 @theme inline {
@@ -78,6 +79,10 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
 }
 
 /* Scrollbar styling for premium feel */
