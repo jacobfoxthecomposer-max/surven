@@ -6,12 +6,11 @@ import { Card } from "@/components/atoms/Card";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import type { ScanResult, ModelName } from "@/types/database";
 
-const MODELS: ModelName[] = ["chatgpt", "claude", "gemini", "google_search"];
+const MODELS: ModelName[] = ["chatgpt", "claude", "perplexity"];
 const MODEL_LABELS: Record<ModelName, string> = {
   chatgpt: "GPT",
   claude: "Claude",
-  gemini: "Gemini",
-  google_search: "Google",
+  perplexity: "Pplx",
 };
 
 interface CompetitorBenchmarkSectionProps {
