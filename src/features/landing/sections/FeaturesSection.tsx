@@ -105,9 +105,9 @@ function FeatureIcon({
         <motion.div
           animate={{ scale: isOpen ? 1.12 : 1 }}
           transition={{ duration: 0.2 }}
-          className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-700 bg-slate-800 shadow-inner group-hover:border-[#4361ee]/50 group-hover:bg-slate-700 transition-colors duration-200"
+          className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-700 bg-slate-800 shadow-inner group-hover:border-[#7c3aed]/50 group-hover:bg-slate-700 transition-colors duration-200"
         >
-          <Icon className="h-6 w-6 text-[#4361ee]" />
+          <Icon className="h-6 w-6 text-[#7c3aed]" />
         </motion.div>
         <span className="hidden text-center text-xs font-bold text-slate-400 md:block group-hover:text-slate-300 transition-colors">
           {feat.text}
@@ -140,18 +140,18 @@ export function FeaturesSection() {
     <section className="py-24 px-4 bg-[#0f172a]">
       <div className="max-w-5xl mx-auto">
         <ScrollReveal className="text-center mb-4">
-          <span className="text-xs font-semibold uppercase tracking-widest text-[#4361ee]">
+          <span className="text-xs font-semibold uppercase tracking-widest text-[#7c3aed]">
             What we track
           </span>
         </ScrollReveal>
         <ScrollReveal className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold">
             Complete AI visibility{" "}
-            <span className="text-[#06d6a0]">intelligence</span>
+            <span className="text-[#d946ef]">intelligence</span>
           </h2>
           <p className="mt-4 text-[#cbd5e1] max-w-xl mx-auto text-sm sm:text-base">
             Surven monitors every signal that determines whether AI recommends your
-            business. <span className="text-[#4361ee] font-medium">Tap any icon to learn more.</span>
+            business. <span className="text-[#7c3aed] font-medium">Tap any icon to learn more.</span>
           </p>
         </ScrollReveal>
 

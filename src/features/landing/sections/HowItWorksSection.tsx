@@ -23,9 +23,9 @@ const timelineSteps: TimelineStep[] = [
     description:
       "Enter your business name, industry, and location. Optionally add competitors you want to track alongside.",
     icon: <Building2 className="w-7 h-7" />,
-    iconBg: "bg-[#4361ee]",
-    badgeBg: "bg-[#4361ee]",
-    glow: "rgb(67 97 238 / 0.25)",
+    iconBg: "bg-[#7c3aed]",
+    badgeBg: "bg-[#7c3aed]",
+    glow: "rgb(124 58 237 / 0.25)",
   },
   {
     id: 2,
@@ -34,9 +34,9 @@ const timelineSteps: TimelineStep[] = [
     description:
       "Surven generates realistic consumer prompts and queries ChatGPT, Claude, and Perplexity to see who gets recommended.",
     icon: <Target className="w-7 h-7" />,
-    iconBg: "bg-[#06d6a0]",
-    badgeBg: "bg-[#06d6a0]",
-    glow: "rgb(6 214 160 / 0.2)",
+    iconBg: "bg-[#d946ef]",
+    badgeBg: "bg-[#d946ef]",
+    glow: "rgb(217 70 239 / 0.2)",
   },
   {
     id: 3,
@@ -45,9 +45,9 @@ const timelineSteps: TimelineStep[] = [
     description:
       "Get a Visibility Score, per-model breakdown, and the exact prompts that mentioned — or missed — your business.",
     icon: <LineChart className="w-7 h-7" />,
-    iconBg: "bg-[#8b5cf6]",
-    badgeBg: "bg-[#8b5cf6]",
-    glow: "rgb(139 92 246 / 0.2)",
+    iconBg: "bg-[#f97316]",
+    badgeBg: "bg-[#f97316]",
+    glow: "rgb(249 115 22 / 0.2)",
   },
 ];
 
@@ -59,7 +59,7 @@ export function HowItWorksSection() {
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <ScrollReveal className="text-center mb-16">
-          <span className="text-xs font-semibold uppercase tracking-widest text-[#4361ee] mb-3 block">
+          <span className="text-xs font-semibold uppercase tracking-widest text-[#7c3aed] mb-3 block">
             How it works
           </span>
           <h2 className="text-3xl sm:text-4xl font-bold text-white">
@@ -122,7 +122,7 @@ export function HowItWorksSection() {
                 {/* Connector */}
                 {index < timelineSteps.length - 1 && (
                   <div className="hidden md:flex items-center mx-4 flex-shrink-0">
-                    <div className="w-16 h-px bg-gradient-to-r from-[#4361ee]/40 via-[#06d6a0]/40 to-[#8b5cf6]/40" />
+                    <div className="w-16 h-px bg-gradient-to-r from-[#7c3aed]/40 via-[#d946ef]/40 to-[#f97316]/40" />
                     <div className="w-1.5 h-1.5 rounded-full bg-[#334155] -ml-px" />
                   </div>
                 )}

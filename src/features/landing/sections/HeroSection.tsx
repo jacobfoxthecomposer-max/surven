@@ -50,7 +50,7 @@ export function HeroSection() {
           <span
             className="relative"
             style={{
-              background: "linear-gradient(135deg, #4361ee 0%, #06d6a0 100%)",
+              background: "linear-gradient(135deg, #7c3aed 0%, #d946ef 100%)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",

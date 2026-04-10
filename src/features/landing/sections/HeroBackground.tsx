@@ -12,8 +12,8 @@ export function HeroBackground() {
         className="absolute inset-0"
         style={{
           backgroundImage: `
-            linear-gradient(to right, rgb(67 97 238 / 0.07) 1px, transparent 1px),
-            linear-gradient(to bottom, rgb(67 97 238 / 0.07) 1px, transparent 1px)
+            linear-gradient(to right, rgb(124 58 237 / 0.07) 1px, transparent 1px),
+            linear-gradient(to bottom, rgb(124 58 237 / 0.07) 1px, transparent 1px)
           `,
           backgroundSize: "64px 64px",
           maskImage: "radial-gradient(ellipse 90% 80% at 50% 40%, black 20%, transparent 100%)",
@@ -26,7 +26,7 @@ export function HeroBackground() {
         animate={{ opacity: [0.5, 0.9, 0.5], scale: [1, 1.1, 1] }}
         transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
         className="absolute top-[45%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full"
-        style={{ background: "radial-gradient(circle, rgb(67 97 238 / 0.13) 0%, transparent 65%)" }}
+        style={{ background: "radial-gradient(circle, rgb(124 58 237 / 0.13) 0%, transparent 65%)" }}
       />
 
       {/* Blue orb — top-left */}
@@ -35,7 +35,7 @@ export function HeroBackground() {
         transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
         className="absolute top-[12%] left-[8%] w-80 h-80 rounded-full"
         style={{
-          background: "radial-gradient(circle, rgb(67 97 238 / 0.2) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgb(124 58 237 / 0.2) 0%, transparent 70%)",
           filter: "blur(45px)",
         }}
       />
@@ -46,7 +46,7 @@ export function HeroBackground() {
         transition={{ duration: 11, repeat: Infinity, ease: "easeInOut", delay: 2 }}
         className="absolute bottom-[10%] right-[6%] w-72 h-72 rounded-full"
         style={{
-          background: "radial-gradient(circle, rgb(6 214 160 / 0.18) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgb(217 70 239 / 0.18) 0%, transparent 70%)",
           filter: "blur(50px)",
         }}
       />
@@ -57,7 +57,7 @@ export function HeroBackground() {
         transition={{ duration: 13, repeat: Infinity, ease: "easeInOut", delay: 4 }}
         className="absolute top-[18%] right-[12%] w-64 h-64 rounded-full"
         style={{
-          background: "radial-gradient(circle, rgb(67 97 238 / 0.14) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgb(124 58 237 / 0.14) 0%, transparent 70%)",
           filter: "blur(55px)",
         }}
       />
@@ -68,7 +68,7 @@ export function HeroBackground() {
         transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
         className="absolute top-[55%] left-[3%] w-56 h-56 rounded-full"
         style={{
-          background: "radial-gradient(circle, rgb(6 214 160 / 0.14) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgb(217 70 239 / 0.14) 0%, transparent 70%)",
           filter: "blur(45px)",
         }}
       />
@@ -88,8 +88,8 @@ export function HeroBackground() {
           key={i}
           animate={{ opacity: [0, 0.6, 0], y: [0, -12, 0] }}
           transition={{ duration: p.dur, repeat: Infinity, ease: "easeInOut", delay: p.delay }}
-          className="absolute w-1 h-1 rounded-full bg-[#4361ee]"
-          style={{ top: p.top, left: p.left, boxShadow: "0 0 6px 1px rgb(67 97 238 / 0.5)" }}
+          className="absolute w-1 h-1 rounded-full bg-[#7c3aed]"
+          style={{ top: p.top, left: p.left, boxShadow: "0 0 6px 1px rgb(124 58 237 / 0.5)" }}
         />
       ))}
     </div>

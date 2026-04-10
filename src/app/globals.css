@@ -19,22 +19,22 @@
   --color-fg-muted: #94a3b8;
 
   /* Brand accents */
-  --color-primary: #4361ee;
-  --color-primary-hover: #3651d4;
-  --color-secondary: #06d6a0;
-  --color-secondary-hover: #05b889;
+  --color-primary: #7c3aed;
+  --color-primary-hover: #6d28d9;
+  --color-secondary: #d946ef;
+  --color-secondary-hover: #ec4899;
 
   /* Semantic states */
   --color-danger: #ef4444;
   --color-warning: #f97316;
-  --color-success: #06d6a0;
-  --color-info: #4361ee;
+  --color-success: #fbbf24;
+  --color-info: #7c3aed;
 
   /* Score gauge colors */
-  --color-score-red: #ef4444;
+  --color-score-red: #6d28d9;
   --color-score-orange: #f97316;
-  --color-score-yellow: #84cc16;
-  --color-score-green: #06d6a0;
+  --color-score-yellow: #fbbf24;
+  --color-score-green: #fbbf24;
 
   /* Borders & dividers */
   --color-border: #334155;
@@ -44,8 +44,8 @@
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.4);
-  --shadow-glow-primary: 0 0 20px rgb(67 97 238 / 0.3);
-  --shadow-glow-secondary: 0 0 20px rgb(6 214 160 / 0.3);
+  --shadow-glow-primary: 0 0 20px rgb(124 58 237 / 0.3);
+  --shadow-glow-secondary: 0 0 20px rgb(217 70 239 / 0.3);
 
   /* Radius */
   --radius-sm: 6px;
@@ -111,7 +111,7 @@ h1, h2, h3 {
 
 /* Selection styling */
 ::selection {
-  background: rgb(67 97 238 / 0.3);
+  background: rgb(124 58 237 / 0.3);
   color: var(--color-fg);
 }
 
