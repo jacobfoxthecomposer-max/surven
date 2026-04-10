@@ -191,6 +191,11 @@ export async function POST(request: NextRequest) {
       customPrompts?: string[];
     };
 
+  // Force mock mode if FORCE_MOCK_SCAN is set to 'true'
+  if (process.env.FORCE_MOCK_SCAN === "true") {
+    return NextResponse.json({ useMock: true });
+  }
+
   const hasOpenAI = !!process.env.OPENAI_API_KEY;
   const hasClaude = !!process.env.ANTHROPIC_API_KEY;
   const hasGemini = !!process.env.GOOGLE_GEMINI_API_KEY;
