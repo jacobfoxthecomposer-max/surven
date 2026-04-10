@@ -101,11 +101,13 @@ async function queryClaude(prompt: string): Promise<string> {
 }
 
 async function queryGemini(prompt: string): Promise<string> {
+  if (!process.env.GOOGLE_GEMINI_API_KEY) return "";
+
   const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-goog-api-key": process.env.GOOGLE_GEMINI_API_KEY!,
+      "x-goog-api-key": process.env.GOOGLE_GEMINI_API_KEY,
     },
     body: JSON.stringify({
       contents: [{
@@ -125,6 +127,8 @@ async function queryGemini(prompt: string): Promise<string> {
 }
 
 async function queryGoogleSearch(prompt: string): Promise<string> {
+  if (!process.env.GOOGLE_GEMINI_API_KEY) return "";
+
   const searchPrompt = `You are Google Search AI Overview. Answer this search query as if you are the AI results section that appears at the top of Google Search: "${prompt}"
 
   Provide a natural, concise answer as if you are the AI-generated overview in Google Search results.`;
@@ -133,7 +137,7 @@ async function queryGoogleSearch(prompt: string): Promise<string> {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-goog-api-key": process.env.GOOGLE_GEMINI_API_KEY!,
+      "x-goog-api-key": process.env.GOOGLE_GEMINI_API_KEY,
     },
     body: JSON.stringify({
       contents: [{
