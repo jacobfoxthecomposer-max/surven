@@ -12,11 +12,12 @@ const SENTIMENT_STYLES = {
 import { cn } from "@/utils/cn";
 import type { ScanResult, ModelName } from "@/types/database";
 
-const MODEL_ORDER: ModelName[] = ["chatgpt", "claude", "perplexity"];
+const MODEL_ORDER: ModelName[] = ["chatgpt", "claude", "gemini", "google_search"];
 const MODEL_LABELS: Record<ModelName, string> = {
   chatgpt: "GPT",
   claude: "Claude",
-  perplexity: "Pplx",
+  gemini: "Gemini",
+  google_search: "Google",
 };
 
 interface PromptResultItemProps {
