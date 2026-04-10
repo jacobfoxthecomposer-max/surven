@@ -11,9 +11,9 @@ const modelConfig: Record<
   ModelName,
   { icon: typeof MessageSquare; label: string; color: string }
 > = {
-  chatgpt: { icon: MessageSquare, label: "ChatGPT", color: "#7c3aed" },
-  claude: { icon: Brain, label: "Claude", color: "#f97316" },
-  perplexity: { icon: Search, label: "Perplexity", color: "#fbbf24" },
+  chatgpt: { icon: MessageSquare, label: "ChatGPT", color: "#10a37f" },
+  claude: { icon: Brain, label: "Claude", color: "#d97706" },
+  perplexity: { icon: Search, label: "Perplexity", color: "#22d3ee" },
 };
 
 interface ModelBreakdownCardProps {

@@ -187,7 +187,7 @@ function DualBar({
         <div className="flex-1 h-1.5 rounded-full bg-[var(--color-surface-alt)]">
           <motion.div
             className="h-1.5 rounded-full"
-            style={{ backgroundColor: "#f97316" }}
+            style={{ backgroundColor: "#8b5cf6" }}
             initial={{ width: 0 }}
             animate={{ width: `${theirScore}%` }}
             transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
