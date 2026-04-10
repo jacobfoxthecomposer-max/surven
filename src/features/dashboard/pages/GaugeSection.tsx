@@ -55,7 +55,7 @@ export function GaugeSection({
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
               className="absolute inset-0 rounded-full pointer-events-none"
               style={{
-                background: "radial-gradient(circle, rgb(67 97 238 / 0.2) 30%, transparent 70%)",
+                background: "radial-gradient(circle, rgb(124 58 237 / 0.25) 30%, transparent 70%)",
                 filter: "blur(12px)",
               }}
             />
