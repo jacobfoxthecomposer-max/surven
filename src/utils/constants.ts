@@ -48,8 +48,7 @@ export const BREAKPOINTS = {
 export const AI_MODELS = [
   { id: "chatgpt", name: "ChatGPT", color: "#10a37f" },
   { id: "claude", name: "Claude", color: "#d97706" },
-  { id: "gemini", name: "Gemini", color: "#4285f4" },
-  { id: "google_search", name: "Google Search", color: "#ea4335" },
+  { id: "perplexity", name: "Perplexity", color: "#22d3ee" },
 ] as const;
 
 export const INDUSTRIES = [

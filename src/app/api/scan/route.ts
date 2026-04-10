@@ -100,56 +100,23 @@ async function queryClaude(prompt: string): Promise<string> {
   return data.content?.[0]?.text ?? "";
 }
 
-async function queryGemini(prompt: string): Promise<string> {
-  const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent", {
+async function queryPerplexity(prompt: string): Promise<string> {
+  const res = await fetch("https://api.perplexity.ai/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-goog-api-key": process.env.GOOGLE_GEMINI_API_KEY!,
+      Authorization: `Bearer ${process.env.PERPLEXITY_API_KEY}`,
     },
     body: JSON.stringify({
-      contents: [{
-        parts: [{
-          text: prompt,
-        }],
-      }],
-      generationConfig: {
-        temperature: 0,
-        maxOutputTokens: 600,
-      },
+      model: "sonar",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.1,
+      max_tokens: 600,
     }),
   });
   if (!res.ok) return "";
   const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-}
-
-async function queryGoogleSearch(prompt: string): Promise<string> {
-  const searchPrompt = `You are Google Search AI Overview. Answer this search query as if you are the AI results section that appears at the top of Google Search: "${prompt}"
-
-  Provide a natural, concise answer as if you are the AI-generated overview in Google Search results.`;
-
-  const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-goog-api-key": process.env.GOOGLE_GEMINI_API_KEY!,
-    },
-    body: JSON.stringify({
-      contents: [{
-        parts: [{
-          text: searchPrompt,
-        }],
-      }],
-      generationConfig: {
-        temperature: 0,
-        maxOutputTokens: 600,
-      },
-    }),
-  });
-  if (!res.ok) return "";
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  return data.choices?.[0]?.message?.content ?? "";
 }
 
 function isMentioned(response: string, name: string): boolean {
@@ -189,9 +156,9 @@ export async function POST(request: NextRequest) {
 
   const hasOpenAI = !!process.env.OPENAI_API_KEY;
   const hasClaude = !!process.env.ANTHROPIC_API_KEY;
-  const hasGemini = !!process.env.GOOGLE_GEMINI_API_KEY;
+  const hasPerplexity = !!process.env.PERPLEXITY_API_KEY;
 
-  if (!hasOpenAI && !hasClaude && !hasGemini) {
+  if (!hasOpenAI && !hasClaude && !hasPerplexity) {
     return NextResponse.json({ useMock: true });
   }
 
@@ -199,8 +166,7 @@ export async function POST(request: NextRequest) {
   const models: { name: ModelName; enabled: boolean }[] = [
     { name: "chatgpt", enabled: hasOpenAI },
     { name: "claude", enabled: hasClaude },
-    { name: "gemini", enabled: hasGemini },
-    { name: "google_search", enabled: hasGemini },
+    { name: "perplexity", enabled: hasPerplexity },
   ];
 
   const tasks: Promise<RawResult>[] = [];
@@ -214,8 +180,7 @@ export async function POST(request: NextRequest) {
           try {
             if (model === "chatgpt") responseText = await queryOpenAI(prompt);
             else if (model === "claude") responseText = await queryClaude(prompt);
-            else if (model === "gemini") responseText = await queryGemini(prompt);
-            else if (model === "google_search") responseText = await queryGoogleSearch(prompt);
+            else if (model === "perplexity") responseText = await queryPerplexity(prompt);
           } catch {
             // empty response = not mentioned
           }

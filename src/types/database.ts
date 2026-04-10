@@ -36,7 +36,7 @@ export interface ScanResult {
   id: string;
   scan_id: string;
   prompt_text: string;
-  model_name: "chatgpt" | "claude" | "gemini" | "google_search";
+  model_name: "chatgpt" | "claude" | "perplexity";
   response_text: string;
   business_mentioned: boolean;
   competitor_mentions: Record<string, boolean>;
