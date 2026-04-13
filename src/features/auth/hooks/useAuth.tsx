@@ -48,12 +48,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = useCallback(async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
+    // Force sync session after signup
+    const { data: sessionData } = await supabase.auth.getSession();
+    setSession(sessionData.session);
+    setUser(sessionData.session?.user ?? null);
     return data;
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
+    // Force sync session after login
+    const { data: sessionData } = await supabase.auth.getSession();
+    setSession(sessionData.session);
+    setUser(sessionData.session?.user ?? null);
     return data;
   }, []);
 
