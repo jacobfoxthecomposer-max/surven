@@ -1,5 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createServerClient as createSupabaseSSR } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { createServerClient } from "@/services/supabaseServer";
+import { z } from "zod";
 import type { ModelName } from "@/types/database";
+
+const SCAN_LIMITS = { free: 5, premium: 20, admin: Infinity } as const;
+
+const ScanRequestSchema = z.object({
+  businessName: z.string().min(1).max(200),
+  industry: z.string().min(1).max(100),
+  city: z.string().min(1).max(100),
+  state: z.string().min(1).max(100),
+  competitors: z.array(z.string().max(100)).max(20),
+  customPrompts: z.array(z.string().max(500)).max(20).default([]),
+});
 
 type Sentiment = "positive" | "neutral" | "negative";
 
@@ -144,15 +159,83 @@ type RawResult = {
 };
 
 export async function POST(request: NextRequest) {
-  const { businessName, industry, city, state, competitors, customPrompts = [] } =
-    await request.json() as {
-      businessName: string;
-      industry: string;
-      city: string;
-      state: string;
-      competitors: string[];
-      customPrompts?: string[];
-    };
+  // Cron job bypasses user auth — all other callers must be logged in
+  const isCron =
+    request.headers.get("authorization") === `Bearer ${process.env.CRON_SECRET}`;
+
+  if (!isCron) {
+    // Verify user session from cookies
+    const cookieStore = await cookies();
+    const supabaseAuth = createSupabaseSSR(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll() {},
+        },
+      }
+    );
+
+    const {
+      data: { user },
+    } = await supabaseAuth.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check and enforce daily scan limit
+    const supabaseAdmin = createServerClient();
+
+    const { data: profile } = await supabaseAdmin
+      .from("user_profiles")
+      .select("plan")
+      .eq("user_id", user.id)
+      .single();
+
+    const plan = (profile?.plan ?? "free") as keyof typeof SCAN_LIMITS;
+    const limit = SCAN_LIMITS[plan] ?? SCAN_LIMITS.free;
+
+    if (limit !== Infinity) {
+      const today = new Date().toISOString().split("T")[0];
+
+      const { data: currentCount } = await supabaseAdmin
+        .from("scan_counts")
+        .select("count")
+        .eq("user_id", user.id)
+        .eq("date", today)
+        .single();
+
+      if ((currentCount?.count ?? 0) >= limit) {
+        return NextResponse.json(
+          {
+            error: `Daily scan limit reached (${limit} scans/day on ${plan} plan).`,
+            limit,
+            plan,
+          },
+          { status: 429 }
+        );
+      }
+
+      // Atomically increment — safe against simultaneous requests
+      await supabaseAdmin.rpc("increment_scan_count", {
+        p_user_id: user.id,
+        p_date: today,
+      });
+    }
+  }
+
+  // Validate input
+  const body = await request.json();
+  const parse = ScanRequestSchema.safeParse(body);
+  if (!parse.success) {
+    return NextResponse.json({ error: "Invalid request data" }, { status: 400 });
+  }
+
+  const { businessName, industry, city, state, competitors, customPrompts } = parse.data;
 
   const hasOpenAI = !!process.env.OPENAI_API_KEY;
   const hasClaude = !!process.env.ANTHROPIC_API_KEY;
@@ -198,7 +281,7 @@ export async function POST(request: NextRequest) {
             response_text: responseText,
             business_mentioned: businessMentioned,
             competitor_mentions: competitorMentions,
-            sentiment: null as Sentiment | null, // filled in below
+            sentiment: null as Sentiment | null,
             citations: responseText ? extractCitations(responseText) : null,
           };
         })()
@@ -208,7 +291,6 @@ export async function POST(request: NextRequest) {
 
   const results = await Promise.all(tasks);
 
-  // Run sentiment analysis in parallel for all mentions
   await Promise.all(
     results.map(async (r) => {
       if (r.business_mentioned && r.response_text) {
@@ -220,15 +302,13 @@ export async function POST(request: NextRequest) {
   const mentionCount = results.filter((r) => r.business_mentioned).length;
   const visibilityScore = Math.round((mentionCount / results.length) * 100);
 
-  // Compute per-model visibility scores
   const enabledModels = models.filter((m) => m.enabled);
   const modelScores: Record<string, number> = {};
   for (const { name } of enabledModels) {
     const modelResults = results.filter((r) => r.model_name === name);
     const mentioned = modelResults.filter((r) => r.business_mentioned).length;
-    modelScores[name] = modelResults.length > 0
-      ? Math.round((mentioned / modelResults.length) * 100)
-      : 0;
+    modelScores[name] =
+      modelResults.length > 0 ? Math.round((mentioned / modelResults.length) * 100) : 0;
   }
 
   return NextResponse.json({ results, visibilityScore, modelScores });

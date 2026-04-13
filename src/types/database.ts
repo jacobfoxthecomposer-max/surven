@@ -1,3 +1,9 @@
+export interface UserProfile {
+  user_id: string;
+  plan: "free" | "premium" | "admin";
+  created_at: string;
+}
+
 export interface Business {
   id: string;
   user_id: string;
