@@ -32,6 +32,9 @@ export async function createScanForBusiness(
           modelScores: json.modelScores,
         };
       }
+    } else if (res.status === 429) {
+      const json = await res.json();
+      throw new Error(json.error ?? "Scan limit reached. Please try again later.");
     } else {
       scanOutput = runMockScan({ ...input, customPrompts });
     }
