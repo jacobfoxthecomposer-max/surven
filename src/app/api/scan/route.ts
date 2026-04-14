@@ -203,13 +203,37 @@ export async function POST(request: NextRequest) {
       const today = new Date().toISOString().split("T")[0];
 
       // Single atomic call: increments only if under the limit, returns -1 if blocked
-      const { data: newCount } = await supabaseAdmin.rpc("try_increment_scan_count", {
+      const { data: newCount, error: rpcError } = await supabaseAdmin.rpc("try_increment_scan_count", {
         p_user_id: user.id,
         p_date: today,
         p_limit: limit,
       });
 
-      if (newCount === -1) {
+      if (rpcError || newCount === null) {
+        // Function failed — fall back to a simple count check
+        const { data: currentCount } = await supabaseAdmin
+          .from("scan_counts")
+          .select("count")
+          .eq("user_id", user.id)
+          .eq("date", today)
+          .single();
+
+        if ((currentCount?.count ?? 0) >= limit) {
+          return NextResponse.json(
+            {
+              error: `Daily scan limit reached (${limit} scans/day on ${plan} plan).`,
+              limit,
+              plan,
+            },
+            { status: 429 }
+          );
+        }
+
+        await supabaseAdmin.from("scan_counts").upsert(
+          { user_id: user.id, date: today, count: (currentCount?.count ?? 0) + 1 },
+          { onConflict: "user_id,date" }
+        );
+      } else if (newCount === -1) {
         return NextResponse.json(
           {
             error: `Daily scan limit reached (${limit} scans/day on ${plan} plan).`,
@@ -218,9 +242,7 @@ export async function POST(request: NextRequest) {
           },
           { status: 429 }
         );
-      }
-
-      if (newCount === -2) {
+      } else if (newCount === -2) {
         return NextResponse.json(
           { error: "Please wait a few seconds between scans." },
           { status: 429 }
