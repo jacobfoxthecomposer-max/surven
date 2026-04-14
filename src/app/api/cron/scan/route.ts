@@ -27,6 +27,8 @@ export async function GET(req: NextRequest) {
 
   const scanResults: { businessId: string; status: string; error?: string }[] = [];
 
+  const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
   for (const business of businesses ?? []) {
     const competitors = (business.competitors as { name: string }[] | null) ?? [];
     const customPrompts = (business.search_prompts as { prompt_text: string }[] | null) ?? [];
@@ -108,6 +110,9 @@ export async function GET(req: NextRequest) {
     } else {
       scanResults.push({ businessId: business.id, status: "success" });
     }
+
+    // Throttle: wait 2 seconds between businesses to avoid hitting API rate limits
+    await delay(2000);
   }
 
   return NextResponse.json({

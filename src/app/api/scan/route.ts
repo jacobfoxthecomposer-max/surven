@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check and enforce daily scan limit
+    // Check and enforce daily scan limit (atomic — no race condition)
     const supabaseAdmin = createServerClient();
 
     const { data: profile } = await supabaseAdmin
@@ -202,14 +202,14 @@ export async function POST(request: NextRequest) {
     if (limit !== Infinity) {
       const today = new Date().toISOString().split("T")[0];
 
-      const { data: currentCount } = await supabaseAdmin
-        .from("scan_counts")
-        .select("count")
-        .eq("user_id", user.id)
-        .eq("date", today)
-        .single();
+      // Single atomic call: increments only if under the limit, returns -1 if blocked
+      const { data: newCount } = await supabaseAdmin.rpc("try_increment_scan_count", {
+        p_user_id: user.id,
+        p_date: today,
+        p_limit: limit,
+      });
 
-      if ((currentCount?.count ?? 0) >= limit) {
+      if (newCount === -1) {
         return NextResponse.json(
           {
             error: `Daily scan limit reached (${limit} scans/day on ${plan} plan).`,
@@ -220,11 +220,12 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Atomically increment — safe against simultaneous requests
-      await supabaseAdmin.rpc("increment_scan_count", {
-        p_user_id: user.id,
-        p_date: today,
-      });
+      if (newCount === -2) {
+        return NextResponse.json(
+          { error: "Please wait a few seconds between scans." },
+          { status: 429 }
+        );
+      }
     }
   }
 
