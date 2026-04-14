@@ -15,30 +15,29 @@ export async function createScanForBusiness(
     modelScores?: Record<string, number>;
   };
 
-  try {
-    const res = await fetch("/api/scan", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...input, customPrompts }),
-    });
-    if (res.ok) {
-      const json = await res.json();
-      if (json.useMock) {
-        scanOutput = runMockScan({ ...input, customPrompts });
-      } else {
-        scanOutput = {
-          visibilityScore: json.visibilityScore,
-          results: json.results,
-          modelScores: json.modelScores,
-        };
-      }
-    } else if (res.status === 429) {
-      const json = await res.json();
-      throw new Error(json.error ?? "Scan limit reached. Please try again later.");
-    } else {
+  const res = await fetch("/api/scan", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...input, customPrompts }),
+  });
+
+  if (res.status === 429) {
+    const json = await res.json();
+    throw new Error(json.error ?? "Scan limit reached. Please try again later.");
+  }
+
+  if (res.ok) {
+    const json = await res.json();
+    if (json.useMock) {
       scanOutput = runMockScan({ ...input, customPrompts });
+    } else {
+      scanOutput = {
+        visibilityScore: json.visibilityScore,
+        results: json.results,
+        modelScores: json.modelScores,
+      };
     }
-  } catch {
+  } else {
     scanOutput = runMockScan({ ...input, customPrompts });
   }
 
