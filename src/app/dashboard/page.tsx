@@ -40,8 +40,8 @@ export default function DashboardPage() {
     try {
       await runScan();
       toast("Scan complete!", "success");
-    } catch {
-      toast("Scan failed. Please try again.", "error");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Scan failed. Please try again.", "error");
     }
   }
 

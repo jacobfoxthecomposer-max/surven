@@ -14,6 +14,7 @@ export function useScan(business: Business | null, competitors: Competitor[]) {
   const { prompts } = useSearchPrompts(business?.id);
   const queryClient = useQueryClient();
   const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
 
   const latestScanQuery = useQuery<ScanWithResults | null>({
     queryKey: ["latestScan", business?.id],
@@ -31,6 +32,7 @@ export function useScan(business: Business | null, competitors: Competitor[]) {
     if (!business || scanning) return;
 
     setScanning(true);
+    setScanError(null);
     try {
       await createScanForBusiness(
         business.id,
@@ -47,6 +49,9 @@ export function useScan(business: Business | null, competitors: Competitor[]) {
       // Invalidate queries to refetch fresh data
       await queryClient.invalidateQueries({ queryKey: ["latestScan", business.id] });
       await queryClient.invalidateQueries({ queryKey: ["scanHistory", business.id] });
+    } catch (err) {
+      setScanError(err instanceof Error ? err.message : "Scan failed. Please try again.");
+      throw err;
     } finally {
       setScanning(false);
     }
@@ -56,6 +61,7 @@ export function useScan(business: Business | null, competitors: Competitor[]) {
     latestScan: latestScanQuery.data ?? null,
     history: historyQuery.data ?? [],
     scanning,
+    scanError,
     isLoading: latestScanQuery.isLoading,
     runScan,
   };
