@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { MessageSquare, Brain, Search } from "lucide-react";
+import { MessageSquare, Brain, Globe, Globe2 } from "lucide-react";
 import { Badge } from "@/components/atoms/Badge";
 import { Card } from "@/components/atoms/Card";
 import type { ModelName } from "@/types/database";
@@ -13,7 +13,8 @@ const modelConfig: Record<
 > = {
   chatgpt: { icon: MessageSquare, label: "ChatGPT", color: "#10a37f" },
   claude: { icon: Brain, label: "Claude", color: "#d97706" },
-  perplexity: { icon: Search, label: "Perplexity", color: "#22d3ee" },
+  gemini: { icon: Globe, label: "Gemini", color: "#4285F4" },
+  google_ai: { icon: Globe2, label: "Google AI", color: "#34A853" },
 };
 
 interface ModelBreakdownCardProps {

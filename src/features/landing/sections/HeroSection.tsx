@@ -68,7 +68,7 @@ export function HeroSection() {
           transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
           className="text-lg sm:text-xl text-[var(--color-fg-secondary)] max-w-2xl mx-auto"
         >
-          Surven tracks your visibility across ChatGPT, Claude, Perplexity, and more — so
+          Surven tracks your visibility across ChatGPT, Claude, Gemini, Google AI, and more — so
           you can show up where your customers are searching.
         </motion.p>
 

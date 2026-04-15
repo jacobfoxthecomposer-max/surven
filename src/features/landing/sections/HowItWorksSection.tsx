@@ -32,7 +32,7 @@ const timelineSteps: TimelineStep[] = [
     number: "02",
     title: "Run a scan",
     description:
-      "Surven generates realistic consumer prompts and queries ChatGPT, Claude, and Perplexity to see who gets recommended.",
+      "Surven generates realistic consumer prompts and queries ChatGPT, Claude, Gemini, and Google AI to see who gets recommended.",
     icon: <Target className="w-7 h-7" />,
     iconBg: "bg-[#d946ef]",
     badgeBg: "bg-[#d946ef]",

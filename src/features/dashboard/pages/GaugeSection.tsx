@@ -101,7 +101,7 @@ export function GaugeSection({
               transition={{ duration: 0.25 }}
               className="text-xs text-[var(--color-primary)] overflow-hidden"
             >
-              Querying ChatGPT, Claude &amp; Perplexity
+              Querying ChatGPT, Claude, Gemini &amp; Google AI
               <motion.span
                 animate={{ opacity: [1, 0, 1] }}
                 transition={{ duration: 1.2, repeat: Infinity }}

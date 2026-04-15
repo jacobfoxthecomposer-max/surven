@@ -17,14 +17,16 @@ const ovo = Ovo({
 export const metadata: Metadata = {
   title: "Surven — AI Visibility Tracker",
   description:
-    "Track your business visibility across ChatGPT, Claude, Perplexity, and more. See if AI is recommending your business.",
+    "Track your business visibility across ChatGPT, Claude, Gemini, Google AI, and more. See if AI is recommending your business.",
   keywords: [
     "AI visibility",
     "GEO",
     "generative engine optimization",
     "ChatGPT",
     "Claude",
-    "Perplexity",
+    "Gemini",
+    "Google AI",
+    "Google AI Overview",
   ],
 };
 

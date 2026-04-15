@@ -115,23 +115,36 @@ async function queryClaude(prompt: string): Promise<string> {
   return data.content?.[0]?.text ?? "";
 }
 
-async function queryPerplexity(prompt: string): Promise<string> {
-  const res = await fetch("https://api.perplexity.ai/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.PERPLEXITY_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: "sonar",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.1,
-      max_tokens: 600,
-    }),
-  });
+async function queryGemini(prompt: string): Promise<string> {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GOOGLE_GEMINI_API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0, maxOutputTokens: 600 },
+      }),
+    }
+  );
   if (!res.ok) return "";
   const data = await res.json();
-  return data.choices?.[0]?.message?.content ?? "";
+  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+}
+
+async function queryGoogleAI(prompt: string): Promise<string> {
+  // TODO: Configure SERP API service (e.g. SerpAPI, ValueSERP, Bright Data)
+  // to extract Google AI Overview text. Swap the endpoint and response parsing here.
+  const SERP_API_ENDPOINT = "https://serpapi.com/search.json"; // <-- change if using different provider
+  const res = await fetch(
+    `${SERP_API_ENDPOINT}?engine=google&q=${encodeURIComponent(prompt)}&api_key=${process.env.GOOGLE_AI_OVERVIEW_API_KEY}`,
+    { method: "GET" }
+  );
+  if (!res.ok) return "";
+  const data = await res.json();
+  // TODO: Verify response shape matches your SERP provider's AI Overview format
+  const blocks: { snippet?: string }[] = data.ai_overview?.text_blocks ?? [];
+  return blocks.map((b) => b.snippet ?? "").join(" ").trim();
 }
 
 function isMentioned(response: string, name: string): boolean {
@@ -262,9 +275,10 @@ export async function POST(request: NextRequest) {
 
   const hasOpenAI = !!process.env.OPENAI_API_KEY;
   const hasClaude = !!process.env.ANTHROPIC_API_KEY;
-  const hasPerplexity = !!process.env.PERPLEXITY_API_KEY;
+  const hasGemini = !!process.env.GOOGLE_GEMINI_API_KEY;
+  const hasGoogleAI = !!process.env.GOOGLE_AI_OVERVIEW_API_KEY;
 
-  if (!hasOpenAI && !hasClaude && !hasPerplexity) {
+  if (!hasOpenAI && !hasClaude && !hasGemini && !hasGoogleAI) {
     return NextResponse.json({ useMock: true });
   }
 
@@ -272,7 +286,8 @@ export async function POST(request: NextRequest) {
   const models: { name: ModelName; enabled: boolean }[] = [
     { name: "chatgpt", enabled: hasOpenAI },
     { name: "claude", enabled: hasClaude },
-    { name: "perplexity", enabled: hasPerplexity },
+    { name: "gemini", enabled: hasGemini },
+    { name: "google_ai", enabled: hasGoogleAI },
   ];
 
   const tasks: Promise<RawResult>[] = [];
@@ -286,7 +301,8 @@ export async function POST(request: NextRequest) {
           try {
             if (model === "chatgpt") responseText = await queryOpenAI(prompt);
             else if (model === "claude") responseText = await queryClaude(prompt);
-            else if (model === "perplexity") responseText = await queryPerplexity(prompt);
+            else if (model === "gemini") responseText = await queryGemini(prompt);
+            else if (model === "google_ai") responseText = await queryGoogleAI(prompt);
           } catch {
             // empty response = not mentioned
           }

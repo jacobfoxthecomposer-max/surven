@@ -19,7 +19,7 @@ const features = [
     icon: Bot,
     text: "Multi-Model",
     tooltip:
-      "We check every major AI tool — ChatGPT, Claude, and Perplexity — all at once. Different AI tools give different answers, so we cover all of them so nothing slips through.",
+      "We check every major AI tool — ChatGPT, Claude, Gemini, and Google AI — all at once. Different AI tools give different answers, so we cover all of them so nothing slips through.",
   },
   {
     key: "prompts",

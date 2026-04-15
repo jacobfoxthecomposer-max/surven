@@ -26,7 +26,7 @@ const PROMPT_TEMPLATES = [
   "Which {industry}s in {location} do you recommend for someone new to the area?",
 ];
 
-const MODELS: ModelName[] = ["chatgpt", "claude", "perplexity"];
+const MODELS: ModelName[] = ["chatgpt", "claude", "gemini", "google_ai"];
 
 function generatePrompts(industry: string, city: string, state: string): string[] {
   const location = `${city}, ${state}`;
