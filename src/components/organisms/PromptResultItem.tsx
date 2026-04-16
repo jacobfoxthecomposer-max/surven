@@ -124,9 +124,18 @@ export function PromptResultItem({
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-[var(--color-fg-muted)] leading-relaxed whitespace-pre-line">
-                      {highlightBusiness(result.response_text, businessName)}
-                    </p>
+                    <div className="text-xs text-[var(--color-fg-muted)] leading-relaxed whitespace-pre-line max-h-[200px] overflow-y-auto">
+                      {result.response_text ? (
+                        highlightBusiness(result.response_text, businessName)
+                      ) : (
+                        <span className="italic">No response</span>
+                      )}
+                    </div>
+                    {result.response_text && result.response_text.length >= 2900 && (
+                      <p className="text-[10px] text-[var(--color-fg-muted)] italic mt-1">
+                        [Response truncated at 3000 characters]
+                      </p>
+                    )}
                   </div>
                 );
               })}

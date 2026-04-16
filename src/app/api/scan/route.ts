@@ -76,75 +76,187 @@ function generatePrompts(
   return [...generated, ...customPrompts];
 }
 
+function parseOpenAIResponse(data: unknown): string | null {
+  try {
+    if (!data || typeof data !== "object") return null;
+    const obj = data as Record<string, unknown>;
+    const content = (obj.choices as unknown[])?.[0] && ((obj.choices as Record<string, unknown>[])[0].message as Record<string, unknown>)?.content;
+    return typeof content === "string" && content.length > 0 ? content : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseClaudeResponse(data: unknown): string | null {
+  try {
+    if (!data || typeof data !== "object") return null;
+    const obj = data as Record<string, unknown>;
+    const content = (obj.content as unknown[])?.[0] && ((obj.content as Record<string, unknown>[])[0])?.text;
+    return typeof content === "string" && content.length > 0 ? content : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseGeminiResponse(data: unknown): string | null {
+  try {
+    if (!data || typeof data !== "object") return null;
+    const obj = data as Record<string, unknown>;
+    const candidates = obj.candidates as Record<string, unknown>[] | undefined;
+    const content = candidates?.[0]?.content as Record<string, unknown> | undefined;
+    const parts = content?.parts as Record<string, unknown>[] | undefined;
+    const text = parts?.[0]?.text;
+    return typeof text === "string" && text.length > 0 ? text : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseGoogleAIResponse(data: unknown): string | null {
+  try {
+    if (!data || typeof data !== "object") return null;
+    const obj = data as Record<string, unknown>;
+    const blocks = (obj.ai_overview as Record<string, unknown>)?.text_blocks;
+    if (!Array.isArray(blocks)) return null;
+    const text = blocks
+      .map((b: unknown) => {
+        if (typeof b === "object" && b !== null && "snippet" in b) {
+          return (b as { snippet?: unknown }).snippet;
+        }
+        return "";
+      })
+      .filter((s: unknown) => typeof s === "string")
+      .join(" ")
+      .trim();
+    return text.length > 0 ? text : null;
+  } catch {
+    return null;
+  }
+}
+
+function capAndCleanResponse(text: string): string {
+  if (!text || typeof text !== "string") return "";
+  return text.slice(0, 3000).trim();
+}
+
+function sanitizeResponse(text: string): string {
+  if (!text) return "";
+  // Remove null bytes and control characters (except \n, \r, \t)
+  return text.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F]/g, "").trim();
+}
+
 async function queryOpenAI(prompt: string): Promise<string> {
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0,
-      max_tokens: 600,
-    }),
-  });
-  if (!res.ok) return "";
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content ?? "";
+  if (!process.env.OPENAI_API_KEY) return "";
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0,
+        max_tokens: 600,
+      }),
+    });
+    if (!res.ok) return "";
+    const data = await res.json();
+    const parsed = parseOpenAIResponse(data);
+    if (!parsed) {
+      console.debug("[Tracker] OpenAI: parsing failed or empty response");
+      return "";
+    }
+    return sanitizeResponse(capAndCleanResponse(parsed));
+  } catch (e) {
+    console.debug("[Tracker] OpenAI error:", e instanceof Error ? e.message : "unknown");
+    return "";
+  }
 }
 
 async function queryClaude(prompt: string): Promise<string> {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": process.env.ANTHROPIC_API_KEY!,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 600,
-      temperature: 0,
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-  if (!res.ok) return "";
-  const data = await res.json();
-  return data.content?.[0]?.text ?? "";
+  if (!process.env.ANTHROPIC_API_KEY) return "";
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 600,
+        temperature: 0,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    if (!res.ok) return "";
+    const data = await res.json();
+    const parsed = parseClaudeResponse(data);
+    if (!parsed) {
+      console.debug("[Tracker] Claude: parsing failed or empty response");
+      return "";
+    }
+    return sanitizeResponse(capAndCleanResponse(parsed));
+  } catch (e) {
+    console.debug("[Tracker] Claude error:", e instanceof Error ? e.message : "unknown");
+    return "";
+  }
 }
 
 async function queryGemini(prompt: string): Promise<string> {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GOOGLE_GEMINI_API_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0, maxOutputTokens: 600 },
-      }),
+  if (!process.env.GOOGLE_GEMINI_API_KEY) return "";
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GOOGLE_GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0, maxOutputTokens: 600 },
+        }),
+      }
+    );
+    if (!res.ok) return "";
+    const data = await res.json();
+    const parsed = parseGeminiResponse(data);
+    if (!parsed) {
+      console.debug("[Tracker] Gemini: parsing failed or empty response");
+      return "";
     }
-  );
-  if (!res.ok) return "";
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    return sanitizeResponse(capAndCleanResponse(parsed));
+  } catch (e) {
+    console.debug("[Tracker] Gemini error:", e instanceof Error ? e.message : "unknown");
+    return "";
+  }
 }
 
 async function queryGoogleAI(prompt: string): Promise<string> {
-  // TODO: Configure SERP API service (e.g. SerpAPI, ValueSERP, Bright Data)
-  // to extract Google AI Overview text. Swap the endpoint and response parsing here.
-  const SERP_API_ENDPOINT = "https://serpapi.com/search.json"; // <-- change if using different provider
-  const res = await fetch(
-    `${SERP_API_ENDPOINT}?engine=google&q=${encodeURIComponent(prompt)}&api_key=${process.env.GOOGLE_AI_OVERVIEW_API_KEY}`,
-    { method: "GET" }
-  );
-  if (!res.ok) return "";
-  const data = await res.json();
-  // TODO: Verify response shape matches your SERP provider's AI Overview format
-  const blocks: { snippet?: string }[] = data.ai_overview?.text_blocks ?? [];
-  return blocks.map((b) => b.snippet ?? "").join(" ").trim();
+  if (!process.env.GOOGLE_AI_OVERVIEW_API_KEY) return "";
+  try {
+    // TODO: Configure SERP API service (e.g. SerpAPI, ValueSERP, Bright Data)
+    // to extract Google AI Overview text. Swap the endpoint and response parsing here.
+    const SERP_API_ENDPOINT = "https://serpapi.com/search.json"; // <-- change if using different provider
+    const res = await fetch(
+      `${SERP_API_ENDPOINT}?engine=google&q=${encodeURIComponent(prompt)}&api_key=${process.env.GOOGLE_AI_OVERVIEW_API_KEY}`,
+      { method: "GET" }
+    );
+    if (!res.ok) return "";
+    const data = await res.json();
+    // TODO: Verify response shape matches your SERP provider's AI Overview format
+    const parsed = parseGoogleAIResponse(data);
+    if (!parsed) {
+      console.debug("[Tracker] Google AI: parsing failed or empty response");
+      return "";
+    }
+    return sanitizeResponse(capAndCleanResponse(parsed));
+  } catch (e) {
+    console.debug("[Tracker] Google AI error:", e instanceof Error ? e.message : "unknown");
+    return "";
+  }
 }
 
 function isMentioned(response: string, name: string): boolean {
