@@ -123,22 +123,25 @@ export function runMockScan(input: MockScanInput): MockScanOutput {
   const hash = hashString(`${businessName}|${industry}|${city}|${state}`);
   const baseScore = 22 + (hash % 57); // always 22–78% for this business
 
-  // Determine how many of the 18 slots count as "mentioned" to match the base score
+  // Determine how many slots count as "mentioned" to match the base score
   const total = prompts.length * MODELS.length;
   const targetMentions = Math.round((baseScore / 100) * total);
 
-  // Assign mentions to specific prompt+model slots using the hash so it's deterministic
+  // Use a per-scan seed so which specific model/prompt slots vary each scan
+  // while the total mention count (and thus visibility score) stays stable
+  const scanSeed = Math.floor(Math.random() * 1000000);
+
   const mentionSlots = new Set<number>();
   let attempt = 0;
   while (mentionSlots.size < targetMentions) {
-    const slot = hashString(`${hash}|${attempt++}`) % total;
+    const slot = hashString(`${hash}|${scanSeed}|${attempt++}`) % total;
     mentionSlots.add(slot);
   }
 
-  // Similarly assign competitor mentions per slot
+  // Similarly vary competitor mentions per scan
   const competitorSlotMaps: Record<string, Set<number>> = {};
   for (const comp of competitors) {
-    const compHash = hashString(`${hash}|${comp}`);
+    const compHash = hashString(`${hash}|${comp}|${scanSeed}`);
     const compMentions = new Set<number>();
     let ca = 0;
     const compTarget = Math.round(0.35 * total);
