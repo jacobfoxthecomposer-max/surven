@@ -41,7 +41,7 @@ export const Radar = ({ className }: { className?: string }) => {
         style={{ transformOrigin: "right center" }}
         className="animate-radar-spin absolute right-1/2 top-1/2 z-40 flex h-[5px] w-[400px] items-end justify-center overflow-hidden bg-transparent"
       >
-        <div className="relative z-40 h-[1px] w-full bg-gradient-to-r from-transparent via-sky-600 to-transparent" />
+        <div className="relative z-40 h-[1px] w-full" style={{ background: "linear-gradient(to right, transparent, #96A283, transparent)" }} />
       </div>
       {/* Concentric circles */}
       {circles.map((_, idx) => (
@@ -49,7 +49,7 @@ export const Radar = ({ className }: { className?: string }) => {
           style={{
             height: `${(idx + 1) * 5}rem`,
             width: `${(idx + 1) * 5}rem`,
-            border: `1px solid rgba(71, 85, 105, ${1 - (idx + 1) * 0.1})`,
+            border: `1px solid rgba(150, 162, 131, ${Math.max(0.05, 0.55 - (idx + 1) * 0.06)})`,
           }}
           key={`circle-${idx}`}
           idx={idx}

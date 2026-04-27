@@ -143,6 +143,15 @@ export function HeroSection() {
         />
       </div>
 
+      {/* Bottom fade — blends hero grid into next section */}
+      <div
+        className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none"
+        style={{
+          height: "140px",
+          background: "linear-gradient(to bottom, transparent, var(--color-bg))",
+        }}
+      />
+
       {/* Content */}
       <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center gap-10">
         {/* Eyebrow */}

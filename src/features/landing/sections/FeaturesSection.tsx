@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollReveal } from "@/components/molecules/ScrollReveal";
+import { Radar } from "@/components/ui/radar-effect";
 import { Eye, Bot, Search, TrendingUp, Zap, BarChart3, Link2 } from "lucide-react";
 
 const features = [
@@ -153,7 +154,7 @@ export function FeaturesSection() {
         <ScrollReveal>
           <div
             ref={sectionRef}
-            className="relative flex h-[360px] w-full flex-col items-center justify-center space-y-8 overflow-visible"
+            className="relative flex h-[420px] w-full flex-col items-center justify-center space-y-8 overflow-visible"
           >
             {/* Row 1 — 3 icons */}
             <div className="mx-auto w-full max-w-3xl">
@@ -197,7 +198,8 @@ export function FeaturesSection() {
               </div>
             </div>
 
-            <div className="absolute bottom-0 h-px w-full bg-[var(--color-border)]" />
+            <Radar className="absolute -bottom-12" />
+            <div className="absolute bottom-0 z-[41] h-px w-full" style={{ background: "linear-gradient(to right, transparent, rgba(150,162,131,0.4), transparent)" }} />
           </div>
         </ScrollReveal>
       </div>
