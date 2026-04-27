@@ -39,7 +39,7 @@ export default function LoginPage() {
     try {
       await signIn(data.email, data.password);
       toast("Welcome back!", "success");
-      router.push("/dashboard");
+      // navigation handled by useEffect once user state commits
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Login failed. Please try again.";
