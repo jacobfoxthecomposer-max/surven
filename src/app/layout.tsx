@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Ovo } from "next/font/google";
+import { Inter, Cormorant_Garamond } from "next/font/google";
 import { Providers } from "@/components/layouts/Providers";
 import "./globals.css";
 
@@ -8,10 +8,11 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
-const ovo = Ovo({
+const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
-  weight: "400",
-  variable: "--font-ovo",
+  weight: ["300", "400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-cormorant",
 });
 
 export const metadata: Metadata = {
@@ -36,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${ovo.variable} dark`}>
+    <html lang="en" className={`${inter.variable} ${cormorant.variable}`}>
       <body className="min-h-screen bg-[var(--color-bg)] text-[var(--color-fg)] font-sans antialiased">
         <Providers>{children}</Providers>
       </body>

@@ -7,32 +7,36 @@ import { Button } from "@/components/atoms/Button";
 
 export function CtaSection() {
   return (
-    <section className="py-24 px-4">
-      <div className="max-w-3xl mx-auto">
+    <section className="py-24 px-4 bg-[#1A1C1A]">
+      <div className="max-w-3xl mx-auto text-center">
         <ScrollReveal>
-          <div className="relative rounded-[var(--radius-lg)] overflow-hidden border border-[var(--color-primary)]/20 p-12 text-center"
-            style={{
-              background: "linear-gradient(135deg, rgb(67 97 238 / 0.08) 0%, rgb(6 214 160 / 0.06) 100%)",
-            }}
-          >
-            {/* Background glow */}
-            <div className="absolute inset-0 pointer-events-none"
-              style={{
-                background: "radial-gradient(ellipse 60% 60% at 50% 100%, rgb(67 97 238 / 0.15), transparent)",
-              }}
-            />
-
-            <div className="relative z-10 space-y-5">
-              <h2 className="text-3xl sm:text-4xl font-bold">
-                Ready to know where you show up?
-              </h2>
-              <p className="text-[var(--color-fg-secondary)] text-lg max-w-xl mx-auto">
-                Join businesses already tracking their AI visibility with Surven.
-                Free to start — no credit card required.
-              </p>
+          <div className="space-y-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#96A283]">
+              Get started
+            </p>
+            <h2
+              className="text-3xl sm:text-4xl font-light leading-tight text-[#F2EEE3]"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              Ready to know where
+              <br />
+              <em className="italic font-normal text-[#96A283]">you show up?</em>
+            </h2>
+            <p className="text-[#C8C2B4] text-base max-w-md mx-auto leading-relaxed">
+              Join businesses already tracking their AI visibility with Surven.
+              Free to start — no credit card required.
+            </p>
+            <div className="pt-2">
               <Link href="/signup">
-                <Button size="lg" className="group gap-2 text-base px-10 mt-2">
-                  Get Started Free
+                <Button
+                  size="lg"
+                  className="group gap-2 text-base px-10"
+                  style={{
+                    backgroundColor: "#96A283",
+                    color: "#1A1C1A",
+                  }}
+                >
+                  Track Your Visibility Free
                   <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>

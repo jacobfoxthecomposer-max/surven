@@ -12,14 +12,12 @@ export default function LandingPage() {
     <>
       <LandingNav />
       <HeroSection />
-      <div className="relative z-10 bg-[#0f172a]">
-        <FeaturesSection />
-        <ValuePropsSection />
-        <HowItWorksSection />
-        <StatsSection />
-        <CtaSection />
-        <Footer />
-      </div>
+      <FeaturesSection />
+      <ValuePropsSection />
+      <HowItWorksSection />
+      <StatsSection />
+      <CtaSection />
+      <Footer />
     </>
   );
 }

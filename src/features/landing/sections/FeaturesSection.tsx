@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollReveal } from "@/components/molecules/ScrollReveal";
-import { Radar } from "@/components/ui/radar-effect";
 import { Eye, Bot, Search, TrendingUp, Zap, BarChart3, Link2 } from "lucide-react";
 
 const features = [
@@ -58,7 +57,6 @@ const features = [
   },
 ];
 
-// Layout: rows of 3, 2, 2
 const rows = [features.slice(0, 3), features.slice(3, 5), features.slice(5, 7)];
 
 function FeatureIcon({
@@ -74,7 +72,6 @@ function FeatureIcon({
 
   return (
     <div className="relative z-50 flex flex-col items-center justify-center">
-      {/* Tooltip */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -82,20 +79,16 @@ function FeatureIcon({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 6, scale: 0.95 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
-            className="absolute bottom-full mb-3 w-56 rounded-xl border border-[#334155] bg-[#1e293b] px-4 py-3 shadow-xl text-left pointer-events-none"
+            className="absolute bottom-full mb-3 w-56 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3 shadow-[var(--shadow-md)] text-left pointer-events-none"
             style={{ zIndex: 100 }}
           >
-            {/* Arrow */}
-            <div
-              className="absolute left-1/2 -translate-x-1/2 -bottom-[7px] w-3 h-3 rotate-45 border-r border-b border-[#334155] bg-[#1e293b]"
-            />
-            <p className="text-xs font-semibold text-[#f1f5f9] mb-1">{feat.text}</p>
-            <p className="text-xs text-[#94a3b8] leading-relaxed">{feat.tooltip}</p>
+            <div className="absolute left-1/2 -translate-x-1/2 -bottom-[7px] w-3 h-3 rotate-45 border-r border-b border-[var(--color-border)] bg-[var(--color-bg)]" />
+            <p className="text-xs font-semibold text-[var(--color-fg)] mb-1">{feat.text}</p>
+            <p className="text-xs text-[var(--color-fg-muted)] leading-relaxed">{feat.tooltip}</p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Icon button */}
       <button
         onClick={onToggle}
         className="flex flex-col items-center space-y-2 group focus:outline-none"
@@ -103,13 +96,13 @@ function FeatureIcon({
         aria-label={`Learn about ${feat.text}`}
       >
         <motion.div
-          animate={{ scale: isOpen ? 1.12 : 1 }}
+          animate={{ scale: isOpen ? 1.1 : 1 }}
           transition={{ duration: 0.2 }}
-          className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-700 bg-slate-800 shadow-inner group-hover:border-[#7c3aed]/50 group-hover:bg-slate-700 transition-colors duration-200"
+          className="flex h-12 w-12 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] group-hover:border-[var(--color-primary)] group-hover:bg-[var(--color-surface-alt)] transition-colors duration-200"
         >
-          <Icon className="h-6 w-6 text-[#7c3aed]" />
+          <Icon className="h-5 w-5 text-[var(--color-primary)]" />
         </motion.div>
-        <span className="hidden text-center text-xs font-bold text-slate-400 md:block group-hover:text-slate-300 transition-colors">
+        <span className="hidden text-center text-xs font-medium text-[var(--color-fg-muted)] md:block group-hover:text-[var(--color-fg)] transition-colors">
           {feat.text}
         </span>
       </button>
@@ -121,7 +114,6 @@ export function FeaturesSection() {
   const [openKey, setOpenKey] = useState<string | null>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
 
-  // Close tooltip when clicking outside
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (sectionRef.current && !sectionRef.current.contains(e.target as Node)) {
@@ -137,26 +129,32 @@ export function FeaturesSection() {
   }
 
   return (
-    <section className="py-24 px-4 bg-[#0f172a]">
+    <section className="py-24 px-4 bg-[var(--color-bg)]">
       <div className="max-w-5xl mx-auto">
         <ScrollReveal className="text-center mb-4">
-          <span className="text-xs font-semibold uppercase tracking-widest text-[#7c3aed]">
+          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-fg-muted)]">
             What we track
           </span>
         </ScrollReveal>
         <ScrollReveal className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold">
+          <h2
+            className="text-3xl sm:text-4xl font-light"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
             Complete AI visibility{" "}
-            <span className="text-[#f97316]">intelligence</span>
+            <em className="italic font-normal text-[var(--color-primary)]">intelligence</em>
           </h2>
-          <p className="mt-4 text-[#cbd5e1] max-w-xl mx-auto text-sm sm:text-base">
-            Surven monitors every signal that determines whether AI recommends your
-            business. <span className="text-[#7c3aed] font-medium">Tap any icon to learn more.</span>
+          <p className="mt-4 text-[var(--color-fg-secondary)] max-w-xl mx-auto text-sm sm:text-base">
+            Surven monitors every signal that determines whether AI recommends your business.{" "}
+            <span className="text-[var(--color-fg)] font-medium">Tap any icon to learn more.</span>
           </p>
         </ScrollReveal>
 
         <ScrollReveal>
-          <div ref={sectionRef} className="relative flex h-[420px] w-full flex-col items-center justify-center space-y-4 overflow-visible">
+          <div
+            ref={sectionRef}
+            className="relative flex h-[360px] w-full flex-col items-center justify-center space-y-8 overflow-visible"
+          >
             {/* Row 1 — 3 icons */}
             <div className="mx-auto w-full max-w-3xl">
               <div className="flex w-full items-center justify-center space-x-10 md:justify-between md:space-x-0">
@@ -199,8 +197,7 @@ export function FeaturesSection() {
               </div>
             </div>
 
-            <Radar className="absolute -bottom-12" />
-            <div className="absolute bottom-0 z-[41] h-px w-full bg-gradient-to-r from-transparent via-slate-700 to-transparent" />
+            <div className="absolute bottom-0 h-px w-full bg-[var(--color-border)]" />
           </div>
         </ScrollReveal>
       </div>

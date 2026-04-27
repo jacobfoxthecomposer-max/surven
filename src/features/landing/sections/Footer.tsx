@@ -8,10 +8,14 @@ const links = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-[var(--color-border)] py-10 px-4">
+    <footer className="border-t border-[var(--color-border)] bg-[var(--color-bg)] py-10 px-6">
       <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-        <Link href="/" className="text-lg font-bold tracking-tight">
-          <span className="text-[var(--color-primary)]">Sur</span>ven
+        <Link
+          href="/"
+          className="text-base font-medium tracking-wide text-[var(--color-fg)]"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          Surven
         </Link>
 
         <nav className="flex items-center gap-6">
