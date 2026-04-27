@@ -3,7 +3,7 @@
 import { type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Settings, LogOut, FileSearch } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/services/supabase";
 import { PageTransition } from "./PageTransition";
@@ -12,6 +12,7 @@ import { cn } from "@/utils/cn";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/audit", label: "Audit", icon: FileSearch },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
