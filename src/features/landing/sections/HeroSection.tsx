@@ -136,9 +136,9 @@ export function HeroSection() {
           className="absolute right-[8%] top-[-5%] w-[18%] h-[22%] rounded-full blur-[90px]"
           style={{ backgroundColor: "rgba(150, 162, 131, 0.18)" }}
         />
-        {/* Rubric Red — bottom right */}
+        {/* Rubric Red — bottom left */}
         <div
-          className="absolute right-[-8%] bottom-[-15%] w-[35%] h-[40%] rounded-full blur-[130px]"
+          className="absolute left-[-8%] bottom-[-15%] w-[35%] h-[40%] rounded-full blur-[130px]"
           style={{ backgroundColor: "rgba(181, 70, 49, 0.18)" }}
         />
       </div>
