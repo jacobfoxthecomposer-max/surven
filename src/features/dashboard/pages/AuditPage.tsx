@@ -157,20 +157,46 @@ export function AuditPage({ businessId, businessName }: AuditPageProps) {
               />
             </Card>
 
-            {/* Website preview */}
-            <div className="xl:order-2 space-y-2">
-              <p className="text-xs text-[var(--color-fg-muted)]">
-                Site preview (may not load if site blocks embedding)
-              </p>
-              <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] overflow-hidden bg-white h-[500px]">
-                <iframe
-                  src={result.siteUrl}
-                  title="Website preview"
-                  className="w-full h-full"
-                  sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-                  loading="lazy"
-                />
-              </div>
+            {/* Site info card */}
+            <div className="xl:order-2">
+              <Card className="h-full">
+                <h3 className="text-sm font-semibold text-[var(--color-fg)] mb-4">
+                  Site Info
+                </h3>
+                <div className="flex items-start gap-3 mb-4">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={result.homepageMeta.faviconUrl}
+                    alt=""
+                    width={32}
+                    height={32}
+                    className="rounded mt-0.5 shrink-0"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[var(--color-fg)] leading-snug">
+                      {result.homepageMeta.title || new URL(result.siteUrl).hostname}
+                    </p>
+                    <p className="text-xs text-[var(--color-fg-muted)] mt-0.5 break-all">
+                      {result.siteUrl}
+                    </p>
+                  </div>
+                </div>
+                {result.homepageMeta.description && (
+                  <p className="text-sm text-[var(--color-fg-secondary)] leading-relaxed mb-4">
+                    {result.homepageMeta.description}
+                  </p>
+                )}
+                <a
+                  href={result.siteUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-primary)] hover:underline"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Open site
+                </a>
+              </Card>
             </div>
           </div>
 

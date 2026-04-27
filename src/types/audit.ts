@@ -17,6 +17,12 @@ export interface CrawlStats {
   crawlDurationMs: number;
 }
 
+export interface HomepageMeta {
+  title: string;
+  description: string;
+  faviconUrl: string;
+}
+
 export interface AuditResult {
   id: string;
   businessId: string;
@@ -25,6 +31,7 @@ export interface AuditResult {
   errorMessage?: string;
   findings: AuditFinding[];
   crawlStats: CrawlStats;
+  homepageMeta: HomepageMeta;
   scanStartedAt: string;
   scanCompletedAt: string;
   cacheExpiresAt: string;

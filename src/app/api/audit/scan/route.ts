@@ -89,6 +89,14 @@ export async function POST(request: NextRequest) {
     const scanCompletedAt = new Date();
     const cacheExpiresAt = new Date(scanCompletedAt.getTime() + 24 * 60 * 60 * 1000);
 
+    const homepage = pages[0];
+    const domain = new URL(siteUrl).hostname;
+    const homepageMeta = {
+      title: homepage?.title ?? "",
+      description: homepage?.metaDescription ?? "",
+      faviconUrl: `https://www.google.com/s2/favicons?domain=${domain}&sz=64`,
+    };
+
     const { data: inserted } = await supabaseAdmin
       .from("audits")
       .insert({
@@ -96,6 +104,7 @@ export async function POST(request: NextRequest) {
         site_url: siteUrl,
         status: "completed",
         findings,
+        homepage_meta: homepageMeta,
         crawl_pages: pages.length,
         crawl_hit_limit: hitLimit,
         crawl_duration_ms: durationMs,
@@ -113,6 +122,7 @@ export async function POST(request: NextRequest) {
         site_url: siteUrl,
         status: "completed",
         findings,
+        homepage_meta: homepageMeta,
         crawl_pages: pages.length,
         crawl_hit_limit: hitLimit,
         crawl_duration_ms: durationMs,
@@ -178,10 +188,14 @@ export async function GET(request: NextRequest) {
 }
 
 function dbRowToResult(row: Record<string, unknown>) {
+  const siteUrl = String(row.site_url ?? "");
+  const domain = (() => { try { return new URL(siteUrl).hostname; } catch { return ""; } })();
+  const meta = (row.homepage_meta as Record<string, string> | null) ?? {};
+
   return {
     id: row.id,
     businessId: row.business_id,
-    siteUrl: row.site_url,
+    siteUrl,
     status: row.status,
     errorMessage: row.error_message,
     findings: row.findings ?? [],
@@ -189,6 +203,11 @@ function dbRowToResult(row: Record<string, unknown>) {
       pagesCrawled: row.crawl_pages ?? 0,
       pagesCapped: row.crawl_hit_limit ?? false,
       crawlDurationMs: row.crawl_duration_ms ?? 0,
+    },
+    homepageMeta: {
+      title: meta.title ?? "",
+      description: meta.description ?? "",
+      faviconUrl: meta.faviconUrl ?? `https://www.google.com/s2/favicons?domain=${domain}&sz=64`,
     },
     scanStartedAt: row.scan_started_at,
     scanCompletedAt: row.scan_completed_at,
