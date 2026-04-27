@@ -30,11 +30,7 @@ export function CtaSection() {
               <Link href="/signup">
                 <Button
                   size="lg"
-                  className="group gap-2 text-base px-10"
-                  style={{
-                    backgroundColor: "#96A283",
-                    color: "#1A1C1A",
-                  }}
+                  className="group gap-2 text-base px-10 !bg-[#96A283] !text-[#1A1C1A] hover:!bg-[#7D8E6C]"
                 >
                   Track Your Visibility Free
                   <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
