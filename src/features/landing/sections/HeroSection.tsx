@@ -1,7 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
+import {
+  motion,
+  useMotionValue,
+  useTransform,
+  useMotionTemplate,
+  useAnimationFrame,
+} from "framer-motion";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/atoms/Button";
@@ -47,11 +53,97 @@ function useTypewriter(texts: string[]) {
   return display;
 }
 
+function GridPattern({
+  offsetX,
+  offsetY,
+  color,
+}: {
+  offsetX: ReturnType<typeof useMotionValue<number>>;
+  offsetY: ReturnType<typeof useMotionValue<number>>;
+  color: string;
+}) {
+  return (
+    <svg className="w-full h-full">
+      <defs>
+        <motion.pattern
+          id="surven-grid"
+          width="40"
+          height="40"
+          patternUnits="userSpaceOnUse"
+          x={offsetX}
+          y={offsetY}
+        >
+          <path
+            d="M 40 0 L 0 0 0 40"
+            fill="none"
+            stroke={color}
+            strokeWidth="1"
+          />
+        </motion.pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#surven-grid)" />
+    </svg>
+  );
+}
+
 export function HeroSection() {
   const typed = useTypewriter(ROTATING_TEXTS);
 
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const gridOffsetX = useMotionValue(0);
+  const gridOffsetY = useMotionValue(0);
+
+  useAnimationFrame(() => {
+    gridOffsetX.set((gridOffsetX.get() + 0.4) % 40);
+    gridOffsetY.set((gridOffsetY.get() + 0.4) % 40);
+  });
+
+  const maskImage = useMotionTemplate`radial-gradient(320px circle at ${mouseX}px ${mouseY}px, black, transparent)`;
+
+  function handleMouseMove(e: React.MouseEvent<HTMLElement>) {
+    const { left, top } = e.currentTarget.getBoundingClientRect();
+    mouseX.set(e.clientX - left);
+    mouseY.set(e.clientY - top);
+  }
+
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center px-6 text-center bg-[var(--color-bg)] pt-14">
+    <section
+      onMouseMove={handleMouseMove}
+      className="relative min-h-screen flex flex-col items-center justify-center px-6 text-center bg-[var(--color-bg)] pt-14 overflow-hidden"
+    >
+      {/* Static faint grid */}
+      <div className="absolute inset-0 z-0" style={{ opacity: 0.06 }}>
+        <GridPattern offsetX={gridOffsetX} offsetY={gridOffsetY} color="#1A1C1A" />
+      </div>
+
+      {/* Mouse-reveal grid layer */}
+      <motion.div
+        className="absolute inset-0 z-0"
+        style={{ maskImage, WebkitMaskImage: maskImage, opacity: 0.35 }}
+      >
+        <GridPattern offsetX={gridOffsetX} offsetY={gridOffsetY} color="#1A1C1A" />
+      </motion.div>
+
+      {/* Color blobs */}
+      <div className="absolute inset-0 pointer-events-none z-0">
+        {/* Sage — top right */}
+        <div
+          className="absolute right-[-10%] top-[-15%] w-[40%] h-[45%] rounded-full blur-[130px]"
+          style={{ backgroundColor: "rgba(150, 162, 131, 0.28)" }}
+        />
+        <div
+          className="absolute right-[8%] top-[-5%] w-[18%] h-[22%] rounded-full blur-[90px]"
+          style={{ backgroundColor: "rgba(150, 162, 131, 0.18)" }}
+        />
+        {/* Rubric Red — bottom right */}
+        <div
+          className="absolute right-[-8%] bottom-[-15%] w-[35%] h-[40%] rounded-full blur-[130px]"
+          style={{ backgroundColor: "rgba(181, 70, 49, 0.18)" }}
+        />
+      </div>
+
+      {/* Content */}
       <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center gap-10">
         {/* Eyebrow */}
         <motion.p
@@ -75,18 +167,16 @@ export function HeroSection() {
           >
             Does AI recommend
             <br />
-            {/* Typewriter line with dashed sage border */}
             <span className="relative mt-3 inline-block">
               <span
-                className="absolute inset-0 -z-10 rounded-2xl"
+                className="absolute -z-10"
                 style={{
-                  margin: "-6px -14px",
+                  inset: "-6px -14px",
                   border: "2px dashed var(--color-primary)",
                   borderRadius: "16px",
                 }}
               />
               <em
-                className="italic font-normal not-italic"
                 style={{
                   fontFamily: "var(--font-display)",
                   fontStyle: "italic",
