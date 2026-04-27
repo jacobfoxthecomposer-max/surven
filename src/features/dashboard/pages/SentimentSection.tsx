@@ -10,9 +10,9 @@ interface SentimentSectionProps {
 }
 
 const SENTIMENT_CONFIG = {
-  positive: { label: "Positive", color: "#06d6a0", bg: "bg-emerald-500/15", text: "text-emerald-400" },
-  neutral:  { label: "Neutral",  color: "#94a3b8", bg: "bg-slate-500/15",   text: "text-slate-400"   },
-  negative: { label: "Negative", color: "#ef4444", bg: "bg-red-500/15",     text: "text-red-400"     },
+  positive: { label: "Positive", color: "#96A283", bg: "bg-[#96A283]/15", text: "text-[#566A47]" },
+  neutral:  { label: "Neutral",  color: "#A09890", bg: "bg-[#A09890]/15", text: "text-[#787068]" },
+  negative: { label: "Negative", color: "#C97A6B", bg: "bg-[#B54631]/15", text: "text-[#8C3522]" },
 } as const;
 
 export function SentimentSection({ results }: SentimentSectionProps) {

@@ -11,10 +11,10 @@ const modelConfig: Record<
   ModelName,
   { icon: typeof MessageSquare; label: string; color: string }
 > = {
-  chatgpt: { icon: MessageSquare, label: "ChatGPT", color: "#10a37f" },
-  claude: { icon: Brain, label: "Claude", color: "#d97706" },
-  gemini: { icon: Globe, label: "Gemini", color: "#4285F4" },
-  google_ai: { icon: Globe2, label: "Google AI", color: "#34A853" },
+  chatgpt: { icon: MessageSquare, label: "ChatGPT", color: "#5BAF92" },
+  claude: { icon: Brain, label: "Claude", color: "#D4943A" },
+  gemini: { icon: Globe, label: "Gemini", color: "#6BA3F5" },
+  google_ai: { icon: Globe2, label: "Google AI", color: "#5CBF74" },
 };
 
 interface ModelBreakdownCardProps {

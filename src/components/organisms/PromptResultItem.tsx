@@ -5,9 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Check, X } from "lucide-react";
 
 const SENTIMENT_STYLES = {
-  positive: "bg-emerald-500/15 text-emerald-400",
-  neutral:  "bg-slate-500/15 text-slate-400",
-  negative: "bg-red-500/15 text-red-400",
+  positive: "bg-[#96A283]/15 text-[#566A47]",
+  neutral:  "bg-[#A09890]/15 text-[#787068]",
+  negative: "bg-[#B54631]/15 text-[#8C3522]",
 } as const;
 import { cn } from "@/utils/cn";
 import type { ScanResult, ModelName } from "@/types/database";
@@ -73,9 +73,9 @@ export function PromptResultItem({
                   {MODEL_LABELS[model]}
                 </span>
                 {mentioned ? (
-                  <Check className="h-3.5 w-3.5 text-emerald-400" />
+                  <Check className="h-3.5 w-3.5 text-[#566A47]" />
                 ) : (
-                  <X className="h-3.5 w-3.5 text-red-400" />
+                  <X className="h-3.5 w-3.5 text-[#B54631]" />
                 )}
               </div>
             );
@@ -111,9 +111,9 @@ export function PromptResultItem({
                         {MODEL_LABELS[model]}
                       </span>
                       {result.business_mentioned ? (
-                        <Check className="h-3 w-3 text-emerald-400" />
+                        <Check className="h-3 w-3 text-[#566A47]" />
                       ) : (
-                        <X className="h-3 w-3 text-red-400" />
+                        <X className="h-3 w-3 text-[#B54631]" />
                       )}
                       {result.business_mentioned && result.sentiment && (
                         <span className={cn(
@@ -155,7 +155,7 @@ function highlightBusiness(text: string, businessName: string): React.ReactNode 
     part.toLowerCase() === businessName.toLowerCase() ? (
       <span
         key={i}
-        className="bg-emerald-500/20 text-emerald-300 px-1 rounded font-medium"
+        className="bg-[#96A283]/20 text-[#3A5028] px-1 rounded font-medium"
       >
         {part}
       </span>

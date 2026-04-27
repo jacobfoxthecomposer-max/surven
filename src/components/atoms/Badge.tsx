@@ -1,11 +1,11 @@
 import { cn } from "@/utils/cn";
 
 const variants = {
-  success: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20",
-  warning: "bg-orange-500/15 text-orange-400 border-orange-500/20",
-  danger: "bg-red-500/15 text-red-400 border-red-500/20",
-  info: "bg-blue-500/15 text-blue-400 border-blue-500/20",
-  neutral: "bg-slate-500/15 text-slate-400 border-slate-500/20",
+  success: "bg-[#96A283]/15 text-[#566A47] border-[#96A283]/25",
+  warning: "bg-[#C97B45]/15 text-[#9A5D28] border-[#C97B45]/25",
+  danger: "bg-[#B54631]/15 text-[#8C3522] border-[#B54631]/25",
+  info: "bg-[#6BA3F5]/15 text-[#2E6ACF] border-[#6BA3F5]/25",
+  neutral: "bg-[#8A8578]/15 text-[#6B6460] border-[#8A8578]/25",
 };
 
 interface BadgeProps {

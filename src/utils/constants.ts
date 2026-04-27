@@ -4,31 +4,31 @@
 // ============================================
 
 export const COLORS = {
-  bg: "#0f172a",
-  surface: "#1e293b",
-  surfaceAlt: "#334155",
-  fg: "#f1f5f9",
-  fgSecondary: "#cbd5e1",
-  fgMuted: "#94a3b8",
-  primary: "#7c3aed",
-  primaryHover: "#6d28d9",
-  secondary: "#d946ef",
-  secondaryHover: "#ec4899",
-  danger: "#ef4444",
-  warning: "#f97316",
-  success: "#fbbf24",
-  info: "#7c3aed",
-  border: "#334155",
-  scoreRed: "#6d28d9",
-  scoreOrange: "#f97316",
-  scoreYellow: "#fbbf24",
-  scoreGreen: "#fbbf24",
+  bg: "#F2EEE3",
+  surface: "#EDE8DC",
+  surfaceAlt: "#E5DFCF",
+  fg: "#1A1C1A",
+  fgSecondary: "#3D3F3D",
+  fgMuted: "#6B6D6B",
+  primary: "#96A283",
+  primaryHover: "#7D8E6C",
+  secondary: "#B54631",
+  secondaryHover: "#8C3522",
+  danger: "#B54631",
+  warning: "#C97B45",
+  success: "#96A283",
+  info: "#6BA3F5",
+  border: "#C8C2B4",
+  scoreRed: "#B54631",
+  scoreOrange: "#C97B45",
+  scoreYellow: "#B8A030",
+  scoreGreen: "#96A283",
   // Thermal gradient colors
-  thermal0: "#6d28d9",  // Coolest (deep purple)
-  thermal1: "#7c3aed",  // Cool (purple)
-  thermal2: "#d946ef",  // Cool-warm (magenta)
-  thermal3: "#f97316",  // Warm (orange)
-  thermal4: "#fbbf24",  // Very warm (yellow)
+  thermal0: "#B54631",
+  thermal1: "#C97B45",
+  thermal2: "#B8A030",
+  thermal3: "#7D8E6C",
+  thermal4: "#96A283",
 } as const;
 
 export const ANIMATION = {
@@ -52,10 +52,10 @@ export const BREAKPOINTS = {
 } as const;
 
 export const AI_MODELS = [
-  { id: "chatgpt", name: "ChatGPT", color: "#10a37f" },
-  { id: "claude", name: "Claude", color: "#d97706" },
-  { id: "gemini", name: "Gemini", color: "#4285F4" },
-  { id: "google_ai", name: "Google AI", color: "#34A853" },
+  { id: "chatgpt", name: "ChatGPT", color: "#5BAF92" },
+  { id: "claude", name: "Claude", color: "#D4943A" },
+  { id: "gemini", name: "Gemini", color: "#6BA3F5" },
+  { id: "google_ai", name: "Google AI", color: "#5CBF74" },
 ] as const;
 
 export const INDUSTRIES = [
