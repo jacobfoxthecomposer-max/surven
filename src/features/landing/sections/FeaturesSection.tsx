@@ -198,7 +198,15 @@ export function FeaturesSection() {
               </div>
             </div>
 
-            <Radar className="absolute -bottom-12" />
+            {/* Radar — top half only, clipped at center */}
+            <div
+              className="absolute bottom-0 left-0 right-0 flex justify-center overflow-hidden pointer-events-none"
+              style={{ height: "320px" }}
+            >
+              <div style={{ position: "absolute", bottom: "-40px" }}>
+                <Radar />
+              </div>
+            </div>
             <div className="absolute bottom-0 z-[41] h-px w-full" style={{ background: "linear-gradient(to right, transparent, rgba(150,162,131,0.4), transparent)" }} />
           </div>
         </ScrollReveal>
