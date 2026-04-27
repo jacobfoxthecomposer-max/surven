@@ -16,6 +16,7 @@ import { CompetitorBenchmarkSection } from "@/features/dashboard/pages/Competito
 import { HistorySection } from "@/features/dashboard/pages/HistorySection";
 import { SentimentSection } from "@/features/dashboard/pages/SentimentSection";
 import { CitationGapSection } from "@/features/dashboard/pages/CitationGapSection";
+import { VisibilityScannerSection } from "@/features/dashboard/pages/VisibilityScannerSection";
 import { exportScanResultsAsCsv } from "@/utils/csvExport";
 import { Button } from "@/components/atoms/Button";
 import { Download } from "lucide-react";
@@ -100,7 +101,12 @@ export default function DashboardPage() {
           />
         </motion.div>
 
-        {/* 2: AI Model Breakdown */}
+        {/* 2: AI Visibility Scanner — multi-brand trend chart */}
+        <motion.div {...reveal}>
+          <VisibilityScannerSection />
+        </motion.div>
+
+        {/* 3: AI Model Breakdown */}
         {results.length > 0 && (
           <motion.div {...reveal}>
             <ModelBreakdownSection results={results} />
