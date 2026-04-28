@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Search, ExternalLink, RefreshCw } from "lucide-react";
+import { Search, ExternalLink, RefreshCw, Monitor, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/atoms/Button";
 import { Input } from "@/components/atoms/Input";
 import { Card } from "@/components/atoms/Card";
@@ -14,17 +14,38 @@ interface AuditPageProps {
   businessName: string;
 }
 
+type PreviewState = "idle" | "loading" | "active" | "error";
+
 export function AuditPage({ businessId, businessName }: AuditPageProps) {
   const [siteUrl, setSiteUrl] = useState("");
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<AuditResult | null>(null);
-  const [error, setError] = useState("");
+  const [scanError, setScanError] = useState("");
+
+  const [previewState, setPreviewState] = useState<PreviewState>("idle");
+  const [previewError, setPreviewError] = useState("");
+  const [viewerUrl, setViewerUrl] = useState("");
+  const sessionIdRef = useRef<string | null>(null);
+
+  // Release Steel session on unmount
+  useEffect(() => {
+    return () => {
+      if (sessionIdRef.current) {
+        fetch("/api/audit/preview", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: sessionIdRef.current }),
+        }).catch(() => {});
+      }
+    };
+  }, []);
 
   async function handleScan(e: React.FormEvent) {
     e.preventDefault();
     setScanning(true);
-    setError("");
+    setScanError("");
     setResult(null);
+    closePreview();
 
     try {
       const res = await fetch("/api/audit/scan", {
@@ -32,20 +53,57 @@ export function AuditPage({ businessId, businessName }: AuditPageProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ businessId, siteUrl }),
       });
-
       const data = await res.json();
-
       if (!res.ok) {
-        setError(data.error ?? "Scan failed. Please try again.");
+        setScanError(data.error ?? "Scan failed. Please try again.");
         return;
       }
-
       setResult(data as AuditResult);
     } catch {
-      setError("Network error. Please try again.");
+      setScanError("Network error. Please try again.");
     } finally {
       setScanning(false);
     }
+  }
+
+  async function handleOpenPreview() {
+    if (!result) return;
+    setPreviewState("loading");
+    setPreviewError("");
+
+    try {
+      const res = await fetch("/api/audit/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ siteUrl: result.siteUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPreviewState("error");
+        setPreviewError(data.error ?? "Failed to start preview.");
+        return;
+      }
+      sessionIdRef.current = data.sessionId;
+      setViewerUrl(data.viewerUrl);
+      setPreviewState("active");
+    } catch {
+      setPreviewState("error");
+      setPreviewError("Failed to start preview. Check your Steel API key.");
+    }
+  }
+
+  function closePreview() {
+    if (sessionIdRef.current) {
+      fetch("/api/audit/preview", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: sessionIdRef.current }),
+      }).catch(() => {});
+      sessionIdRef.current = null;
+    }
+    setViewerUrl("");
+    setPreviewState("idle");
+    setPreviewError("");
   }
 
   const criticalCount = result?.findings.filter((f) => f.severity === "critical").length ?? 0;
@@ -85,7 +143,7 @@ export function AuditPage({ businessId, businessName }: AuditPageProps) {
               </p>
             )}
           </div>
-          {error && <p className="text-sm text-[#B54631]">{error}</p>}
+          {scanError && <p className="text-sm text-[#B54631]">{scanError}</p>}
         </form>
       </Card>
 
@@ -135,6 +193,7 @@ export function AuditPage({ businessId, businessName }: AuditPageProps) {
                 onClick={() => {
                   setResult(null);
                   setSiteUrl(result.siteUrl);
+                  closePreview();
                 }}
               >
                 <RefreshCw className="h-3.5 w-3.5" />
@@ -143,8 +202,8 @@ export function AuditPage({ businessId, businessName }: AuditPageProps) {
             </div>
           </div>
 
-          {/* Findings + preview */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {/* Findings + live preview */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
             {/* Findings */}
             <Card className="xl:order-1">
               <h3 className="text-sm font-semibold text-[var(--color-fg)] mb-4">
@@ -157,46 +216,72 @@ export function AuditPage({ businessId, businessName }: AuditPageProps) {
               />
             </Card>
 
-            {/* Website screenshot */}
-            <div className="xl:order-2 space-y-3">
-              <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] overflow-hidden bg-[var(--color-surface)] aspect-[4/3] relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`https://api.microlink.io/?url=${encodeURIComponent(result.siteUrl)}&screenshot=true&meta=false&embed=screenshot.url`}
-                  alt={`Screenshot of ${result.siteUrl}`}
-                  className="w-full h-full object-cover object-top"
-                  loading="lazy"
-                />
-              </div>
-              <div className="flex items-center gap-2 px-1">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={result.homepageMeta.faviconUrl}
-                  alt=""
-                  width={16}
-                  height={16}
-                  className="rounded shrink-0"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                />
-                <span className="text-xs text-[var(--color-fg)] truncate flex-1">
-                  {result.homepageMeta.title || new URL(result.siteUrl).hostname}
-                </span>
-                <a
-                  href={result.siteUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-[var(--color-fg-muted)] hover:text-[var(--color-primary)] transition-colors shrink-0"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  Open
-                </a>
-              </div>
+            {/* Live preview */}
+            <div className="xl:order-2 space-y-2">
+              {previewState === "idle" && (
+                <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-8 flex flex-col items-center justify-center gap-3 min-h-[300px]">
+                  <Monitor className="h-8 w-8 text-[var(--color-fg-muted)]" />
+                  <p className="text-sm text-[var(--color-fg-secondary)] text-center">
+                    Open a live, interactive preview of the website
+                  </p>
+                  <Button onClick={handleOpenPreview} variant="secondary">
+                    <Monitor className="h-4 w-4" />
+                    Open Live Preview
+                  </Button>
+                </div>
+              )}
+
+              {previewState === "loading" && (
+                <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-8 flex flex-col items-center justify-center gap-3 min-h-[300px]">
+                  <Loader2 className="h-6 w-6 animate-spin text-[var(--color-primary)]" />
+                  <p className="text-sm text-[var(--color-fg-muted)]">
+                    Starting browser session…
+                  </p>
+                </div>
+              )}
+
+              {previewState === "error" && (
+                <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-8 flex flex-col items-center justify-center gap-3 min-h-[300px]">
+                  <p className="text-sm text-[#B54631] text-center">{previewError}</p>
+                  <Button onClick={handleOpenPreview} variant="secondary" size="sm">
+                    Try again
+                  </Button>
+                </div>
+              )}
+
+              {previewState === "active" && viewerUrl && (
+                <>
+                  <div className="flex items-center justify-between px-1">
+                    <p className="text-xs text-[var(--color-fg-muted)] truncate">
+                      {result.siteUrl}
+                    </p>
+                    <button
+                      onClick={closePreview}
+                      className="p-1 rounded hover:bg-[var(--color-surface-alt)] text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors cursor-pointer shrink-0"
+                      aria-label="Close preview"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] overflow-hidden bg-white" style={{ height: "700px" }}>
+                    <iframe
+                      src={viewerUrl}
+                      title="Live website preview"
+                      className="w-full h-full"
+                      allow="same-origin"
+                    />
+                  </div>
+                  <p className="text-[11px] text-[var(--color-fg-muted)] text-center">
+                    Live browser session — fully interactive. Closes automatically after 5 minutes.
+                  </p>
+                </>
+              )}
             </div>
           </div>
 
           {/* Cache notice */}
           <p className="text-xs text-[var(--color-fg-muted)] text-center">
-            Results cached for 24 hours. Use Re-scan to force a fresh audit.
+            Audit results cached for 24 hours. Use Re-scan to force a fresh audit.
           </p>
         </motion.div>
       )}
