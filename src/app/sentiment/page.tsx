@@ -7,10 +7,14 @@ import { Spinner } from "@/components/atoms/Spinner";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
 import { useScan } from "@/features/dashboard/hooks/useScan";
+import { useSentimentHistory } from "@/features/sentiment/hooks/useSentimentHistory";
 import { SentimentInsights } from "@/features/sentiment/components/SentimentInsights";
 import { SentimentDonut } from "@/features/sentiment/components/SentimentDonut";
 import { SentimentByPlatform } from "@/features/sentiment/components/SentimentByPlatform";
 import { SentimentDrivers } from "@/features/sentiment/components/SentimentDrivers";
+import { SentimentOverTime } from "@/features/sentiment/components/SentimentOverTime";
+import { WhatAISaid } from "@/features/sentiment/components/WhatAISaid";
+import { SentimentByFeature } from "@/features/sentiment/components/SentimentByFeature";
 
 const ease = [0.16, 1, 0.3, 1] as const;
 const reveal = {
@@ -25,6 +29,7 @@ export default function SentimentPage() {
   const { user, loading: authLoading } = useAuth();
   const { business, competitors, isLoading: bizLoading } = useBusiness();
   const { latestScan, isLoading: scanLoading } = useScan(business, competitors);
+  const { data: sentimentHistory = [], isLoading: historyLoading } = useSentimentHistory(business?.id);
 
   if (!user && !authLoading) {
     router.push("/login");
@@ -47,6 +52,7 @@ export default function SentimentPage() {
   }
 
   const results = latestScan?.results ?? [];
+  const competitorNames = competitors.map((c) => c.name);
 
   return (
     <DashboardLayout>
@@ -96,9 +102,24 @@ export default function SentimentPage() {
               </div>
             </motion.div>
 
+            {/* Sentiment over time */}
+            <motion.div {...reveal}>
+              <SentimentOverTime data={sentimentHistory} isLoading={historyLoading} />
+            </motion.div>
+
+            {/* Sentiment + Mentions by Feature (prompt) */}
+            <motion.div {...reveal}>
+              <SentimentByFeature results={results} businessName={business.name} competitors={competitorNames} />
+            </motion.div>
+
             {/* Strength / improvement drivers */}
             <motion.div {...reveal}>
               <SentimentDrivers results={results} businessName={business.name} />
+            </motion.div>
+
+            {/* What AI actually said */}
+            <motion.div {...reveal}>
+              <WhatAISaid results={results} businessName={business.name} />
             </motion.div>
           </>
         )}
