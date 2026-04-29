@@ -183,7 +183,7 @@ export default function App() {
               type="url"
               value={draftSettings.apiUrl}
               onChange={(e) => setDraftSettings((s) => ({ ...s, apiUrl: e.target.value }))}
-              placeholder="https://your-surven-app.vercel.app/api/audit/run"
+              placeholder="https://surven.vercel.app/api/audit/run"
               style={{
                 width: "100%",
                 padding: "8px 10px",
@@ -203,7 +203,7 @@ export default function App() {
               type="password"
               value={draftSettings.apiKey}
               onChange={(e) => setDraftSettings((s) => ({ ...s, apiKey: e.target.value }))}
-              placeholder="Your EXTENSION_API_KEY"
+              placeholder="Generate from dashboard Settings → API Keys"
               style={{
                 width: "100%",
                 padding: "8px 10px",
@@ -214,6 +214,9 @@ export default function App() {
                 boxSizing: "border-box",
               }}
             />
+            <p style={{ fontSize: "11px", color: "#6B6D6B", marginTop: "4px" }}>
+              Get this from your Surven dashboard: Settings → API Keys → Generate API Key
+            </p>
           </div>
           <button
             onClick={saveSettings}

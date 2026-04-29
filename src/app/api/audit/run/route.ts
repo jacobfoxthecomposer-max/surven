@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { supabase } from "@/services/supabase";
 import { crawlWebsite } from "@/utils/crawler";
 import { analyzeWebsite } from "@/utils/analyzeWebsite";
 
@@ -6,8 +7,22 @@ export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   const apiKey = request.headers.get("x-api-key");
-  if (!apiKey || apiKey !== process.env.EXTENSION_API_KEY) {
+  if (!apiKey) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Validate API key against database
+  const { data, error } = await supabase.rpc("validate_extension_api_key", {
+    p_key: apiKey,
+  });
+
+  if (error || !data || data.length === 0) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const [keyData] = data;
+  if (!keyData.valid || (keyData.plan !== "premium" && keyData.plan !== "admin")) {
+    return NextResponse.json({ error: "Premium plan required" }, { status: 403 });
   }
 
   const body = await request.json().catch(() => null);
