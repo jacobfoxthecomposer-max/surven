@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Copy, Check, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/services/supabase";
 
-const PAID_PLANS = ["premium", "enterprise", "admin"];
+const PAID_PLANS = ["plus", "premium", "admin"];
 
 export function ApiKeysTab() {
   const [apiKey, setApiKey] = useState<string | null>(null);

@@ -5,7 +5,7 @@ import { createServerClient } from "@/services/supabaseServer";
 import { z } from "zod";
 import type { ModelName } from "@/types/database";
 
-const SCAN_LIMITS = { free: 5, premium: 20, enterprise: Infinity, admin: Infinity } as const;
+const SCAN_LIMITS = { free: 5, plus: 20, premium: Infinity, admin: Infinity } as const;
 
 const ScanRequestSchema = z.object({
   businessName: z.string().min(1).max(200),

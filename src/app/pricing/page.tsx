@@ -21,7 +21,7 @@ const plans = [
     highlight: false,
   },
   {
-    name: "Premium",
+    name: "Plus",
     price: "$49",
     period: "/mo",
     description: "More scans, plus the Chrome extension for on-site audits.",
@@ -39,7 +39,7 @@ const plans = [
     highlight: true,
   },
   {
-    name: "Enterprise",
+    name: "Premium",
     price: "$199",
     period: "/mo",
     description: "Unlimited usage for agencies and high-volume teams.",
