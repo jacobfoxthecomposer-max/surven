@@ -16,6 +16,7 @@ import {
   Settings,
   ChevronRight,
   Upload,
+  Zap,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useUserProfile } from "@/features/auth/hooks/useUserProfile";
@@ -46,7 +47,7 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
   {
     title: "Analytics",
     items: [
-      { label: "Advanced Tracker", href: "/dashboard", icon: TrendingUp },
+      { label: "AI Visibility Tracker", href: "/dashboard", icon: TrendingUp },
       { label: "Brand Sentiment", href: "/dashboard", icon: Users },
       { label: "Competitor Comparison", href: "/dashboard", icon: GitCompare },
       { label: "AI Benchmark", href: "/dashboard", icon: BarChart3 },
@@ -65,6 +66,7 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
     title: "Optimization",
     items: [
       { label: "Content Audit", href: "/audit", icon: BarChart3 },
+      { label: "Crawlability Audit", href: "/dashboard", icon: Zap },
       { label: "Alerts", href: "/dashboard", icon: AlertCircle },
     ],
   },
