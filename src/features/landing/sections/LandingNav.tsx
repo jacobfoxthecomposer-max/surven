@@ -33,6 +33,12 @@ export function LandingNav() {
 
         <div className="flex items-center gap-4">
           <Link
+            href="/pricing"
+            className="text-sm text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors hidden sm:block"
+          >
+            Pricing
+          </Link>
+          <Link
             href="/login"
             className="text-sm text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors hidden sm:block"
           >
