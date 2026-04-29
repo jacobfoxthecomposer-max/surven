@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS audits (
   site_url          TEXT NOT NULL,
   status            TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('completed', 'failed')),
   findings          JSONB,
+  homepage_meta     JSONB,
   crawl_pages       INT,
   crawl_hit_limit   BOOLEAN,
   crawl_duration_ms INT,

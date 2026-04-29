@@ -1,4 +1,4 @@
-import type { CrawledPage, AuditFinding, AuditSeverity } from "@/types/audit";
+import type { CrawledPage, AuditFinding, AuditSeverity } from "./types";
 
 type RuleCheck = (homepage: CrawledPage, allPages: CrawledPage[]) => AuditFinding | null;
 

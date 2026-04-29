@@ -12,32 +12,6 @@ export interface AuditFinding {
   howToFix: string;
 }
 
-export interface CrawlStats {
-  pagesCrawled: number;
-  pagesCapped: boolean;
-  crawlDurationMs: number;
-}
-
-export interface HomepageMeta {
-  title: string;
-  description: string;
-  faviconUrl: string;
-}
-
-export interface AuditResult {
-  id: string;
-  businessId: string;
-  siteUrl: string;
-  status: "completed" | "failed";
-  errorMessage?: string;
-  findings: AuditFinding[];
-  crawlStats: CrawlStats;
-  homepageMeta: HomepageMeta;
-  scanStartedAt: string;
-  scanCompletedAt: string;
-  cacheExpiresAt: string;
-}
-
 export interface CrawledPage {
   url: string;
   title: string;
