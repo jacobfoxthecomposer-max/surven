@@ -5,31 +5,16 @@ import { Footer } from "@/features/landing/sections/Footer";
 
 const plans = [
   {
-    name: "Free",
-    price: "$0",
-    period: "/mo",
-    description: "Try the tracker and see where you stand.",
-    cta: "Get Started",
-    ctaHref: "/signup",
-    ctaVariant: "outline" as const,
-    features: [
-      "5 AI visibility scans / day",
-      "ChatGPT, Claude, Gemini tracking",
-      "Competitor mention tracking",
-      "Basic visibility score",
-    ],
-    highlight: false,
-  },
-  {
     name: "Plus",
     price: "$49",
     period: "/mo",
-    description: "More scans, plus the Chrome extension for on-site audits.",
-    cta: "Get Started",
+    description: "For businesses serious about showing up in AI search.",
+    cta: "Start Free Trial",
     ctaHref: "/signup",
     ctaVariant: "primary" as const,
     features: [
-      "20 AI visibility scans / day",
+      "7-day free trial",
+      "5 AI visibility scans / day",
       "ChatGPT, Claude, Gemini tracking",
       "Competitor mention tracking",
       "Full visibility score & history",
@@ -42,12 +27,13 @@ const plans = [
     name: "Premium",
     price: "$199",
     period: "/mo",
-    description: "Unlimited usage for agencies and high-volume teams.",
-    cta: "Get Started",
+    description: "For agencies and teams tracking multiple clients.",
+    cta: "Start Free Trial",
     ctaHref: "/signup",
     ctaVariant: "outline" as const,
     features: [
-      "Unlimited AI visibility scans",
+      "7-day free trial",
+      "20 AI visibility scans / day",
       "ChatGPT, Claude, Gemini tracking",
       "Competitor mention tracking",
       "Full visibility score & history",
@@ -67,7 +53,7 @@ const plans = [
     ctaVariant: "outline" as const,
     ctaExternal: true,
     features: [
-      "Everything in Enterprise",
+      "Everything in Premium",
       "Dedicated optimization strategist",
       "Custom GEO strategy & execution",
       "Schema markup implementation",
@@ -86,17 +72,25 @@ export default function PricingPage() {
       <LandingNav />
 
       <main className="min-h-screen pt-24 pb-24 px-6">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-16">
+          <div className="text-center mb-6">
             <h1 className="font-display text-5xl font-semibold mb-4">Simple, honest pricing</h1>
             <p className="text-[var(--color-fg-muted)] text-lg max-w-xl mx-auto">
-              Start free and upgrade when you're ready. Every plan includes real AI visibility data — no fluff.
+              Every paid plan starts with a 7-day free trial. No credit card required to start.
             </p>
           </div>
 
+          {/* Trial banner */}
+          <div className="flex justify-center mb-12">
+            <div className="inline-flex items-center gap-2 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 text-[var(--color-primary)] text-sm font-medium px-4 py-2 rounded-full">
+              <span className="w-2 h-2 rounded-full bg-[var(--color-primary)] inline-block" />
+              7-day free trial on all plans — cancel anytime
+            </div>
+          </div>
+
           {/* Plans grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {plans.map((plan) => (
               <div
                 key={plan.name}

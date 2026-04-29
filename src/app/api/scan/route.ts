@@ -5,7 +5,7 @@ import { createServerClient } from "@/services/supabaseServer";
 import { z } from "zod";
 import type { ModelName } from "@/types/database";
 
-const SCAN_LIMITS = { free: 5, plus: 20, premium: Infinity, admin: Infinity } as const;
+const SCAN_LIMITS = { free: 3, plus: 5, premium: 20, admin: Infinity } as const;
 
 const ScanRequestSchema = z.object({
   businessName: z.string().min(1).max(200),
@@ -317,11 +317,23 @@ export async function POST(request: NextRequest) {
 
     const { data: profile } = await supabaseAdmin
       .from("user_profiles")
-      .select("plan")
+      .select("plan, trial_ends_at")
       .eq("user_id", user.id)
       .single();
 
     const plan = (profile?.plan ?? "free") as keyof typeof SCAN_LIMITS;
+
+    // Trial expiry check for free-plan users
+    if (plan === "free") {
+      const trialEndsAt = profile?.trial_ends_at ? new Date(profile.trial_ends_at) : null;
+      if (!trialEndsAt || trialEndsAt < new Date()) {
+        return NextResponse.json(
+          { error: "Your free trial has expired. Please upgrade to continue scanning.", trialExpired: true },
+          { status: 403 }
+        );
+      }
+    }
+
     const limit = SCAN_LIMITS[plan] ?? SCAN_LIMITS.free;
 
     if (limit !== Infinity) {
