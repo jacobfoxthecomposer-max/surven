@@ -70,7 +70,7 @@ export function SentimentDonut({ results }: Props) {
                 fontSize: "12px",
                 color: "var(--color-fg)",
               }}
-              formatter={(value: number) => [`${Math.round((value / total) * 100)}%`, ""]}
+              formatter={(value) => [`${Math.round((Number(value) / total) * 100)}%`, ""]}
             />
           </PieChart>
         </ResponsiveContainer>
