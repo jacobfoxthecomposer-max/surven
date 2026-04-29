@@ -11,9 +11,13 @@ CREATE TABLE IF NOT EXISTS extension_api_keys (
   name              TEXT DEFAULT 'Default Key',
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   last_used_at      TIMESTAMPTZ,
-  revoked_at        TIMESTAMPTZ,
-  CONSTRAINT unique_active_key_per_user UNIQUE(user_id, revoked_at) WHERE revoked_at IS NULL
+  revoked_at        TIMESTAMPTZ
 );
+
+-- Partial unique index: one active key per user
+CREATE UNIQUE INDEX IF NOT EXISTS unique_active_key_per_user
+  ON extension_api_keys (user_id)
+  WHERE revoked_at IS NULL;
 
 ALTER TABLE extension_api_keys ENABLE ROW LEVEL SECURITY;
 
