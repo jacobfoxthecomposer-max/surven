@@ -1,18 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { Copy, Check, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/services/supabase";
+
+const PAID_PLANS = ["premium", "enterprise", "admin"];
 
 export function ApiKeysTab() {
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [planLoading, setPlanLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [revealed, setRevealed] = useState(false);
-  const [plan, setPlan] = useState<string | null>(null);
-  const queryClient = useQueryClient();
+  const [plan, setPlan] = useState<string>("free");
 
   useEffect(() => {
     fetchUserPlan();
@@ -35,6 +36,9 @@ export function ApiKeysTab() {
       setPlan(data?.plan || "free");
     } catch (err) {
       console.error("Failed to fetch plan:", err);
+      setPlan("free");
+    } finally {
+      setPlanLoading(false);
     }
   }
 
@@ -83,7 +87,18 @@ export function ApiKeysTab() {
     }
   }
 
-  if (plan === "free") {
+  if (planLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-lg font-semibold mb-2">Chrome Extension API Key</h2>
+        </div>
+        <div className="h-24 bg-[var(--color-surface)] animate-pulse rounded-lg" />
+      </div>
+    );
+  }
+
+  if (!PAID_PLANS.includes(plan)) {
     return (
       <div className="space-y-6">
         <div>

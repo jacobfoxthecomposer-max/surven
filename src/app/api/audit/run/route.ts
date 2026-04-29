@@ -20,8 +20,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const PAID_PLANS = ["premium", "enterprise", "admin"];
   const [keyData] = data;
-  if (!keyData.valid || (keyData.plan !== "premium" && keyData.plan !== "admin")) {
+  if (!keyData.valid || !PAID_PLANS.includes(keyData.plan)) {
     return NextResponse.json({ error: "Premium plan required" }, { status: 403 });
   }
 
