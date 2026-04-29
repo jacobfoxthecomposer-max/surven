@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/services/supabase";
 
 export function ApiKeysTab() {
@@ -10,6 +10,7 @@ export function ApiKeysTab() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [revealed, setRevealed] = useState(false);
   const [plan, setPlan] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
@@ -125,9 +126,19 @@ export function ApiKeysTab() {
           <div className="p-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg">
             <p className="text-xs font-semibold text-[var(--color-fg-secondary)] mb-2">Your API Key</p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 text-sm font-mono bg-[var(--color-bg)] p-3 rounded border border-[var(--color-border)] overflow-x-auto">
+              <code
+                className="flex-1 text-sm font-mono bg-[var(--color-bg)] p-3 rounded border border-[var(--color-border)] overflow-x-auto select-none"
+                style={{ filter: revealed ? "none" : "blur(6px)", transition: "filter 0.2s" }}
+              >
                 {apiKey}
               </code>
+              <button
+                onClick={() => setRevealed((r) => !r)}
+                className="p-2 hover:bg-[var(--color-bg)] rounded transition-colors"
+                title={revealed ? "Hide key" : "Show key"}
+              >
+                {revealed ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
               <button
                 onClick={copyToClipboard}
                 className="p-2 hover:bg-[var(--color-bg)] rounded transition-colors"
