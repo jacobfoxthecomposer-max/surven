@@ -1,507 +1,366 @@
 "use client";
 
 import { motion } from "framer-motion";
-import {
-  Download,
-  ScanSearch,
-  Wrench,
-  FileCode2,
-  MapPin,
-  HelpCircle,
-  Clock,
-  Tag,
-  Star,
-  Link2,
-  Globe,
-  CheckCircle2,
-} from "lucide-react";
-import { GooeyText } from "@/components/ui/gooey-text-morphing";
+import { Globe, ChevronDown, Search, Settings, AlertCircle, Clock, FileText } from "lucide-react";
 import { SurvenLogo } from "@/components/atoms/SurvenLogo";
 
-// ─── Data ────────────────────────────────────────────────────────────────────
+// ─── Mock extension data ──────────────────────────────────────────────────────
 
-const MORPHING_TEXTS = [
-  "Missing Schema",
-  "Stale Content",
-  "Weak Credentials",
-  "No FAQ Markup",
-  "Bad Meta Tags",
-  "Citation Gaps",
-  "Generic Title Tags",
-  "Low E-E-A-T",
-];
-
-const AUDIT_FEATURES = [
+const MOCK_FINDINGS = [
   {
-    icon: FileCode2,
-    title: "Organization Schema",
-    description: "Checks for structured business data that tells AI your name, phone, and service area.",
-    severity: "critical",
-    time: "30 min fix",
+    id: "org_schema",
+    title: "Organization Schema Missing",
+    severity: "critical" as const,
+    fixTime: 30,
     impact: 8,
+    expanded: false,
   },
   {
-    icon: MapPin,
-    title: "LocalBusiness Schema",
-    description: "Validates location-specific markup so AI can confidently connect you to a place.",
-    severity: "critical",
-    time: "20 min fix",
-    impact: 9,
-  },
-  {
-    icon: HelpCircle,
-    title: "FAQ Schema",
-    description: "Detects missing or thin Q&A markup that AI uses as a structured answer source.",
-    severity: "high",
-    time: "45 min fix",
+    id: "content_freshness",
+    title: "Content Not Recently Updated",
+    severity: "high" as const,
+    fixTime: 15,
     impact: 7,
+    expanded: false,
   },
   {
-    icon: Clock,
-    title: "Content Freshness",
-    description: "Flags pages that haven't been updated in 90+ days — AI deprioritizes stale content.",
-    severity: "high",
-    time: "15 min fix",
+    id: "meta_desc",
+    title: "Meta Description Too Short",
+    severity: "medium" as const,
+    fixTime: 10,
+    impact: 6,
+    expanded: false,
+  },
+  {
+    id: "faq_schema",
+    title: "FAQ Schema Missing",
+    severity: "high" as const,
+    fixTime: 45,
     impact: 7,
-  },
-  {
-    icon: Tag,
-    title: "Meta Description",
-    description: "Catches missing, too-short, or too-long descriptions that guide AI summarization.",
-    severity: "medium",
-    time: "10 min fix",
-    impact: 6,
-  },
-  {
-    icon: Star,
-    title: "Credentials & E-E-A-T",
-    description: "Scans for proof signals — years in business, licenses, awards, reviews.",
-    severity: "high",
-    time: "60 min fix",
-    impact: 8,
-  },
-  {
-    icon: Link2,
-    title: "Citation Consistency",
-    description: "Checks that your NAP data (name, address, phone) matches across sources.",
-    severity: "medium",
-    time: "30 min fix",
-    impact: 6,
-  },
-  {
-    icon: ScanSearch,
-    title: "Title Tag Quality",
-    description: "Flags generic, missing, or oversized titles — the first thing AI reads about you.",
-    severity: "medium",
-    time: "10 min fix",
-    impact: 5,
+    expanded: false,
   },
 ];
 
-const SEVERITY_STYLES: Record<string, { dot: string; badge: string }> = {
-  critical: { dot: "bg-[#B54631]", badge: "bg-[#FEE2E2] text-[#B54631]" },
-  high:     { dot: "bg-[#C97B45]", badge: "bg-[#FEF3C7] text-[#C97B45]" },
-  medium:   { dot: "bg-[#96A283]", badge: "bg-[#F0FDF4] text-[#6B8F5C]" },
+const SEVERITY: Record<string, { bg: string; text: string; border: string; badge: string }> = {
+  critical: { bg: "#FEE2E2", text: "#B54631", border: "#F9A8A0", badge: "bg-[#FEE2E2] text-[#B54631]" },
+  high:     { bg: "#FEF3C7", text: "#C97B45", border: "#FDE68A", badge: "bg-[#FEF3C7] text-[#C97B45]" },
+  medium:   { bg: "#F0FDF4", text: "#5E8A4E", border: "#BBF7D0", badge: "bg-[#F0FDF4] text-[#5E8A4E]" },
 };
 
-const STEPS = [
-  {
-    number: "01",
-    icon: Download,
-    title: "Add to Chrome",
-    description: "Install the Surven Auditor extension from the Chrome Web Store in one click.",
-  },
-  {
-    number: "02",
-    icon: ScanSearch,
-    title: "Open any website",
-    description: "Navigate to any client site. Click the Surven icon and the audit runs automatically.",
-  },
-  {
-    number: "03",
-    icon: Wrench,
-    title: "Fix what matters",
-    description: "Every finding includes a plain-English explanation and an exact time estimate to fix.",
-  },
-];
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
-// ─── Animations ──────────────────────────────────────────────────────────────
+function BrowserMockup() {
+  return (
+    <div
+      className="relative w-full rounded-2xl overflow-hidden shadow-2xl"
+      style={{ border: "1px solid var(--color-border)" }}
+    >
+      {/* Browser chrome */}
+      <div
+        className="flex items-center gap-2 px-4 py-3"
+        style={{ background: "#E8E2D5", borderBottom: "1px solid var(--color-border)" }}
+      >
+        {/* Traffic lights */}
+        <div className="flex gap-1.5">
+          <div className="w-3 h-3 rounded-full bg-[#FF5F57]" />
+          <div className="w-3 h-3 rounded-full bg-[#FEBC2E]" />
+          <div className="w-3 h-3 rounded-full bg-[#28C840]" />
+        </div>
+        {/* Address bar */}
+        <div
+          className="flex-1 mx-3 flex items-center gap-2 px-3 py-1.5 rounded-md text-xs"
+          style={{ background: "#F2EEE3", color: "#6B6D6B", border: "1px solid var(--color-border)" }}
+        >
+          <Globe size={11} />
+          thecurbskateshop.com
+        </div>
+        {/* Extension icon — glowing to draw eye */}
+        <motion.div
+          animate={{ scale: [1, 1.15, 1] }}
+          transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
+          className="w-6 h-6 rounded flex items-center justify-center cursor-pointer"
+          style={{ background: "#96A283" }}
+          title="Surven Auditor"
+        >
+          <Search size={11} color="white" />
+        </motion.div>
+      </div>
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  visible: (i = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, delay: i * 0.08 },
-  }),
-};
+      {/* Browser content + side panel */}
+      <div className="flex" style={{ height: "460px" }}>
+
+        {/* Fake webpage */}
+        <div
+          className="flex-1 p-6 overflow-hidden"
+          style={{ background: "#FAFAF8" }}
+        >
+          {/* Fake nav */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="w-24 h-4 rounded" style={{ background: "#D1CBC0" }} />
+            <div className="flex gap-3">
+              {[48, 36, 44].map((w, i) => (
+                <div key={i} className="h-3 rounded" style={{ width: w, background: "#E0DAD0" }} />
+              ))}
+            </div>
+          </div>
+          {/* Fake hero */}
+          <div className="mb-6">
+            <div className="w-3/4 h-6 rounded mb-2" style={{ background: "#C8C2B4" }} />
+            <div className="w-1/2 h-6 rounded mb-4" style={{ background: "#C8C2B4" }} />
+            <div className="w-full h-3 rounded mb-1.5" style={{ background: "#E0DAD0" }} />
+            <div className="w-5/6 h-3 rounded mb-4" style={{ background: "#E0DAD0" }} />
+            <div className="w-28 h-8 rounded-lg" style={{ background: "#96A283" }} />
+          </div>
+          {/* Fake image block */}
+          <div className="w-full h-28 rounded-lg" style={{ background: "#DDD7CB" }} />
+        </div>
+
+        {/* Extension side panel */}
+        <motion.div
+          initial={{ x: 280, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-col shrink-0 overflow-hidden"
+          style={{
+            width: 256,
+            background: "#F2EEE3",
+            borderLeft: "1px solid #C8C2B4",
+            fontFamily: "'Inter', system-ui, sans-serif",
+          }}
+        >
+          {/* Panel header */}
+          <div style={{ padding: "12px", borderBottom: "1px solid #C8C2B4" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+              <span style={{ fontSize: "13px", fontWeight: 600, color: "#1A1C1A" }}>
+                <span style={{ color: "#96A283" }}>Sur</span>ven Auditor
+              </span>
+              <Settings size={13} style={{ color: "#6B6D6B" }} />
+            </div>
+            <div
+              style={{
+                width: "100%",
+                padding: "7px 10px",
+                background: "#96A283",
+                color: "white",
+                border: "none",
+                borderRadius: "6px",
+                fontSize: "12px",
+                fontWeight: 500,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "6px",
+              }}
+            >
+              <Search size={12} />
+              Run Audit
+            </div>
+          </div>
+
+          {/* Summary */}
+          <div style={{ padding: "8px 12px", borderBottom: "1px solid #E5DFCF" }}>
+            <div style={{ fontSize: "11px", color: "#1A1C1A" }}>
+              <strong>4</strong> issues found
+              <span style={{ color: "#B54631", marginLeft: "8px" }}>• 1 critical</span>
+              <span style={{ color: "#C97B45", marginLeft: "6px" }}>• 2 high</span>
+            </div>
+            <div style={{ fontSize: "10px", color: "#6B6D6B", marginTop: "2px" }}>12 pages crawled</div>
+          </div>
+
+          {/* Findings */}
+          <div style={{ flex: 1, overflow: "hidden", padding: "8px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              {MOCK_FINDINGS.map((finding, i) => {
+                const s = SEVERITY[finding.severity];
+                const isFirst = i === 0;
+                return (
+                  <motion.div
+                    key={finding.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 1.2 + i * 0.1, duration: 0.3 }}
+                    style={{
+                      border: `1px solid ${s.border}`,
+                      borderRadius: "6px",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: "8px 10px",
+                        background: s.bg,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        gap: "6px",
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: "11px", fontWeight: 600, color: s.text, marginBottom: "2px", lineHeight: 1.3 }}>
+                          {finding.title}
+                        </div>
+                        <div style={{ fontSize: "10px", color: "#6B6D6B" }}>
+                          {finding.fixTime} min fix · Impact {finding.impact}/10
+                        </div>
+                      </div>
+                      <ChevronDown
+                        size={13}
+                        style={{ color: s.text, marginTop: "1px", flexShrink: 0, transform: isFirst ? "rotate(180deg)" : undefined }}
+                      />
+                    </div>
+                    {isFirst && (
+                      <div style={{ padding: "8px 10px", background: "#E5DFCF", fontSize: "10px", color: "#3D3F3D", lineHeight: 1.5 }}>
+                        Add Organization schema to your homepage &lt;head&gt; so AI systems know your business name, phone, and location.
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AuditLandingPage() {
   return (
     <div
-      className="min-h-screen"
+      className="min-h-screen flex flex-col"
       style={{ background: "var(--color-bg)", color: "var(--color-fg)", fontFamily: "var(--font-sans)" }}
     >
       {/* Nav */}
       <nav
-        className="sticky top-0 z-50 flex items-center justify-between px-6 py-4 backdrop-blur-md"
-        style={{ borderBottom: "1px solid var(--color-border)", background: "rgba(242,238,227,0.85)" }}
+        className="sticky top-0 z-50 flex items-center justify-between px-8 py-4"
+        style={{ borderBottom: "1px solid var(--color-border)", background: "rgba(242,238,227,0.9)", backdropFilter: "blur(12px)" }}
       >
         <SurvenLogo size="md" />
         <motion.a
           href="#"
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white cursor-not-allowed"
+          className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium text-white"
           style={{ background: "var(--color-primary)" }}
-          title="Coming soon — not yet on the Chrome Web Store"
+          title="Coming soon to the Chrome Web Store"
         >
-          <Globe size={15} />
+          <Globe size={14} />
           Add to Chrome
         </motion.a>
       </nav>
 
-      {/* Hero */}
-      <section className="mx-auto max-w-5xl px-6 pt-20 pb-16 text-center">
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeUp}
-          className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium mb-6"
-          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-fg-muted)" }}
-        >
-          <span
-            className="inline-block w-2 h-2 rounded-full animate-pulse"
-            style={{ background: "var(--color-primary)" }}
-          />
-          Chrome Extension · Coming Soon
-        </motion.div>
+      {/* Hero — fills remaining viewport */}
+      <div className="flex-1 flex items-center">
+        <div className="w-full max-w-7xl mx-auto px-8 py-12 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
 
-        <motion.h1
-          initial="hidden"
-          animate="visible"
-          custom={1}
-          variants={fadeUp}
-          style={{ fontFamily: "var(--font-display)", fontSize: "clamp(2.5rem, 6vw, 4.5rem)", fontWeight: 600, lineHeight: 1.1 }}
-        >
-          See exactly what's stopping
-          <br />
-          AI from recommending you
-        </motion.h1>
-
-        {/* Gooey morphing text */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          custom={2}
-          variants={fadeUp}
-          className="relative h-20 mt-4 flex items-center justify-center overflow-hidden"
-        >
-          <GooeyText
-            texts={MORPHING_TEXTS}
-            morphTime={1.2}
-            cooldownTime={2}
-            className="relative"
-            textClassName="absolute select-none text-center font-semibold text-[clamp(1.5rem,4vw,2.5rem)]"
-            textStyle={{ color: "var(--color-primary)", fontFamily: "var(--font-display)" }}
-          />
-        </motion.div>
-
-        <motion.p
-          initial="hidden"
-          animate="visible"
-          custom={3}
-          variants={fadeUp}
-          className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed"
-          style={{ color: "var(--color-fg-muted)" }}
-        >
-          Surven Auditor is a Chrome extension that crawls up to 100 pages of any website
-          and surfaces the exact GEO issues preventing AI systems from recommending that business.
-        </motion.p>
-
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          custom={4}
-          variants={fadeUp}
-          className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
-        >
-          <motion.a
-            href="#"
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            className="flex items-center gap-2 px-8 py-3.5 rounded-xl text-base font-semibold text-white cursor-not-allowed"
-            style={{ background: "var(--color-primary)", boxShadow: "0 4px 14px rgba(150,162,131,0.35)" }}
-            title="Coming soon"
-          >
-            <Globe size={18} />
-            Add to Chrome — Free
-          </motion.a>
-          <span className="text-sm" style={{ color: "var(--color-fg-muted)" }}>
-            Chrome Web Store launch coming soon
-          </span>
-        </motion.div>
-
-        {/* Stats strip */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          custom={5}
-          variants={fadeUp}
-          className="mt-14 flex items-center justify-center gap-10 flex-wrap"
-        >
-          {[
-            { value: "8", label: "GEO checks" },
-            { value: "100", label: "pages crawled" },
-            { value: "~30s", label: "per audit" },
-            { value: "Free", label: "to use" },
-          ].map((stat) => (
-            <div key={stat.label} className="text-center">
-              <div
-                style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 600, color: "var(--color-fg)" }}
-              >
-                {stat.value}
-              </div>
-              <div className="text-sm" style={{ color: "var(--color-fg-muted)" }}>
-                {stat.label}
-              </div>
-            </div>
-          ))}
-        </motion.div>
-      </section>
-
-      {/* How it works */}
-      <section
-        className="py-20"
-        style={{ background: "var(--color-surface)", borderTop: "1px solid var(--color-border)", borderBottom: "1px solid var(--color-border)" }}
-      >
-        <div className="mx-auto max-w-5xl px-6">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeUp}
-            className="text-center mb-14"
-          >
-            <h2
-              style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.75rem, 4vw, 2.75rem)", fontWeight: 600 }}
+          {/* Left: copy */}
+          <div>
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium mb-6"
+              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-fg-muted)" }}
             >
-              How it works
-            </h2>
-            <p className="mt-2 text-base" style={{ color: "var(--color-fg-muted)" }}>
-              From install to insight in under a minute.
-            </p>
-          </motion.div>
+              <span
+                className="inline-block w-2 h-2 rounded-full animate-pulse"
+                style={{ background: "var(--color-primary)" }}
+              />
+              Chrome Extension · Coming Soon
+            </motion.div>
 
-          <div className="relative grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Connector line (desktop only) */}
-            <div
-              className="hidden md:block absolute top-10 left-[calc(16.5%+1.5rem)] right-[calc(16.5%+1.5rem)] h-px"
-              style={{ background: "var(--color-border)" }}
-            />
+            <motion.h1
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "clamp(2.25rem, 4vw, 3.75rem)",
+                fontWeight: 600,
+                lineHeight: 1.1,
+                letterSpacing: "-0.01em",
+              }}
+            >
+              See exactly what's stopping AI from recommending you
+            </motion.h1>
 
-            {STEPS.map((step, i) => (
-              <motion.div
-                key={step.number}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                custom={i}
-                variants={fadeUp}
-                className="flex flex-col items-center text-center gap-4"
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="mt-5 text-lg leading-relaxed"
+              style={{ color: "var(--color-fg-muted)", maxWidth: "480px" }}
+            >
+              Surven Auditor crawls up to 100 pages of any website and surfaces the exact GEO issues
+              preventing AI from recommending that business.
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="mt-8 flex items-center gap-4 flex-wrap"
+            >
+              <motion.a
+                href="#"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                className="flex items-center gap-2 px-7 py-3.5 rounded-xl text-base font-semibold text-white"
+                style={{
+                  background: "var(--color-primary)",
+                  boxShadow: "0 4px 20px rgba(150,162,131,0.4)",
+                }}
+                title="Coming soon to the Chrome Web Store"
               >
-                <div
-                  className="relative z-10 flex items-center justify-center w-20 h-20 rounded-2xl"
-                  style={{
-                    background: "var(--color-bg)",
-                    border: "1px solid var(--color-border)",
-                    boxShadow: "var(--shadow-md)",
-                  }}
-                >
-                  <step.icon size={28} style={{ color: "var(--color-primary)" }} />
+                <Globe size={17} />
+                Add to Chrome
+              </motion.a>
+              <span className="text-sm" style={{ color: "var(--color-fg-muted)" }}>
+                Chrome Web Store · launching soon
+              </span>
+            </motion.div>
+
+            {/* Micro stats */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.5 }}
+              className="mt-10 flex items-center gap-8"
+            >
+              {[
+                { icon: AlertCircle, label: "8 GEO checks" },
+                { icon: FileText,    label: "100 pages crawled" },
+                { icon: Clock,       label: "~30s per audit" },
+              ].map(({ icon: Icon, label }) => (
+                <div key={label} className="flex items-center gap-2 text-sm" style={{ color: "var(--color-fg-muted)" }}>
+                  <Icon size={14} style={{ color: "var(--color-primary)" }} />
+                  {label}
                 </div>
-                <div>
-                  <div className="text-xs font-semibold mb-1" style={{ color: "var(--color-primary)" }}>
-                    STEP {step.number}
-                  </div>
-                  <h3
-                    className="text-lg font-semibold mb-2"
-                    style={{ color: "var(--color-fg)" }}
-                  >
-                    {step.title}
-                  </h3>
-                  <p className="text-sm leading-relaxed" style={{ color: "var(--color-fg-muted)" }}>
-                    {step.description}
-                  </p>
-                </div>
-              </motion.div>
-            ))}
+              ))}
+            </motion.div>
           </div>
-        </div>
-      </section>
 
-      {/* Features bento */}
-      <section className="py-20">
-        <div className="mx-auto max-w-5xl px-6">
+          {/* Right: browser mockup */}
           <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeUp}
-            className="text-center mb-14"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
           >
-            <h2
-              style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.75rem, 4vw, 2.75rem)", fontWeight: 600 }}
-            >
-              8 checks. Every audit.
-            </h2>
-            <p className="mt-2 text-base" style={{ color: "var(--color-fg-muted)" }}>
-              Every finding includes a plain-English explanation, why it matters, and exactly how to fix it.
-            </p>
+            <BrowserMockup />
           </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {AUDIT_FEATURES.map((feature, i) => {
-              const styles = SEVERITY_STYLES[feature.severity];
-              return (
-                <motion.div
-                  key={feature.title}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true }}
-                  custom={i * 0.5}
-                  variants={fadeUp}
-                  whileHover={{ y: -3, transition: { duration: 0.2 } }}
-                  className="rounded-xl p-5 flex flex-col gap-3"
-                  style={{
-                    background: "var(--color-surface)",
-                    border: "1px solid var(--color-border)",
-                    boxShadow: "var(--shadow-sm)",
-                  }}
-                >
-                  <div className="flex items-start justify-between">
-                    <div
-                      className="flex items-center justify-center w-9 h-9 rounded-lg"
-                      style={{ background: "var(--color-surface-alt)" }}
-                    >
-                      <feature.icon size={18} style={{ color: "var(--color-primary)" }} />
-                    </div>
-                    <span
-                      className={`text-xs font-semibold px-2 py-0.5 rounded-full ${styles.badge}`}
-                    >
-                      {feature.severity}
-                    </span>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold mb-1" style={{ color: "var(--color-fg)" }}>
-                      {feature.title}
-                    </h3>
-                    <p className="text-xs leading-relaxed" style={{ color: "var(--color-fg-muted)" }}>
-                      {feature.description}
-                    </p>
-                  </div>
-                  <div className="mt-auto flex items-center justify-between text-xs" style={{ color: "var(--color-fg-muted)" }}>
-                    <span>{feature.time}</span>
-                    <span>Impact {feature.impact}/10</span>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
         </div>
-      </section>
-
-      {/* What you get strip */}
-      <section
-        className="py-16"
-        style={{ background: "var(--color-surface)", borderTop: "1px solid var(--color-border)", borderBottom: "1px solid var(--color-border)" }}
-      >
-        <div className="mx-auto max-w-3xl px-6">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeUp}
-            className="text-center mb-10"
-          >
-            <h2
-              style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.5rem, 3.5vw, 2.25rem)", fontWeight: 600 }}
-            >
-              Built for GEO agencies
-            </h2>
-          </motion.div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {[
-              "Runs a full 100-page crawl — not just the homepage",
-              "Highlights issues directly on the webpage",
-              "Plain-English explanations for every finding",
-              "24-hour result caching so scans stay fast",
-              "Simple API key setup — no accounts for clients",
-              "Works on any website, any industry",
-            ].map((item, i) => (
-              <motion.div
-                key={item}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                custom={i * 0.3}
-                variants={fadeUp}
-                className="flex items-start gap-3 text-sm"
-                style={{ color: "var(--color-fg-secondary)" }}
-              >
-                <CheckCircle2
-                  size={16}
-                  className="mt-0.5 shrink-0"
-                  style={{ color: "var(--color-primary)" }}
-                />
-                {item}
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-24">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={fadeUp}
-          className="mx-auto max-w-xl px-6 text-center"
-        >
-          <h2
-            className="mb-4"
-            style={{ fontFamily: "var(--font-display)", fontSize: "clamp(2rem, 5vw, 3rem)", fontWeight: 600 }}
-          >
-            Coming to the Chrome Web Store
-          </h2>
-          <p className="text-base mb-8" style={{ color: "var(--color-fg-muted)" }}>
-            Surven Auditor is launching soon. Built by the team behind Surven — the AI visibility tracker for local businesses.
-          </p>
-          <motion.a
-            href="/"
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-base font-semibold text-white"
-            style={{ background: "var(--color-primary)", boxShadow: "0 4px 14px rgba(150,162,131,0.35)" }}
-          >
-            Track your AI visibility →
-          </motion.a>
-        </motion.div>
-      </section>
+      </div>
 
       {/* Footer */}
       <footer
-        className="px-6 py-8 text-center text-sm"
+        className="px-8 py-5 text-sm flex items-center justify-between"
         style={{ borderTop: "1px solid var(--color-border)", color: "var(--color-fg-muted)" }}
       >
-        <span style={{ fontFamily: "var(--font-display)", fontWeight: 500, color: "var(--color-fg)" }}>
-          Surven
-        </span>{" "}
-        · Generative Engine Optimization
+        <SurvenLogo size="sm" />
+        <span>Generative Engine Optimization</span>
       </footer>
     </div>
   );
