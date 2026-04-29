@@ -73,8 +73,8 @@ const itemVariants: Variants = {
 
 // ─── Interactive extension panel ──────────────────────────────────────────────
 
-function ExtensionPanel() {
-  const [expandedId, setExpandedId] = useState<string | null>("org_schema");
+function ExtensionPanel({ onFirstInteract }: { onFirstInteract: () => void }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [whatIsItId, setWhatIsItId] = useState<string | null>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
@@ -143,7 +143,7 @@ function ExtensionPanel() {
               <div key={finding.id} style={{ border: `1px solid ${s.border}`, borderRadius: "6px", overflow: "hidden" }}>
                 {/* Card header — clickable */}
                 <button
-                  onClick={() => setExpandedId(isExpanded ? null : finding.id)}
+                  onClick={() => { onFirstInteract(); setExpandedId(isExpanded ? null : finding.id); }}
                   style={{
                     width: "100%", padding: "10px 12px", background: s.bg, border: "none",
                     textAlign: "left", cursor: "pointer", display: "flex",
@@ -235,7 +235,50 @@ function ExtensionPanel() {
 // ─── Browser mockup ───────────────────────────────────────────────────────────
 
 function BrowserMockup() {
+  const [hintDismissed, setHintDismissed] = useState(false);
+
   return (
+    <div className="relative w-full">
+      {/* Floating annotation — fades away on first card click */}
+      <motion.div
+        initial={{ opacity: 0, x: 10 }}
+        animate={{ opacity: hintDismissed ? 0 : 1, x: hintDismissed ? 14 : 0 }}
+        transition={{ opacity: { duration: 0.4, delay: hintDismissed ? 0 : 2 }, x: { duration: 0.4, delay: hintDismissed ? 0 : 2 } }}
+        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-[calc(100%+8px)] flex items-center gap-2 pointer-events-none z-10"
+        style={{ width: 90 }}
+      >
+        {/* Curved arrow pointing left */}
+        <svg width="36" height="48" viewBox="0 0 36 48" fill="none" style={{ flexShrink: 0 }}>
+          <path
+            d="M 30 4 C 32 20, 8 28, 6 44"
+            stroke="#96A283"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            fill="none"
+          />
+          <path
+            d="M 2 40 L 6 44 L 11 40"
+            stroke="#96A283"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
+        </svg>
+        <span
+          style={{
+            fontFamily: "var(--font-display)",
+            fontStyle: "italic",
+            fontSize: "13px",
+            color: "#96A283",
+            lineHeight: 1.3,
+            marginTop: "-8px",
+          }}
+        >
+          click to explore
+        </span>
+      </motion.div>
+
     <div
       className="relative w-full rounded-2xl overflow-hidden"
       style={{ border: "1px solid var(--color-border)", boxShadow: "0 24px 60px rgba(26,28,26,0.14)" }}
@@ -303,9 +346,10 @@ function BrowserMockup() {
           transition={{ duration: 0.65, delay: 0.9, ease: [0.16, 1, 0.3, 1] }}
           style={{ width: 300, borderLeft: "1px solid #C8C2B4", flexShrink: 0 }}
         >
-          <ExtensionPanel />
+          <ExtensionPanel onFirstInteract={() => setHintDismissed(true)} />
         </motion.div>
       </div>
+    </div>
     </div>
   );
 }
