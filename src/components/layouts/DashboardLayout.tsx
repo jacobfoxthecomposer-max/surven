@@ -10,6 +10,7 @@ import { PageTransition } from "./PageTransition";
 import { BusinessSwitcher } from "@/components/organisms/BusinessSwitcher";
 import { Sidebar } from "@/components/organisms/Sidebar";
 import { SurvenLogo } from "@/components/atoms/SurvenLogo";
+import { useSidebarContext } from "@/features/sidebar/context/SidebarContext";
 import { cn } from "@/utils/cn";
 
 const navItems = [
@@ -22,6 +23,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { isExpanded } = useSidebarContext();
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -77,7 +79,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         <Sidebar />
 
         {/* Content */}
-        <main className="flex-1 ml-64 px-4 sm:px-6 lg:px-8 py-8">
+        <main className={cn("flex-1 px-4 sm:px-6 lg:px-8 py-8 transition-all duration-300", isExpanded ? "ml-64" : "ml-20")}>
           <PageTransition key={pathname}>{children}</PageTransition>
         </main>
       </div>

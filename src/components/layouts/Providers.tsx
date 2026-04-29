@@ -5,6 +5,7 @@ import { useState, type ReactNode } from "react";
 import { ToastProvider } from "@/components/molecules/Toast";
 import { AuthProvider } from "@/features/auth/hooks/useAuth";
 import { ActiveBusinessProvider } from "@/features/business/hooks/useActiveBusiness";
+import { SidebarProvider } from "@/features/sidebar/context/SidebarContext";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -23,7 +24,9 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ActiveBusinessProvider>
-          <ToastProvider>{children}</ToastProvider>
+          <SidebarProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </SidebarProvider>
         </ActiveBusinessProvider>
       </AuthProvider>
     </QueryClientProvider>

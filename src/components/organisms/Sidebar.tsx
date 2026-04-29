@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -14,12 +14,13 @@ import {
   BookOpen,
   AlertCircle,
   Settings,
-  ChevronDown,
+  ChevronRight,
   Upload,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useUserProfile } from "@/features/auth/hooks/useUserProfile";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
+import { useSidebarContext } from "@/features/sidebar/context/SidebarContext";
 import { cn } from "@/utils/cn";
 
 interface SidebarSection {
@@ -80,19 +81,7 @@ export function Sidebar() {
   const { user } = useAuth();
   const { business } = useBusiness();
   const { plan } = useUserProfile();
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(["Overview", "Analytics"])
-  );
-
-  const toggleSection = (title: string) => {
-    const newExpanded = new Set(expandedSections);
-    if (newExpanded.has(title)) {
-      newExpanded.delete(title);
-    } else {
-      newExpanded.add(title);
-    }
-    setExpandedSections(newExpanded);
-  };
+  const { isExpanded, setIsExpanded } = useSidebarContext();
 
   const isItemActive = (href?: string) => {
     if (!href) return false;
@@ -100,43 +89,56 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="fixed left-0 top-14 h-[calc(100vh-56px)] w-64 border-r border-[var(--color-border)] bg-[var(--color-bg)] overflow-y-auto z-30 flex flex-col">
-      {/* Main sidebar content */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {SIDEBAR_SECTIONS.map((section) => (
-          <div key={section.title}>
-            <button
-              onClick={() => toggleSection(section.title)}
-              className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-[var(--color-fg-muted)] uppercase tracking-wider hover:text-[var(--color-fg)] transition-colors"
-            >
-              {section.title}
-              <ChevronDown
-                className={cn(
-                  "h-4 w-4 transition-transform duration-200",
-                  expandedSections.has(section.title) ? "rotate-0" : "-rotate-90"
-                )}
-              />
-            </button>
+    <aside
+      className={cn(
+        "fixed left-0 top-14 h-[calc(100vh-56px)] border-r border-[var(--color-border)] bg-[var(--color-bg)] overflow-y-auto z-30 flex flex-col transition-all duration-300",
+        isExpanded ? "w-64" : "w-20"
+      )}
+    >
+      {/* Collapse toggle button */}
+      <div className="flex items-center justify-between px-3 py-4 border-b border-[var(--color-border)]">
+        {isExpanded && <div className="text-xs font-semibold text-[var(--color-fg-muted)] uppercase tracking-wider">Menu</div>}
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="ml-auto flex items-center justify-center h-8 w-8 rounded-lg text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] hover:bg-[var(--color-surface)] transition-colors"
+          title={isExpanded ? "Collapse" : "Expand"}
+        >
+          <ChevronRight
+            className={cn(
+              "h-5 w-5 transition-transform duration-300",
+              !isExpanded && "rotate-180"
+            )}
+          />
+        </button>
+      </div>
 
-            {expandedSections.has(section.title) && (
-              <div className="space-y-1 mt-1">
-                {section.items.map((item) => (
-                  <NavItem
-                    key={item.label}
-                    item={item}
-                    active={isItemActive(item.href)}
-                    disabled={item.disabled}
-                  />
-                ))}
+      {/* Main sidebar content */}
+      <nav className="flex-1 px-2 py-3 space-y-4 overflow-hidden">
+        {SIDEBAR_SECTIONS.map((section) => (
+          <div key={section.title} className="space-y-2">
+            {isExpanded && (
+              <div className="px-3 py-1 text-xs font-semibold text-[var(--color-fg-muted)] uppercase tracking-wider">
+                {section.title}
               </div>
             )}
+            <div className="space-y-1">
+              {section.items.map((item) => (
+                <NavItem
+                  key={item.label}
+                  item={item}
+                  active={isItemActive(item.href)}
+                  disabled={item.disabled}
+                  isExpanded={isExpanded}
+                />
+              ))}
+            </div>
           </div>
         ))}
       </nav>
 
       {/* Profile section */}
-      <div className="border-t border-[var(--color-border)] p-3 space-y-3">
-        <ProfileCard user={user} business={business} plan={plan} />
+      <div className="border-t border-[var(--color-border)] p-3">
+        <ProfileCard user={user} business={business} plan={plan} isExpanded={isExpanded} />
       </div>
     </aside>
   );
@@ -146,59 +148,75 @@ function NavItem({
   item,
   active,
   disabled,
+  isExpanded,
 }: {
   item: SidebarItem;
   active: boolean;
   disabled?: boolean;
+  isExpanded: boolean;
 }) {
   const Icon = item.icon;
 
-  if (disabled) {
+  if (!item.href) {
+    if (isExpanded) {
+      return (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[var(--color-fg-muted)] opacity-50 cursor-not-allowed">
+          <Icon className="h-4 w-4 flex-shrink-0" />
+          <span className="flex-1 text-left truncate">{item.label}</span>
+        </div>
+      );
+    }
     return (
-      <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[var(--color-fg-muted)] opacity-50 cursor-not-allowed">
-        <Icon className="h-4 w-4 flex-shrink-0" />
-        <span className="flex-1 text-left truncate">{item.label}</span>
-        {item.badge && (
-          <span className="text-xs bg-[var(--color-surface)] px-2 py-0.5 rounded">
-            {item.badge}
-          </span>
-        )}
+      <div className="relative group">
+        <div className="flex items-center justify-center h-10 w-10 mx-auto rounded-lg text-[var(--color-fg-muted)] opacity-50 cursor-not-allowed">
+          <Icon className="h-4 w-4" />
+        </div>
+        <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg px-2 py-1 text-xs text-[var(--color-fg)] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+          {item.label}
+        </div>
       </div>
     );
   }
 
-  if (!item.href) {
+  if (isExpanded) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[var(--color-fg-muted)]">
+      <Link
+        href={item.href}
+        className={cn(
+          "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+          active
+            ? "bg-[var(--color-surface)] text-[var(--color-fg)]"
+            : "text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] hover:bg-[var(--color-surface)]/50"
+        )}
+      >
         <Icon className="h-4 w-4 flex-shrink-0" />
         <span className="flex-1 text-left truncate">{item.label}</span>
         {item.badge && (
-          <span className="text-xs bg-[var(--color-surface)] px-2 py-0.5 rounded">
+          <span className="text-xs bg-[var(--color-bg)] px-2 py-0.5 rounded">
             {item.badge}
           </span>
         )}
-      </div>
+      </Link>
     );
   }
 
   return (
-    <Link
-      href={item.href}
-      className={cn(
-        "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-        active
-          ? "bg-[var(--color-surface)] text-[var(--color-fg)]"
-          : "text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] hover:bg-[var(--color-surface)]/50"
-      )}
-    >
-      <Icon className="h-4 w-4 flex-shrink-0" />
-      <span className="flex-1 text-left truncate">{item.label}</span>
-      {item.badge && (
-        <span className="text-xs bg-[var(--color-surface)] px-2 py-0.5 rounded">
-          {item.badge}
-        </span>
-      )}
-    </Link>
+    <div className="relative group">
+      <Link
+        href={item.href}
+        className={cn(
+          "flex items-center justify-center h-10 w-10 mx-auto rounded-lg transition-colors",
+          active
+            ? "bg-[var(--color-surface)] text-[var(--color-fg)]"
+            : "text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] hover:bg-[var(--color-surface)]/50"
+        )}
+      >
+        <Icon className="h-4 w-4" />
+      </Link>
+      <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg px-2 py-1 text-xs text-[var(--color-fg)] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+        {item.label}
+      </div>
+    </div>
   );
 }
 
@@ -206,12 +224,34 @@ function ProfileCard({
   user,
   business,
   plan,
+  isExpanded,
 }: {
   user: any;
   business: any;
   plan?: string;
+  isExpanded: boolean;
 }) {
   const [showUploadMenu, setShowUploadMenu] = useState(false);
+
+  if (!isExpanded) {
+    return (
+      <div className="relative group">
+        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm mx-auto cursor-pointer relative">
+          {user?.email?.[0]?.toUpperCase() || "U"}
+          <button
+            onClick={() => setShowUploadMenu(!showUploadMenu)}
+            className="absolute -bottom-1 -right-1 h-5 w-5 bg-[var(--color-fg-muted)] rounded-full flex items-center justify-center text-[var(--color-bg)] hover:bg-[var(--color-fg)] transition-colors"
+          >
+            <Upload className="h-3 w-3" />
+          </button>
+        </div>
+        <div className="absolute left-full ml-2 top-0 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs text-[var(--color-fg)] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 space-y-0.5">
+          <div className="font-semibold">{business?.name || "Business"}</div>
+          <div className="text-[var(--color-fg-muted)]">{plan || "Loading..."}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[var(--color-surface)] rounded-lg p-3 space-y-3">
