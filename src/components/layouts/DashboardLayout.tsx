@@ -8,6 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/services/supabase";
 import { PageTransition } from "./PageTransition";
 import { BusinessSwitcher } from "@/components/organisms/BusinessSwitcher";
+import { SurvenLogo } from "@/components/atoms/SurvenLogo";
 import { cn } from "@/utils/cn";
 
 const navItems = [
@@ -34,11 +35,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           {/* Logo + switcher */}
           <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="flex items-center gap-2">
-              <span className="text-lg font-bold tracking-tight">
-                <span className="text-[var(--color-primary)]">Sur</span>ven
-              </span>
-            </Link>
+            <SurvenLogo size="md" />
             <BusinessSwitcher />
           </div>
 

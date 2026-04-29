@@ -16,6 +16,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { GooeyText } from "@/components/ui/gooey-text-morphing";
+import { SurvenLogo } from "@/components/atoms/SurvenLogo";
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -148,9 +149,7 @@ export default function AuditLandingPage() {
         className="sticky top-0 z-50 flex items-center justify-between px-6 py-4 backdrop-blur-md"
         style={{ borderBottom: "1px solid var(--color-border)", background: "rgba(242,238,227,0.85)" }}
       >
-        <span style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem", fontWeight: 600 }}>
-          Surven
-        </span>
+        <SurvenLogo size="md" />
         <motion.a
           href="#"
           whileHover={{ scale: 1.03 }}
