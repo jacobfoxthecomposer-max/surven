@@ -56,7 +56,7 @@ export default function SentimentPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-8 max-w-5xl">
+      <div className="space-y-8 w-full">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -93,13 +93,9 @@ export default function SentimentPage() {
             </motion.div>
 
             {/* Donut + Platform breakdown */}
-            <motion.div {...reveal} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-1">
-                <SentimentDonut results={results} />
-              </div>
-              <div className="md:col-span-2">
-                <SentimentByPlatform results={results} />
-              </div>
+            <motion.div {...reveal} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <SentimentDonut results={results} />
+              <SentimentByPlatform results={results} />
             </motion.div>
 
             {/* Sentiment over time */}
