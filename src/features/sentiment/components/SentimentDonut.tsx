@@ -85,8 +85,10 @@ export function SentimentDonut({ results }: Props) {
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           {dominant && (
             <>
-              <span className="text-2xl font-bold text-[var(--color-fg)]">{pcts[dominant]}%</span>
-              <span className="text-xs text-[var(--color-fg-muted)]">{CONFIG[dominant].label}</span>
+              <span style={{ fontFamily: "var(--font-display)", fontSize: 36, fontWeight: 600, lineHeight: 1, color: "var(--color-fg)" }}>
+                {pcts[dominant]}%
+              </span>
+              <span className="text-xs text-[var(--color-fg-muted)] mt-0.5">{CONFIG[dominant].label}</span>
             </>
           )}
         </div>

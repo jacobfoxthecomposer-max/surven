@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Info } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -28,13 +28,6 @@ const LINES = [
   { key: "Negative", color: "#B54631" },
 ] as const;
 
-type Range = "14d" | "30d" | "all";
-const RANGES: { key: Range; label: string }[] = [
-  { key: "14d", label: "14d" },
-  { key: "30d", label: "30d" },
-  { key: "all", label: "All" },
-];
-
 // Custom SVG end-of-line pill for the Positive line
 function EndLabel(props: {
   x?: number; y?: number; value?: number;
@@ -60,23 +53,16 @@ function EndLabel(props: {
 
 export function SentimentOverTime({ data, isLoading }: Props) {
   const [hoveredLine, setHoveredLine] = useState<string | null>(null);
-  const [range, setRange]             = useState<Range>("all");
 
-  const filteredData = useMemo(() => {
-    if (range === "14d") return data.slice(-14);
-    if (range === "30d") return data.slice(-30);
-    return data;
-  }, [data, range]);
-
-  const chartData = filteredData.map((d) => ({
+  const chartData = data.map((d) => ({
     date: formatDate(d.date),
     Positive: d.positivePct,
     Neutral: d.neutralPct,
     Negative: d.negativePct,
   }));
 
-  const latestPositive = filteredData.length > 0 ? filteredData[filteredData.length - 1].positivePct : null;
-  const prevPositive   = filteredData.length > 1 ? filteredData[filteredData.length - 2].positivePct : null;
+  const latestPositive = data.length > 0 ? data[data.length - 1].positivePct : null;
+  const prevPositive   = data.length > 1 ? data[data.length - 2].positivePct : null;
   const trend = latestPositive !== null && prevPositive !== null ? latestPositive - prevPositive : null;
 
   const insight = latestPositive !== null
@@ -90,33 +76,16 @@ export function SentimentOverTime({ data, isLoading }: Props) {
   return (
     <Card>
       {/* Header row */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+      <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-1.5">
           <h3 className="text-sm font-semibold text-[var(--color-fg)]">Favorable Sentiment Over Time</h3>
           <HoverHint hint="Tracks how your brand's positive sentiment rate changes across scans. Each point is one scan's overall positive mention rate.">
             <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
           </HoverHint>
         </div>
-
-        {/* Range pills */}
-        <div className="flex items-center gap-1">
-          {RANGES.map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setRange(key)}
-              className="px-3 py-1 rounded-full text-xs font-medium transition-colors"
-              style={{
-                background: range === key ? "var(--color-primary)" : "var(--color-surface-alt)",
-                color: range === key ? "white" : "var(--color-fg-muted)",
-              }}
-            >
-              {label}
-            </button>
-          ))}
-          <span className="text-xs text-[var(--color-fg-muted)] ml-2 shrink-0">
-            {filteredData.length} scan{filteredData.length !== 1 ? "s" : ""}
-          </span>
-        </div>
+        <span className="text-xs text-[var(--color-fg-muted)] shrink-0">
+          {data.length} scan{data.length !== 1 ? "s" : ""}
+        </span>
       </div>
 
       {/* AI callout */}
@@ -126,7 +95,7 @@ export function SentimentOverTime({ data, isLoading }: Props) {
         <div className="flex items-center justify-center h-48">
           <Spinner size="md" />
         </div>
-      ) : filteredData.length < 2 ? (
+      ) : data.length < 2 ? (
         <div className="flex items-center justify-center h-48">
           <p className="text-sm text-[var(--color-fg-muted)]">Run more scans to see trends over time.</p>
         </div>

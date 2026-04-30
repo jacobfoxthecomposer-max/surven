@@ -107,7 +107,7 @@ export function SentimentDrivers({ results, businessName }: Props) {
           <div className="space-y-3">
             {strengths.map((s, i) => (
               <div key={i} className="bg-[#96A283]/10 rounded-lg px-3 py-2.5">
-                <p className="text-sm text-[var(--color-fg)] leading-snug line-clamp-2">{s.text}</p>
+                <p className="text-sm text-[var(--color-fg)] leading-snug leading-snug">{s.text}</p>
                 <div className="flex items-center justify-between mt-1">
                   <p className="text-xs text-[#566A47]">{s.detail}</p>
                   <Link href="/sentiment" className="text-xs text-[#566A47] hover:underline whitespace-nowrap ml-2">View prompts →</Link>
@@ -145,7 +145,7 @@ export function SentimentDrivers({ results, businessName }: Props) {
                   item.type === "negative" ? "bg-[#B54631]/10" : "bg-[var(--color-surface-alt)]"
                 }`}
               >
-                <p className="text-sm text-[var(--color-fg)] leading-snug line-clamp-2">{item.text}</p>
+                <p className="text-sm text-[var(--color-fg)] leading-snug leading-snug">{item.text}</p>
                 <div className="flex items-center justify-between mt-1">
                   <p className={`text-xs ${item.type === "negative" ? "text-[#8C3522]" : "text-[var(--color-fg-muted)]"}`}>
                     {item.detail}

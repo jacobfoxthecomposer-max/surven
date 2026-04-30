@@ -1,76 +1,17 @@
 "use client";
 
 import * as React from "react";
-
-type Placement = "top" | "left" | "right" | "bottom";
+import { createPortal } from "react-dom";
 
 interface HoverHintProps {
   hint: string;
   children: React.ReactNode;
-  /** Optional inline display style for the wrapper. Defaults to inline-flex. */
   display?: "inline" | "inline-flex" | "inline-block" | "block";
-  /** Tooltip width in px. Defaults to 240. */
   width?: number;
-  /** Wrapper className passthrough. */
   className?: string;
-  /** Where the tooltip appears relative to the trigger. Defaults to "top". */
-  placement?: Placement;
+  placement?: "top" | "bottom" | "left" | "right";
 }
 
-const PLACEMENT_TOOLTIP: Record<Placement, string> = {
-  top: "left-1/2 bottom-full mb-2 -translate-x-1/2 translate-y-1 group-hover:translate-y-0",
-  bottom: "left-1/2 top-full mt-2 -translate-x-1/2 -translate-y-1 group-hover:translate-y-0",
-  left: "right-full top-1/2 mr-2 -translate-y-1/2 translate-x-1 group-hover:translate-x-0",
-  right: "left-full top-1/2 ml-2 -translate-y-1/2 -translate-x-1 group-hover:translate-x-0",
-};
-
-const PLACEMENT_ARROW: Record<Placement, { className: string; style: React.CSSProperties }> = {
-  top: {
-    className: "left-1/2 top-full -translate-x-1/2 -mt-px",
-    style: {
-      width: 0,
-      height: 0,
-      borderLeft: "5px solid transparent",
-      borderRight: "5px solid transparent",
-      borderTop: "5px solid var(--color-border)",
-    },
-  },
-  bottom: {
-    className: "left-1/2 bottom-full -translate-x-1/2 -mb-px",
-    style: {
-      width: 0,
-      height: 0,
-      borderLeft: "5px solid transparent",
-      borderRight: "5px solid transparent",
-      borderBottom: "5px solid var(--color-border)",
-    },
-  },
-  left: {
-    className: "top-1/2 left-full -translate-y-1/2 -ml-px",
-    style: {
-      width: 0,
-      height: 0,
-      borderTop: "5px solid transparent",
-      borderBottom: "5px solid transparent",
-      borderLeft: "5px solid var(--color-border)",
-    },
-  },
-  right: {
-    className: "top-1/2 right-full -translate-y-1/2 -mr-px",
-    style: {
-      width: 0,
-      height: 0,
-      borderTop: "5px solid transparent",
-      borderBottom: "5px solid transparent",
-      borderRight: "5px solid var(--color-border)",
-    },
-  },
-};
-
-/**
- * Wraps any element. On hover, shows a small description tooltip
- * with a smooth fade-and-slide animation. Defaults to appearing above the trigger.
- */
 export function HoverHint({
   hint,
   children,
@@ -79,29 +20,113 @@ export function HoverHint({
   className = "",
   placement = "top",
 }: HoverHintProps) {
-  const displayClass =
-    display === "inline"
-      ? "inline"
-      : display === "inline-block"
-      ? "inline-block"
-      : display === "block"
-      ? "block"
-      : "inline-flex";
+  const [visible, setVisible] = React.useState(false);
+  const [coords, setCoords] = React.useState({ x: 0, y: 0 });
+  const triggerRef = React.useRef<HTMLSpanElement>(null);
+  const [mounted, setMounted] = React.useState(false);
 
-  const positionClass = PLACEMENT_TOOLTIP[placement];
-  const arrow = PLACEMENT_ARROW[placement];
+  React.useEffect(() => { setMounted(true); }, []);
+
+  const show = React.useCallback(() => {
+    if (!triggerRef.current) return;
+    const r = triggerRef.current.getBoundingClientRect();
+    switch (placement) {
+      case "top":    setCoords({ x: r.left + r.width / 2, y: r.top }); break;
+      case "bottom": setCoords({ x: r.left + r.width / 2, y: r.bottom }); break;
+      case "left":   setCoords({ x: r.left, y: r.top + r.height / 2 }); break;
+      case "right":  setCoords({ x: r.right, y: r.top + r.height / 2 }); break;
+    }
+    setVisible(true);
+  }, [placement]);
+
+  const hide = React.useCallback(() => setVisible(false), []);
+
+  const displayClass =
+    display === "inline" ? "inline" :
+    display === "inline-block" ? "inline-block" :
+    display === "block" ? "block" : "inline-flex";
+
+  const tooltipStyle: React.CSSProperties = {
+    position: "fixed",
+    zIndex: 9999,
+    width,
+    maxWidth: "min(90vw, 300px)",
+    pointerEvents: "none",
+  };
+
+  const arrowStyle: React.CSSProperties = {
+    position: "absolute",
+    width: 0,
+    height: 0,
+  };
+
+  switch (placement) {
+    case "top":
+      tooltipStyle.left = coords.x;
+      tooltipStyle.top = coords.y - 10;
+      tooltipStyle.transform = "translate(-50%, -100%)";
+      arrowStyle.left = "50%";
+      arrowStyle.top = "100%";
+      arrowStyle.transform = "translateX(-50%)";
+      arrowStyle.borderLeft = "5px solid transparent";
+      arrowStyle.borderRight = "5px solid transparent";
+      arrowStyle.borderTop = "5px solid var(--color-border)";
+      break;
+    case "bottom":
+      tooltipStyle.left = coords.x;
+      tooltipStyle.top = coords.y + 10;
+      tooltipStyle.transform = "translate(-50%, 0)";
+      arrowStyle.left = "50%";
+      arrowStyle.bottom = "100%";
+      arrowStyle.transform = "translateX(-50%)";
+      arrowStyle.borderLeft = "5px solid transparent";
+      arrowStyle.borderRight = "5px solid transparent";
+      arrowStyle.borderBottom = "5px solid var(--color-border)";
+      break;
+    case "left":
+      tooltipStyle.left = coords.x - 10;
+      tooltipStyle.top = coords.y;
+      tooltipStyle.transform = "translate(-100%, -50%)";
+      arrowStyle.top = "50%";
+      arrowStyle.left = "100%";
+      arrowStyle.transform = "translateY(-50%)";
+      arrowStyle.borderTop = "5px solid transparent";
+      arrowStyle.borderBottom = "5px solid transparent";
+      arrowStyle.borderLeft = "5px solid var(--color-border)";
+      break;
+    case "right":
+      tooltipStyle.left = coords.x + 10;
+      tooltipStyle.top = coords.y;
+      tooltipStyle.transform = "translate(0, -50%)";
+      arrowStyle.top = "50%";
+      arrowStyle.right = "100%";
+      arrowStyle.transform = "translateY(-50%)";
+      arrowStyle.borderTop = "5px solid transparent";
+      arrowStyle.borderBottom = "5px solid transparent";
+      arrowStyle.borderRight = "5px solid var(--color-border)";
+      break;
+  }
+
+  const tooltip = visible ? (
+    <div
+      role="tooltip"
+      style={tooltipStyle}
+      className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[12px] leading-snug text-[var(--color-fg-secondary)] shadow-lg whitespace-normal"
+    >
+      {hint}
+      <span style={arrowStyle} />
+    </div>
+  ) : null;
 
   return (
-    <span className={`relative ${displayClass} group ${className}`}>
+    <span
+      ref={triggerRef}
+      className={`${displayClass} items-center ${className}`}
+      onMouseEnter={show}
+      onMouseLeave={hide}
+    >
       {children}
-      <span
-        role="tooltip"
-        className={`pointer-events-none absolute z-50 ${positionClass} opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[12px] leading-snug text-[var(--color-fg-secondary)] shadow-md whitespace-normal`}
-        style={{ width }}
-      >
-        {hint}
-        <span className={`absolute ${arrow.className}`} style={arrow.style} />
-      </span>
+      {mounted && createPortal(tooltip, document.body)}
     </span>
   );
 }

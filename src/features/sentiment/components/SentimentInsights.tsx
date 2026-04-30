@@ -110,7 +110,7 @@ export function SentimentInsights({ results, sentimentHistory }: Props) {
                 </HoverHint>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
-                <p className="text-base font-semibold text-[var(--color-fg)] truncate">{c.value}</p>
+                <p style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, lineHeight: 1.2, color: "var(--color-fg)" }}>{c.value}</p>
                 {deltaType && c.delta != null && (
                   <BadgeDelta
                     deltaType={deltaType}
