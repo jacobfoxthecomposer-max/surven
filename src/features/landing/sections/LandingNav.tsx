@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, useScroll } from "framer-motion";
 import { Button } from "@/components/atoms/Button";
+import { SurvenLogo } from "@/components/atoms/SurvenLogo";
 import { cn } from "@/utils/cn";
 
 export function LandingNav() {
@@ -28,15 +29,15 @@ export function LandingNav() {
       )}
     >
       <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-        <Link
-          href="/"
-          className="text-base font-medium tracking-wide text-[var(--color-fg)]"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
-          Surven
-        </Link>
+        <SurvenLogo size="md" />
 
         <div className="flex items-center gap-4">
+          <Link
+            href="/pricing"
+            className="text-sm text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors hidden sm:block"
+          >
+            Pricing
+          </Link>
           <Link
             href="/login"
             className="text-sm text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors hidden sm:block"

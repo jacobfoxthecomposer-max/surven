@@ -47,7 +47,7 @@ interface VisibilityScannerChartProps {
   brands: VisibilityBrand[];
   dates: Date[];
   enabledIds: Set<string>;
-  height?: number | string;
+  height?: number;
   hoveredBrandId?: string | null;
   yPadding?: number;
   strokeYou?: number;
@@ -594,7 +594,7 @@ export function VisibilityScannerChart({
             content={(props) => (
               <CustomTooltip
                 active={props.active as boolean}
-                payload={props.payload as TooltipPayloadItem[]}
+                payload={props.payload as unknown as TooltipPayloadItem[]}
                 label={props.label as string}
                 coordinate={props.coordinate as { x: number; y: number }}
                 brands={brands}
@@ -707,7 +707,6 @@ export function VisibilityScannerChart({
                     key={`opt-${i}`}
                     x={data[m.dateIndex].date}
                     y={markerValue}
-                    isFront
                     ifOverflow="visible"
                     shape={(props: { cx?: number; cy?: number }) => {
                       const cx = props.cx ?? 0;

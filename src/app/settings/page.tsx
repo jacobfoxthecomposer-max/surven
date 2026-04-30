@@ -6,15 +6,17 @@ import { BusinessTab } from "@/features/settings/pages/BusinessTab";
 import { AccountTab } from "@/features/settings/pages/AccountTab";
 import { IntegrationsTab } from "@/features/settings/pages/IntegrationsTab";
 import { PromptsTab } from "@/features/settings/pages/PromptsTab";
+import { ApiKeysTab } from "@/features/settings/pages/ApiKeysTab";
 import { cn } from "@/utils/cn";
 
-type Tab = "business" | "account" | "prompts" | "integrations";
+type Tab = "business" | "account" | "prompts" | "integrations" | "api-keys";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "business", label: "Business" },
   { id: "account", label: "Account" },
   { id: "prompts", label: "Prompts" },
   { id: "integrations", label: "Integrations" },
+  { id: "api-keys", label: "API Keys" },
 ];
 
 export default function SettingsPage() {
@@ -57,6 +59,7 @@ export default function SettingsPage() {
           {activeTab === "account" && <AccountTab />}
           {activeTab === "prompts" && <PromptsTab />}
           {activeTab === "integrations" && <IntegrationsTab />}
+          {activeTab === "api-keys" && <ApiKeysTab />}
         </div>
       </div>
     </DashboardLayout>

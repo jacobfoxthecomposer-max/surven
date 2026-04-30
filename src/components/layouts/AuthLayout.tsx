@@ -2,7 +2,7 @@
 
 import { type ReactNode } from "react";
 import { motion } from "framer-motion";
-import Link from "next/link";
+import { SurvenLogo } from "@/components/atoms/SurvenLogo";
 
 interface AuthLayoutProps {
   children: ReactNode;
@@ -14,11 +14,9 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
       {/* Logo */}
-      <Link href="/" className="mb-8">
-        <span className="text-2xl font-bold tracking-tight">
-          <span className="text-[var(--color-primary)]">Sur</span>ven
-        </span>
-      </Link>
+      <div className="mb-8">
+        <SurvenLogo size="lg" />
+      </div>
 
       {/* Card */}
       <motion.div

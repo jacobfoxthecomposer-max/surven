@@ -1,0 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Cormorant+Garamond:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Surven Color Palette */
+  --color-bg: #F2EEE3;
+  --color-surface: #EDE8DC;
+  --color-surface-alt: #E5DFCF;
+
+  --color-fg: #1A1C1A;
+  --color-fg-secondary: #3D3F3D;
+  --color-fg-muted: #6B6D6B;
+
+  --color-primary: #96A283;
+  --color-primary-hover: #7D8E6C;
+
+  --color-border: #C8C2B4;
+
+  /* Fonts */
+  --font-inter: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-cormorant: 'Cormorant Garamond', Georgia, serif;
+}
+
+body {
+  font-family: var(--font-inter);
+  color: var(--color-fg);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-cormorant);
+}

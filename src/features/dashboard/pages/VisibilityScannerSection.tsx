@@ -1755,7 +1755,7 @@ function PositionChart({
           content={(props) => (
             <PositionTooltip
               active={props.active as boolean}
-              payload={props.payload as PositionTooltipPayloadItem[]}
+              payload={props.payload as unknown as PositionTooltipPayloadItem[]}
               label={props.label as string}
               coordinate={props.coordinate as { x: number; y: number }}
               stats={stats}

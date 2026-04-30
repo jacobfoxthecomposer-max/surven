@@ -1,6 +1,6 @@
 export interface UserProfile {
   user_id: string;
-  plan: "free" | "premium" | "admin";
+  plan: "free" | "plus" | "premium" | "admin";
   created_at: string;
 }
 
