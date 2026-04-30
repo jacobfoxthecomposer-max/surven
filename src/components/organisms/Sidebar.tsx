@@ -47,7 +47,7 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
   {
     title: "Analytics",
     items: [
-      { label: "AI Visibility Tracker", href: "/dashboard", icon: TrendingUp },
+      { label: "AI Visibility Tracker", href: "/ai-visibility-tracker", icon: TrendingUp },
       { label: "Brand Sentiment", href: "/sentiment", icon: Users },
       { label: "Competitor Comparison", href: "/competitor-comparison", icon: GitCompare },
       { label: "AI Benchmark", href: "/dashboard", icon: BarChart3 },
