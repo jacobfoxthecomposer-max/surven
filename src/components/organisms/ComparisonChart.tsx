@@ -58,7 +58,7 @@ export function ComparisonChart({
           />
           <XAxis
             type="number"
-            domain={[0, 100]}
+            domain={[0, (dataMax: number) => Math.min(100, Math.ceil(dataMax * 1.15))]}
             tick={{ fill: COLORS.fgMuted, fontSize: 12 }}
             axisLine={{ stroke: COLORS.border }}
             tickLine={false}

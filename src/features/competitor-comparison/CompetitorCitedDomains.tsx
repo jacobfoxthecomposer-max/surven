@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
-import { ExternalLink, Info } from "lucide-react";
+import { ExternalLink, Info, Link } from "lucide-react";
 import type { ScanResult } from "@/types/database";
 
 interface DomainStat {
@@ -83,37 +83,42 @@ export function CompetitorCitedDomains({
 
   return (
     <section id="citations-section">
-      <div className="mb-4">
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold text-[var(--color-fg)]">Top Cited Domains</h3>
-          <HoverHint hint="Domains that AI models cite in responses mentioning each business. Authority sources your competitors are using.">
-            <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
-          </HoverHint>
+      <Card className="overflow-hidden">
+        {/* Gradient header */}
+        <div
+          className="-mx-5 -mt-5 px-5 py-4 mb-5"
+          style={{ background: "linear-gradient(135deg, rgba(150,162,131,0.18), rgba(150,162,131,0.04))" }}
+        >
+          <div className="flex items-center gap-2">
+            <div className="h-7 w-7 rounded-lg bg-[#96A283]/20 flex items-center justify-center">
+              <Link className="h-4 w-4 text-[#566A47]" />
+            </div>
+            <h3 className="text-sm font-semibold text-[var(--color-fg)]">Top Cited Domains</h3>
+            <HoverHint hint="Domains that AI models cite in responses mentioning each business. See what authority sources your competitors are using.">
+              <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+            </HoverHint>
+          </div>
         </div>
-        <p className="text-xs text-[var(--color-fg-muted)] mt-1">
-          Domains AI models cite in responses where each business is mentioned.
-        </p>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {entities.map((entity, entityIdx) => {
-          const maxCount = entity.domains[0]?.count ?? 1;
-          return (
-            <motion.div
-              key={entity.name}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, delay: entityIdx * 0.07 }}
-            >
-              <Card className="h-full overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {entities.map((entity, entityIdx) => {
+            const maxCount = entity.domains[0]?.count ?? 1;
+            return (
+              <motion.div
+                key={entity.name}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, delay: entityIdx * 0.07 }}
+                className="rounded-[var(--radius-md)] border border-[var(--color-border)] overflow-hidden"
+              >
                 <div
-                  className="-mx-5 -mt-5 px-5 py-3 mb-4"
-                  style={{ background: "linear-gradient(135deg, rgba(150,162,131,0.08), rgba(150,162,131,0.02))" }}
+                  className="px-4 py-2.5"
+                  style={{ background: "linear-gradient(135deg, rgba(150,162,131,0.10), rgba(150,162,131,0.02))" }}
                 >
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold text-[var(--color-fg)] truncate">
+                    <span className="text-sm font-semibold text-[var(--color-fg)] truncate">
                       {entity.name}
-                    </h3>
+                    </span>
                     {entity.isClient && (
                       <span className="text-[10px] bg-[var(--color-primary)]/20 text-[var(--color-primary)] px-1.5 py-0.5 rounded-full font-medium shrink-0">
                         You
@@ -122,57 +127,59 @@ export function CompetitorCitedDomains({
                   </div>
                 </div>
 
-                {entity.domains.length === 0 ? (
-                  <p className="text-xs text-[var(--color-fg-muted)]">No citations found.</p>
-                ) : (
-                  <div className="space-y-2.5">
-                    {entity.domains.map((stat, i) => {
-                      const pct = Math.round((stat.count / maxCount) * 100);
-                      return (
-                        <div key={stat.domain}>
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center gap-1 min-w-0">
-                              <span className="text-xs text-[var(--color-fg)] truncate max-w-[140px]">
-                                {stat.domain}
-                              </span>
-                              <a
-                                href={`https://${stat.domain}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[var(--color-fg-muted)] hover:text-[var(--color-primary)] shrink-0"
-                              >
-                                <ExternalLink className="h-3 w-3" />
-                              </a>
+                <div className="p-4">
+                  {entity.domains.length === 0 ? (
+                    <p className="text-xs text-[var(--color-fg-muted)]">No citations found.</p>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {entity.domains.map((stat, i) => {
+                        const pct = Math.round((stat.count / maxCount) * 100);
+                        return (
+                          <div key={stat.domain}>
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-1 min-w-0">
+                                <span className="text-xs text-[var(--color-fg)] truncate max-w-[140px]">
+                                  {stat.domain}
+                                </span>
+                                <a
+                                  href={`https://${stat.domain}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[var(--color-fg-muted)] hover:text-[var(--color-primary)] shrink-0"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              </div>
+                              <div className="flex gap-1 shrink-0 ml-2">
+                                {stat.models.map((m) => (
+                                  <span
+                                    key={m}
+                                    className="h-2 w-2 rounded-full"
+                                    style={{ backgroundColor: MODEL_COLORS[m] ?? "#888" }}
+                                    title={m}
+                                  />
+                                ))}
+                              </div>
                             </div>
-                            <div className="flex gap-1 shrink-0 ml-2">
-                              {stat.models.map((m) => (
-                                <span
-                                  key={m}
-                                  className="h-2 w-2 rounded-full"
-                                  style={{ backgroundColor: MODEL_COLORS[m] ?? "#888" }}
-                                  title={m}
-                                />
-                              ))}
+                            <div className="h-1.5 rounded-full bg-[var(--color-surface-alt)]">
+                              <motion.div
+                                className="h-1.5 rounded-full bg-[var(--color-primary)]"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${pct}%` }}
+                                transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: i * 0.05 }}
+                              />
                             </div>
                           </div>
-                          <div className="h-1.5 rounded-full bg-[var(--color-surface-alt)]">
-                            <motion.div
-                              className="h-1.5 rounded-full bg-[var(--color-primary)]"
-                              initial={{ width: 0 }}
-                              animate={{ width: `${pct}%` }}
-                              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: i * 0.05 }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </Card>
-            </motion.div>
-          );
-        })}
-      </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </Card>
     </section>
   );
 }

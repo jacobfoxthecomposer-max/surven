@@ -37,7 +37,7 @@ export function CompetitorGaps({
   businessName,
   competitors,
 }: CompetitorGapsProps) {
-  const { gaps, advantages } = useMemo(() => {
+  const { gaps, advantages, gapInsight } = useMemo(() => {
     const gapMap = new Map<string, GapItem>();
     const advantageMap = new Map<string, AdvantageItem>();
 
@@ -82,9 +82,14 @@ export function CompetitorGaps({
       }
     }
 
+    const gapsList = Array.from(gapMap.values()).slice(0, 10);
+    const uniqueCompetitors = [...new Set(gapsList.map((g) => g.competitor))];
+    const allGapModels = [...new Set(gapsList.flatMap((g) => g.models))];
+
     return {
-      gaps: Array.from(gapMap.values()).slice(0, 10),
+      gaps: gapsList,
       advantages: Array.from(advantageMap.values()).slice(0, 10),
+      gapInsight: { uniqueCompetitors, allGapModels },
     };
   }, [results, competitors]);
 
@@ -112,7 +117,7 @@ export function CompetitorGaps({
           {gaps.length === 0 ? (
             <p className="text-sm text-[var(--color-fg-muted)]">No gaps found — you're keeping up.</p>
           ) : (
-            <div className="space-y-3">
+            <div className="flex flex-col gap-3">
               {gaps.map((gap, i) => (
                 <motion.div
                   key={`${gap.competitor}-${i}`}
@@ -141,6 +146,24 @@ export function CompetitorGaps({
                   </div>
                 </motion.div>
               ))}
+
+              {/* Action insight — fills remaining space */}
+              <div className="mt-auto pt-3 border-t border-[var(--color-border)]">
+                <p className="text-[11px] font-medium text-[var(--color-fg-muted)] uppercase tracking-wide mb-1.5">How to close {gaps.length === 1 ? "this gap" : "these gaps"}</p>
+                <p className="text-xs text-[var(--color-fg-secondary)] leading-relaxed">
+                  Publish content that directly answers {gaps.length === 1 ? "this prompt" : `these ${gaps.length} prompts`}.
+                  {gapInsight.uniqueCompetitors.length > 0 && (
+                    <> {gapInsight.uniqueCompetitors.join(", ")} {gapInsight.uniqueCompetitors.length === 1 ? "appears" : "appear"} on {gapInsight.allGapModels.length} AI {gapInsight.allGapModels.length === 1 ? "platform" : "platforms"} for {gaps.length === 1 ? "this query" : "these queries"}.</>
+                  )}
+                </p>
+                {gapInsight.allGapModels.length > 0 && (
+                  <div className="flex gap-1.5 flex-wrap mt-2">
+                    {gapInsight.allGapModels.map((m) => (
+                      <span key={m} className="text-[10px] px-2 py-0.5 rounded-full bg-[#B54631]/10 text-[#8C3522] font-medium">{m}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </Card>
