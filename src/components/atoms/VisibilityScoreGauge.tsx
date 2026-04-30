@@ -213,7 +213,7 @@ export function VisibilityScoreGauge({
   stats?: VisibilityStats;
 }) {
   const t = tierFor(score);
-  const cx = 130, cy = 120, r = 88, stroke = 16;
+  const cx = 130, cy = 120, r = 88, stroke = 20;
   const angle = Math.max(2, Math.min(180, (score / 100) * 180));
   const tip = polar(cx, cy, r, angle);
 
@@ -230,8 +230,8 @@ export function VisibilityScoreGauge({
       </div>
       {descriptionOverride && <div className="mb-4">{descriptionOverride}</div>}
       <div className="flex-1 flex items-center justify-center">
-        <div className="flex justify-center">
-          <div className="relative" style={{ width: "85%" }}>
+        <div className="flex justify-center w-full">
+          <div className="relative" style={{ width: "100%" }}>
         <svg viewBox="0 0 260 150" width="100%" style={{ display: "block" }}>
           <defs>
             <linearGradient id="vsgTrack" x1="0" y1="0" x2="1" y2="0">
@@ -254,7 +254,7 @@ export function VisibilityScoreGauge({
             textAnchor="middle"
             style={{
               fontFamily: "var(--font-display)",
-              fontSize: 40,
+              fontSize: 52,
               fontWeight: 600,
               fill: t.color,
               letterSpacing: "-0.02em",
@@ -262,14 +262,14 @@ export function VisibilityScoreGauge({
           >
             {Math.round(score)}%
           </text>
-          <text x={cx + 42} y={cy - 18} fill="var(--color-fg-muted)" fontSize="11">
+          <text x={cx + 42} y={cy - 18} fill="var(--color-fg-muted)" fontSize="13">
             /100%
           </text>
           <text
             x={cx}
             y={cy + 8}
             textAnchor="middle"
-            style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 500, fill: "var(--color-fg)" }}
+            style={{ fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 500, fill: "var(--color-fg)" }}
           >
             {t.label}
           </text>
