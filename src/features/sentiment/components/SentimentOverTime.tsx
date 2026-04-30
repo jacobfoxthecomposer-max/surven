@@ -139,6 +139,7 @@ export function SentimentOverTime({ data, isLoading }: Props) {
             </button>
           ))}
         </div>
+        </>
       )}
     </Card>
   );
