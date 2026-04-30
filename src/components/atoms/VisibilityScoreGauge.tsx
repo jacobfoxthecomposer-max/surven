@@ -250,7 +250,7 @@ export function VisibilityScoreGauge({
           />
           <text
             x={cx}
-            y={cy - 14}
+            y={cy - 16}
             textAnchor="middle"
             style={{
               fontFamily: "var(--font-display)",
@@ -262,12 +262,12 @@ export function VisibilityScoreGauge({
           >
             {Math.round(score)}%
           </text>
-          <text x={cx + 42} y={cy - 18} fill="var(--color-fg-muted)" fontSize="13">
+          <text x={cx} y={cy + 4} textAnchor="middle" fill="var(--color-fg-muted)" fontSize="13">
             /100%
           </text>
           <text
             x={cx}
-            y={cy + 8}
+            y={cy + 26}
             textAnchor="middle"
             style={{ fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 500, fill: "var(--color-fg)" }}
           >
