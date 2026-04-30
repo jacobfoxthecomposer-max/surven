@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Spinner } from "@/components/atoms/Spinner";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
+import { Calendar } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
 import { useScan } from "@/features/dashboard/hooks/useScan";
@@ -19,11 +20,12 @@ import { WhatAISaid } from "@/features/sentiment/components/WhatAISaid";
 import { SentimentByFeature } from "@/features/sentiment/components/SentimentByFeature";
 import { AI_MODELS } from "@/utils/constants";
 
-type TimeRange = "14d" | "30d" | "90d" | "all";
+type TimeRange = "14d" | "30d" | "90d" | "ytd" | "all";
 const TIME_RANGES: { key: TimeRange; label: string }[] = [
   { key: "14d", label: "14d" },
   { key: "30d", label: "30d" },
   { key: "90d", label: "90d" },
+  { key: "ytd", label: "YTD" },
   { key: "all", label: "All" },
 ];
 
@@ -90,10 +92,17 @@ export default function SentimentPage() {
     : allResults.filter((r) => selectedModels.has(r.model_name));
 
   // Apply time range filter to history
-  const filteredHistory = timeRange === "14d" ? sentimentHistory.slice(-14)
-    : timeRange === "30d" ? sentimentHistory.slice(-30)
-    : timeRange === "90d" ? sentimentHistory.slice(-90)
-    : sentimentHistory;
+  const now = new Date();
+  const filteredHistory = (() => {
+    if (timeRange === "14d") return sentimentHistory.slice(-14);
+    if (timeRange === "30d") return sentimentHistory.slice(-30);
+    if (timeRange === "90d") return sentimentHistory.slice(-90);
+    if (timeRange === "ytd") {
+      const jan1 = new Date(now.getFullYear(), 0, 1).toISOString();
+      return sentimentHistory.filter((d) => d.date >= jan1);
+    }
+    return sentimentHistory;
+  })();
 
   const competitorNames = competitors.map((c) => c.name);
 
@@ -147,7 +156,7 @@ export default function SentimentPage() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1, ease }}
-          className="flex flex-wrap items-center gap-2 pb-3 border-b border-[var(--color-border)]"
+          className="flex flex-wrap items-center gap-2 pb-4 border-b border-[var(--color-border)]"
         >
           {/* Time range pills */}
           <div className="flex items-center gap-1">
@@ -164,12 +173,20 @@ export default function SentimentPage() {
                 {label}
               </button>
             ))}
+            <button
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ml-0.5 transition-colors"
+              style={{ background: "var(--color-surface-alt)", color: "var(--color-fg-muted)" }}
+              title="Custom date range (coming soon)"
+            >
+              <Calendar className="h-3 w-3" />
+              Custom
+            </button>
           </div>
 
           <div className="h-4 w-px bg-[var(--color-border)]" />
 
-          {/* AI model toggles */}
-          <span className="text-xs text-[var(--color-fg-muted)] shrink-0">AI models:</span>
+          {/* AI engine toggles — all same sage green when active */}
+          <span className="text-xs text-[var(--color-fg-muted)] shrink-0">AI engines:</span>
           <div className="flex flex-wrap items-center gap-1.5">
             {AI_MODELS.map((m) => {
               const active = selectedModels.has(m.id);
@@ -179,9 +196,8 @@ export default function SentimentPage() {
                   onClick={() => toggleModel(m.id)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
                   style={{
-                    background: active ? m.color : "var(--color-surface-alt)",
-                    color:      active ? "white"  : "var(--color-fg-muted)",
-                    opacity:    active ? 1 : 0.65,
+                    background: active ? "var(--color-primary)" : "var(--color-surface-alt)",
+                    color:      active ? "white" : "var(--color-fg-muted)",
                   }}
                 >
                   <EngineIcon id={m.id} size={12} />
