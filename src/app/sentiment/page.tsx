@@ -158,35 +158,39 @@ export default function SentimentPage() {
           transition={{ duration: 0.4, delay: 0.1, ease }}
           className="flex flex-wrap items-center gap-2 pb-4 border-b border-[var(--color-border)]"
         >
-          {/* Time range pills */}
-          <div className="flex items-center gap-1">
+          {/* Time range pills — grouped bordered container */}
+          <div className="inline-flex rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-1 gap-1">
             {TIME_RANGES.map(({ key, label }) => (
               <button
                 key={key}
                 onClick={() => setTimeRange(key)}
-                className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
-                style={{
-                  background: timeRange === key ? "var(--color-fg)" : "var(--color-surface-alt)",
-                  color:      timeRange === key ? "var(--color-bg)" : "var(--color-fg-muted)",
-                }}
+                className={
+                  "px-3.5 py-2 font-medium rounded-[var(--radius-sm)] transition-colors " +
+                  (timeRange === key
+                    ? "bg-[var(--color-primary)] text-white"
+                    : "text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-alt)]")
+                }
+                style={{ fontSize: 14 }}
               >
                 {label}
               </button>
             ))}
-            <button
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ml-0.5 transition-colors"
-              style={{ background: "var(--color-surface-alt)", color: "var(--color-fg-muted)" }}
-              title="Custom date range (coming soon)"
-            >
-              <Calendar className="h-3 w-3" />
-              Custom
-            </button>
           </div>
+
+          {/* Custom button — separate with border */}
+          <button
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 font-medium rounded-[var(--radius-md)] border transition-colors bg-[var(--color-surface)] text-[var(--color-fg-secondary)] border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]"
+            style={{ fontSize: 14 }}
+            title="Custom date range (coming soon)"
+          >
+            <Calendar className="h-4 w-4" />
+            Custom
+          </button>
 
           <div className="h-4 w-px bg-[var(--color-border)]" />
 
-          {/* AI engine toggles — all same sage green when active */}
-          <span className="text-xs text-[var(--color-fg-muted)] shrink-0">AI engines:</span>
+          {/* AI engine chips — outlined when inactive */}
+          <span className="text-[var(--color-fg-muted)] mr-1" style={{ fontSize: 14 }}>AI engines:</span>
           <div className="flex flex-wrap items-center gap-1.5">
             {AI_MODELS.map((m) => {
               const active = selectedModels.has(m.id);
@@ -194,13 +198,15 @@ export default function SentimentPage() {
                 <button
                   key={m.id}
                   onClick={() => toggleModel(m.id)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
-                  style={{
-                    background: active ? "var(--color-primary)" : "var(--color-surface-alt)",
-                    color:      active ? "white" : "var(--color-fg-muted)",
-                  }}
+                  className={
+                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-full)] border font-medium transition-colors " +
+                    (active
+                      ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                      : "bg-transparent text-[var(--color-fg-muted)] border-[var(--color-border)] hover:border-[var(--color-border-hover)] hover:text-[var(--color-fg-secondary)]")
+                  }
+                  style={{ fontSize: 14 }}
                 >
-                  <EngineIcon id={m.id} size={12} />
+                  <EngineIcon id={m.id} size={13} />
                   {m.name}
                 </button>
               );
