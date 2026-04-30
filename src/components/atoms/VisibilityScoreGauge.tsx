@@ -229,8 +229,9 @@ export function VisibilityScoreGauge({
         />
       </div>
       {descriptionOverride && <div className="mb-4">{descriptionOverride}</div>}
-      <div className="flex justify-center my-1">
-      <div className="relative" style={{ width: "85%" }}>
+      <div className="flex-1 flex items-center justify-center">
+        <div className="flex justify-center">
+          <div className="relative" style={{ width: "85%" }}>
         <svg viewBox="0 0 260 150" width="100%" style={{ display: "block" }}>
           <defs>
             <linearGradient id="vsgTrack" x1="0" y1="0" x2="1" y2="0">
@@ -310,6 +311,7 @@ export function VisibilityScoreGauge({
           </HoverHint>
         </div>
       </div>
+        </div>
       </div>
 
       {stats && (
