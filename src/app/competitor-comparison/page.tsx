@@ -105,13 +105,16 @@ export default function CompetitorComparisonPage() {
 
     const modelScores = AI_MODELS.map((m) => {
       const modelResults = results.filter((r) => r.model_name === m.id);
-      if (modelResults.length === 0) return { name: m.name, score: 0 };
+      if (modelResults.length === 0) return { name: m.name, id: m.id, score: 0 };
       const hits = modelResults.filter((r) => r.business_mentioned).length;
-      return { name: m.name, score: Math.round((hits / modelResults.length) * 100) };
+      return { name: m.name, id: m.id, score: Math.round((hits / modelResults.length) * 100) };
     }).sort((a, b) => b.score - a.score);
 
-    const bestModelScore = modelScores[0]?.score ?? 0;
-    const outperforming = competitorNames.filter((name) => {
+    const bestModel = modelScores[0];
+    const bestModelScore = bestModel?.score ?? 0;
+    const bestModelName = bestModel?.name ?? null;
+
+    const outperformingNames = competitorNames.filter((name) => {
       let mentioned = 0, total = 0;
       for (const r of results) {
         if (r.competitor_mentions && name in r.competitor_mentions) {
@@ -121,9 +124,9 @@ export default function CompetitorComparisonPage() {
       }
       const compScore = total > 0 ? Math.round((mentioned / total) * 100) : 0;
       return score > compScore;
-    }).length;
+    });
 
-    return { avgCompetitorScore: Math.round(avgCompetitorScore), bestModelScore, outperforming };
+    return { avgCompetitorScore: Math.round(avgCompetitorScore), bestModelScore, bestModelName, outperforming: outperformingNames.length, outperformingNames };
   }, [results, competitorNames, score, hasResults]);
 
   const overallTrend = kpiInsights
@@ -249,7 +252,12 @@ export default function CompetitorComparisonPage() {
                     <p style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, lineHeight: 1.2, color: "var(--color-fg)" }}>
                       +{(score - kpiInsights.avgCompetitorScore).toFixed(0)}%
                     </p>
-                    <p className="text-xs text-[var(--color-fg-muted)]">Above average</p>
+                    <p className="text-xs text-[var(--color-fg-muted)]">
+                      {score > kpiInsights.avgCompetitorScore ? "Above" : "Below"} average
+                    </p>
+                    <p className="text-[11px] text-[var(--color-fg-muted)] mt-0.5 opacity-70 leading-tight">
+                      You: {score}% · Competitor avg: {kpiInsights.avgCompetitorScore}%
+                    </p>
                   </div>
                 </Card>
 
@@ -260,14 +268,19 @@ export default function CompetitorComparisonPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1 mb-0.5">
                       <p className="text-xs text-[var(--color-fg-muted)]">Best Platform</p>
-                      <HoverHint hint="Your strongest AI platform based on visibility.">
+                      <HoverHint hint="Your strongest AI platform based on visibility score.">
                         <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
                       </HoverHint>
                     </div>
                     <p style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, lineHeight: 1.2, color: "var(--color-fg)" }}>
                       {kpiInsights.bestModelScore}%
                     </p>
-                    <p className="text-xs text-[var(--color-fg-muted)]">Platform visibility</p>
+                    <p className="text-xs text-[var(--color-fg-muted)]">Visibility score</p>
+                    {kpiInsights.bestModelName && (
+                      <p className="text-[11px] text-[var(--color-fg-muted)] mt-0.5 opacity-70 leading-tight">
+                        on {kpiInsights.bestModelName}
+                      </p>
+                    )}
                   </div>
                 </Card>
 
@@ -278,7 +291,7 @@ export default function CompetitorComparisonPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1 mb-0.5">
                       <p className="text-xs text-[var(--color-fg-muted)]">Outperforming</p>
-                      <HoverHint hint="Number of competitors you rank higher than.">
+                      <HoverHint hint="Number of competitors you rank higher than by visibility score.">
                         <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
                       </HoverHint>
                     </div>
@@ -286,6 +299,12 @@ export default function CompetitorComparisonPage() {
                       {kpiInsights.outperforming}/{competitorNames.length}
                     </p>
                     <p className="text-xs text-[var(--color-fg-muted)]">Competitors</p>
+                    {kpiInsights.outperformingNames.length > 0 && (
+                      <p className="text-[11px] text-[var(--color-fg-muted)] mt-0.5 opacity-70 leading-tight">
+                        {kpiInsights.outperformingNames.slice(0, 2).join(", ")}
+                        {kpiInsights.outperformingNames.length > 2 ? ` +${kpiInsights.outperformingNames.length - 2} more` : ""}
+                      </p>
+                    )}
                   </div>
                 </Card>
               </motion.div>

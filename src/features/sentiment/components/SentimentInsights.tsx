@@ -51,13 +51,23 @@ export function SentimentInsights({ results, sentimentHistory }: Props) {
       if (rate > bestRate) { bestRate = rate; bestModel = m; }
     }
 
-    const riskPrompts = mentioned
-      .filter((r) => r.sentiment === "negative")
-      .map((r) => r.prompt_text)
-      .filter((v, i, a) => a.indexOf(v) === i)
-      .slice(0, 1);
+    const neutralCount = total - positiveCount - negativeCount;
 
-    return { positivePct, positiveDelta, negativeCount, total, bestModel, bestRate, riskPrompts };
+    // Worst platform by positive rate
+    let worstModel: ModelName | null = null;
+    let worstRate = Infinity;
+    for (const m of models) {
+      const modelMentions = mentioned.filter((r) => r.model_name === m);
+      if (modelMentions.length === 0) continue;
+      const rate = modelMentions.filter((r) => r.sentiment === "positive").length / modelMentions.length;
+      if (rate < worstRate) { worstRate = rate; worstModel = m; }
+    }
+
+    const riskPrompt = mentioned
+      .filter((r) => r.sentiment === "negative")
+      .map((r) => r.prompt_text)[0] ?? null;
+
+    return { positivePct, positiveDelta, negativeCount, neutralCount, positiveCount, total, bestModel, bestRate, worstModel, worstRate, riskPrompt };
   }, [results, sentimentHistory]);
 
   if (!insights) return null;
@@ -70,6 +80,7 @@ export function SentimentInsights({ results, sentimentHistory }: Props) {
       label: "Overall Sentiment",
       value: `${insights.positivePct}% Positive`,
       sub: `across ${insights.total} AI mention${insights.total !== 1 ? "s" : ""}`,
+      extra: `${insights.positiveCount} positive · ${insights.neutralCount} neutral · ${insights.negativeCount} negative`,
       delta: insights.positiveDelta,
     },
     {
@@ -79,6 +90,9 @@ export function SentimentInsights({ results, sentimentHistory }: Props) {
       label: "Strongest Platform",
       value: insights.bestModel ? MODEL_LABELS[insights.bestModel] : "—",
       sub: insights.bestModel ? `${Math.round(insights.bestRate * 100)}% positive rate` : "No data",
+      extra: insights.worstModel && insights.worstModel !== insights.bestModel
+        ? `Weakest: ${MODEL_LABELS[insights.worstModel]} (${Math.round(insights.worstRate * 100)}%)`
+        : null,
       delta: null,
     },
     {
@@ -88,6 +102,9 @@ export function SentimentInsights({ results, sentimentHistory }: Props) {
       label: "Risk Signals",
       value: insights.negativeCount > 0 ? `${insights.negativeCount} Negative` : "None Found",
       sub: insights.negativeCount > 0 ? "mentions needing attention" : "sentiment is clean",
+      extra: insights.riskPrompt
+        ? `"${insights.riskPrompt.length > 48 ? insights.riskPrompt.slice(0, 48) + "…" : insights.riskPrompt}"`
+        : null,
       delta: null,
     },
   ];
@@ -120,6 +137,7 @@ export function SentimentInsights({ results, sentimentHistory }: Props) {
                 )}
               </div>
               <p className="text-xs text-[var(--color-fg-muted)]">{c.sub}</p>
+              {c.extra && <p className="text-[11px] text-[var(--color-fg-muted)] mt-0.5 opacity-70 leading-tight">{c.extra}</p>}
             </div>
           </Card>
         );

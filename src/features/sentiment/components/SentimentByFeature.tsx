@@ -32,7 +32,7 @@ function mentionColor(count: number, max: number): string {
   return "bg-[#dbeafe] text-[#1e3a5f]";
 }
 
-function truncatePrompt(prompt: string, max = 60): string {
+function truncatePrompt(prompt: string, max = 95): string {
   return prompt.length > max ? prompt.slice(0, max) + "…" : prompt;
 }
 
