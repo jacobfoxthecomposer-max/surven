@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
+import { Info } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend,
+  ResponsiveContainer,
 } from "recharts";
 import { Card } from "@/components/atoms/Card";
+import { HoverHint } from "@/components/atoms/HoverHint";
 import { Spinner } from "@/components/atoms/Spinner";
 import type { SentimentDataPoint } from "@/features/sentiment/hooks/useSentimentHistory";
 
@@ -18,7 +21,15 @@ function formatDate(iso: string) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+const LINES = [
+  { key: "Positive", color: "#96A283" },
+  { key: "Neutral",  color: "#C8C2B4" },
+  { key: "Negative", color: "#B54631" },
+] as const;
+
 export function SentimentOverTime({ data, isLoading }: Props) {
+  const [hoveredLine, setHoveredLine] = useState<string | null>(null);
+
   const chartData = data.map((d) => ({
     date: formatDate(d.date),
     Positive: d.positivePct,
@@ -36,7 +47,12 @@ export function SentimentOverTime({ data, isLoading }: Props) {
     <Card>
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-5">
         <div>
-          <h3 className="text-sm font-semibold text-[var(--color-fg)]">Favorable Sentiment Over Time</h3>
+          <div className="flex items-center gap-1.5">
+            <h3 className="text-sm font-semibold text-[var(--color-fg)]">Favorable Sentiment Over Time</h3>
+            <HoverHint hint="Tracks how your brand's positive sentiment rate changes across scans. Each point is one scan's overall positive mention rate.">
+              <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+            </HoverHint>
+          </div>
           {latestPositive !== null && (
             <div className="mt-1.5 flex items-center gap-2">
               <span className="text-xs font-medium text-[#566A47]">
@@ -61,6 +77,7 @@ export function SentimentOverTime({ data, isLoading }: Props) {
           <p className="text-sm text-[var(--color-fg-muted)]">Run more scans to see trends over time.</p>
         </div>
       ) : (
+        <>
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
@@ -88,35 +105,39 @@ export function SentimentOverTime({ data, isLoading }: Props) {
                 }}
                 formatter={(value, name) => [`${Number(value)}%`, String(name)]}
               />
-              <Legend
-                wrapperStyle={{ fontSize: 12, color: "var(--color-fg-muted)", paddingTop: 12 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="Positive"
-                stroke="#96A283"
-                strokeWidth={2.5}
-                dot={false}
-                isAnimationActive={true}
-              />
-              <Line
-                type="monotone"
-                dataKey="Neutral"
-                stroke="#C8C2B4"
-                strokeWidth={2.5}
-                dot={false}
-                isAnimationActive={true}
-              />
-              <Line
-                type="monotone"
-                dataKey="Negative"
-                stroke="#B54631"
-                strokeWidth={2.5}
-                dot={false}
-                isAnimationActive={true}
-              />
+              {LINES.map(({ key, color }) => (
+                <Line
+                  key={key}
+                  type="monotone"
+                  dataKey={key}
+                  stroke={color}
+                  strokeWidth={hoveredLine === key ? 3 : 2.5}
+                  strokeOpacity={hoveredLine && hoveredLine !== key ? 0.15 : 1}
+                  dot={false}
+                  isAnimationActive={true}
+                  style={{ transition: "stroke-opacity 0.2s, stroke-width 0.2s" }}
+                />
+              ))}
             </LineChart>
           </ResponsiveContainer>
+        </div>
+
+        {/* Custom interactive legend */}
+        <div className="flex items-center gap-5 mt-3 pt-3 border-t border-[var(--color-border)]">
+          {LINES.map(({ key, color }) => (
+            <button
+              key={key}
+              onMouseEnter={() => setHoveredLine(key)}
+              onMouseLeave={() => setHoveredLine(null)}
+              className="flex items-center gap-1.5 group cursor-pointer"
+              style={{ opacity: hoveredLine && hoveredLine !== key ? 0.4 : 1, transition: "opacity 0.2s" }}
+            >
+              <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ background: color }} />
+              <span className="text-xs text-[var(--color-fg-muted)] group-hover:text-[var(--color-fg-secondary)] transition-colors">
+                {key}
+              </span>
+            </button>
+          ))}
         </div>
       )}
     </Card>
