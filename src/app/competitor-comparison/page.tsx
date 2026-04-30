@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Download, GitCompare, Calendar, Info } from "lucide-react";
+import { Download, GitCompare, Calendar, Info, TrendingUp, BarChart3, Trophy } from "lucide-react";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Spinner } from "@/components/atoms/Spinner";
 import { Button } from "@/components/atoms/Button";
@@ -255,7 +255,7 @@ export default function CompetitorComparisonPage() {
 
                 <Card className="flex items-center gap-4 p-5">
                   <div className="h-10 w-10 rounded-xl bg-[#96A283]/10 flex items-center justify-center flex-shrink-0">
-                    <span style={{ fontFamily: "var(--font-display)", fontSize: 16, fontWeight: 600, color: "#96A283" }}>📊</span>
+                    <BarChart3 className="h-5 w-5 text-[#96A283]" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1 mb-0.5">
@@ -273,7 +273,7 @@ export default function CompetitorComparisonPage() {
 
                 <Card className="flex items-center gap-4 p-5">
                   <div className="h-10 w-10 rounded-xl bg-[#96A283]/10 flex items-center justify-center flex-shrink-0">
-                    <span style={{ fontFamily: "var(--font-display)", fontSize: 16, fontWeight: 600, color: "#96A283" }}>✓</span>
+                    <Trophy className="h-5 w-5 text-[#96A283]" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1 mb-0.5">

@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { motion } from "framer-motion";
-import { Info } from "lucide-react";
+import { Info, Zap } from "lucide-react";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
@@ -108,7 +108,7 @@ export function CompetitorHeatmap({
         >
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-lg bg-[#96A283]/20 flex items-center justify-center">
-              <span style={{ fontSize: 14, fontWeight: 600, color: "#566A47" }}>🔥</span>
+              <Zap className="h-4 w-4 text-[#566A47]" />
             </div>
             <h3 className="text-sm font-semibold text-[var(--color-fg)]">AI Platform Visibility Heatmap</h3>
             <HoverHint hint="Visibility score per AI platform. Darker shades indicate higher presence and mentions.">
