@@ -116,8 +116,8 @@ export function AccountTab() {
       </div>
 
       {/* Danger zone */}
-      <div className="space-y-4 p-4 rounded-lg border border-red-500/30 bg-red-500/5">
-        <h3 className="text-lg font-semibold text-red-400">Danger Zone</h3>
+      <div className="space-y-4 p-4 rounded-lg border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/5">
+        <h3 className="text-lg font-semibold text-[var(--color-danger)]">Danger Zone</h3>
         <p className="text-sm text-[var(--color-fg-secondary)]">
           Once you delete your account, there is no going back. Please be certain.
         </p>

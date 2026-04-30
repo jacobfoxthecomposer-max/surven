@@ -58,6 +58,17 @@ export const AI_MODELS = [
   { id: "google_ai", name: "Google AI", color: "#5CBF74" },
 ] as const;
 
+// Single source of truth for competitor visualization colors.
+// Used by ComparisonChart, BrandChip, and any chart legend.
+export const COMPETITOR_PALETTE = [
+  "#6BA3F5",
+  "#C97B45",
+  "#B8A030",
+  "#A07878",
+  "#7A8FA6",
+  "#9B7EC8",
+] as const;
+
 export const INDUSTRIES = [
   "Dentist",
   "Restaurant",

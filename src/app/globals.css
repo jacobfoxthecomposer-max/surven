@@ -19,15 +19,17 @@
 
   /* Semantic states */
   --color-danger: #B54631;
-  --color-warning: #B54631;
+  --color-danger-hover: #8C3522;
+  --color-warning: #C97B45;
   --color-success: #96A283;
-  --color-info: #96A283;
+  --color-success-hover: #7D8E6C;
+  --color-info: #6BA3F5;
 
-  /* Score gauge colors */
+  /* Score gauge colors — must stay in sync with COLORS in src/utils/constants.ts */
   --color-score-red: #B54631;
-  --color-score-orange: #C4683D;
-  --color-score-yellow: #96A283;
-  --color-score-green: #7D8E6C;
+  --color-score-orange: #C97B45;
+  --color-score-yellow: #B8A030;
+  --color-score-green: #96A283;
 
   /* Borders */
   --color-border: #C8C2B4;
