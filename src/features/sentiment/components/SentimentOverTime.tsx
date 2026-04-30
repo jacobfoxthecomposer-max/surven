@@ -95,25 +95,25 @@ export function SentimentOverTime({ data, isLoading }: Props) {
                 type="monotone"
                 dataKey="Positive"
                 stroke="#96A283"
-                strokeWidth={2}
-                dot={{ r: 3, fill: "#96A283" }}
-                activeDot={{ r: 5 }}
+                strokeWidth={2.5}
+                dot={false}
+                isAnimationActive={true}
               />
               <Line
                 type="monotone"
                 dataKey="Neutral"
                 stroke="#C8C2B4"
-                strokeWidth={2}
-                dot={{ r: 3, fill: "#C8C2B4" }}
-                activeDot={{ r: 5 }}
+                strokeWidth={2.5}
+                dot={false}
+                isAnimationActive={true}
               />
               <Line
                 type="monotone"
                 dataKey="Negative"
                 stroke="#B54631"
-                strokeWidth={2}
-                dot={{ r: 3, fill: "#B54631" }}
-                activeDot={{ r: 5 }}
+                strokeWidth={2.5}
+                dot={false}
+                isAnimationActive={true}
               />
             </LineChart>
           </ResponsiveContainer>

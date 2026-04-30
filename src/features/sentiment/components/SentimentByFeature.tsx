@@ -29,7 +29,7 @@ function mentionColor(count: number, max: number): string {
   return "bg-[#dbeafe] text-[#1e3a5f]";
 }
 
-function truncatePrompt(prompt: string, max = 42): string {
+function truncatePrompt(prompt: string, max = 60): string {
   return prompt.length > max ? prompt.slice(0, max) + "…" : prompt;
 }
 
@@ -83,7 +83,7 @@ export function SentimentByFeature({ results, businessName, competitors }: Props
         <table className="w-full text-xs border-separate border-spacing-y-1">
           <thead>
             <tr>
-              <th className="text-left text-[var(--color-fg-muted)] font-medium pb-2 pr-3 w-40">Prompt</th>
+              <th className="text-left text-[var(--color-fg-muted)] font-medium pb-2 pr-3 w-auto">Prompt</th>
               <th className="text-center text-[var(--color-fg-muted)] font-medium pb-2 px-1 min-w-[56px]">
                 {businessName.split(" ")[0]}
               </th>
@@ -145,7 +145,7 @@ export function SentimentByFeature({ results, businessName, competitors }: Props
         <table className="w-full text-xs border-separate border-spacing-y-1">
           <thead>
             <tr>
-              <th className="text-left text-[var(--color-fg-muted)] font-medium pb-2 pr-3 w-40">Prompt</th>
+              <th className="text-left text-[var(--color-fg-muted)] font-medium pb-2 pr-3 w-auto">Prompt</th>
               <th className="text-center text-[var(--color-fg-muted)] font-medium pb-2 px-1 min-w-[56px]">
                 {businessName.split(" ")[0]}
               </th>
