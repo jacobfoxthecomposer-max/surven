@@ -18,7 +18,7 @@ interface Props {
 }
 
 export function SentimentDonut({ results }: Props) {
-  const { counts, total, dominant, pcts } = useMemo(() => {
+  const { counts, total, dominant, pcts, promptHighlights } = useMemo(() => {
     const mentioned = results.filter((r) => r.business_mentioned && r.sentiment);
     const counts = { positive: 0, neutral: 0, negative: 0 };
     for (const r of mentioned) {
@@ -33,7 +33,25 @@ export function SentimentDonut({ results }: Props) {
     const dominant = total > 0
       ? (Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0] as keyof typeof counts)
       : null;
-    return { counts, total, dominant, pcts };
+
+    // Per-prompt positive rate for highlights
+    const promptMap = new Map<string, { pos: number; total: number }>();
+    for (const r of mentioned) {
+      const entry = promptMap.get(r.prompt_text) ?? { pos: 0, total: 0 };
+      entry.total++;
+      if (r.sentiment === "positive") entry.pos++;
+      promptMap.set(r.prompt_text, entry);
+    }
+    const promptRates = Array.from(promptMap.entries())
+      .map(([prompt, { pos, total: t }]) => ({ prompt, pct: Math.round((pos / t) * 100), total: t }))
+      .filter((p) => p.total >= 1)
+      .sort((a, b) => b.pct - a.pct);
+
+    const best  = promptRates[0] ?? null;
+    const worst = promptRates.length > 1 ? promptRates[promptRates.length - 1] : null;
+    const promptHighlights = { best, worst };
+
+    return { counts, total, dominant, pcts, promptHighlights };
   }, [results]);
 
   if (total === 0) return null;
@@ -51,16 +69,16 @@ export function SentimentDonut({ results }: Props) {
         </HoverHint>
       </div>
 
-      {/* Donut */}
-      <div className="relative h-44">
+      {/* Donut — larger */}
+      <div className="relative h-56">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={chartData}
               cx="50%"
               cy="50%"
-              innerRadius={52}
-              outerRadius={72}
+              innerRadius={68}
+              outerRadius={92}
               paddingAngle={3}
               dataKey="value"
               stroke="none"
@@ -85,17 +103,17 @@ export function SentimentDonut({ results }: Props) {
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           {dominant && (
             <>
-              <span style={{ fontFamily: "var(--font-display)", fontSize: 36, fontWeight: 600, lineHeight: 1, color: "var(--color-fg)" }}>
+              <span style={{ fontFamily: "var(--font-display)", fontSize: 42, fontWeight: 600, lineHeight: 1, color: "var(--color-fg)" }}>
                 {pcts[dominant]}%
               </span>
-              <span className="text-xs text-[var(--color-fg-muted)] mt-0.5">{CONFIG[dominant].label}</span>
+              <span className="text-xs text-[var(--color-fg-muted)] mt-1">{CONFIG[dominant].label}</span>
             </>
           )}
         </div>
       </div>
 
       {/* Legend */}
-      <div className="mt-4 space-y-2">
+      <div className="mt-3 space-y-2">
         {(["positive", "neutral", "negative"] as const).map((k) => (
           <div key={k} className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -110,9 +128,42 @@ export function SentimentDonut({ results }: Props) {
         ))}
       </div>
 
-      <p className="text-xs text-[var(--color-fg-muted)] mt-4 pt-3 border-t border-[var(--color-border)]">
+      <p className="text-xs text-[var(--color-fg-muted)] mt-3 pb-3 border-b border-[var(--color-border)]">
         Based on {total} AI mention{total !== 1 ? "s" : ""}
       </p>
+
+      {/* Prompt highlights */}
+      {(promptHighlights.best || promptHighlights.worst) && (
+        <div className="mt-3 space-y-2">
+          <p className="text-[11px] font-medium text-[var(--color-fg-muted)] uppercase tracking-wide">Prompt Highlights</p>
+          {promptHighlights.best && (
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <div className="h-1.5 w-1.5 rounded-full bg-[#96A283] flex-shrink-0 mt-1" />
+                <span className="text-xs text-[var(--color-fg-secondary)] leading-snug line-clamp-2">
+                  {promptHighlights.best.prompt.length > 70
+                    ? promptHighlights.best.prompt.slice(0, 70) + "…"
+                    : promptHighlights.best.prompt}
+                </span>
+              </div>
+              <span className="text-xs font-semibold text-[#96A283] flex-shrink-0">{promptHighlights.best.pct}%</span>
+            </div>
+          )}
+          {promptHighlights.worst && promptHighlights.worst.prompt !== promptHighlights.best?.prompt && (
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <div className="h-1.5 w-1.5 rounded-full bg-[#B54631] flex-shrink-0 mt-1" />
+                <span className="text-xs text-[var(--color-fg-secondary)] leading-snug line-clamp-2">
+                  {promptHighlights.worst.prompt.length > 70
+                    ? promptHighlights.worst.prompt.slice(0, 70) + "…"
+                    : promptHighlights.worst.prompt}
+                </span>
+              </div>
+              <span className="text-xs font-semibold text-[#B54631] flex-shrink-0">{promptHighlights.worst.pct}%</span>
+            </div>
+          )}
+        </div>
+      )}
     </Card>
   );
 }
