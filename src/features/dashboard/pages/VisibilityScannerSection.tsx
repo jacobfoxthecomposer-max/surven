@@ -2682,7 +2682,7 @@ function VariantBody({
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[260px_minmax(0,1fr)_320px] gap-4 items-stretch">
-        <ScrollReveal className="flex" delay={0}>
+        <ScrollReveal className="flex h-full" delay={0}>
           <VisibilityScoreGauge
             score={data.youToday}
             width={260}

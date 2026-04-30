@@ -59,9 +59,9 @@ function StatsBlock({ stats }: { stats: VisibilityStats }) {
   const grew = stats.delta >= 0;
   const pct = Math.round((stats.promptsHit / Math.max(1, stats.promptsTotal)) * 100);
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div
-        className="rounded-[var(--radius-md)] p-3 border-l-4"
+        className="rounded-[var(--radius-md)] p-4 border-l-4"
         style={{
           borderLeftColor: ACCENTS.sage,
           background: `linear-gradient(135deg, ${ACCENTS.sage}1F 0%, ${ACCENTS.yellow}10 100%)`,
@@ -135,7 +135,7 @@ function StatsBlock({ stats }: { stats: VisibilityStats }) {
         </a>
       </div>
 
-      <div className="grid grid-cols-2 gap-1.5">
+      <div className="grid grid-cols-2 gap-2">
         <Chip
           color={ACCENTS.yellow}
           icon={Trophy}
@@ -219,17 +219,17 @@ export function VisibilityScoreGauge({
 
   return (
     <div
-      className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5"
+      className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 flex flex-col h-full"
       style={{ width }}
     >
-      <div className="mb-3 pb-2 border-b border-[var(--color-border)]">
+      <div className="mb-4 pb-2 border-b border-[var(--color-border)]">
         <SectionHeading
           text={label}
           info="How often AI tools mention your business across customer questions."
         />
       </div>
-      {descriptionOverride && <div className="mb-3">{descriptionOverride}</div>}
-      <div className="relative">
+      {descriptionOverride && <div className="mb-4">{descriptionOverride}</div>}
+      <div className="relative flex justify-center">
         <svg viewBox="0 0 260 150" width="100%" style={{ display: "block" }}>
           <defs>
             <linearGradient id="vsgTrack" x1="0" y1="0" x2="1" y2="0">
@@ -311,7 +311,7 @@ export function VisibilityScoreGauge({
       </div>
 
       {stats && (
-        <div className="mt-4 pt-3 border-t border-[var(--color-border)]">
+        <div className="mt-auto pt-4 border-t border-[var(--color-border)]">
           <StatsBlock stats={stats} />
         </div>
       )}
