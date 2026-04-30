@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
+import { Info } from "lucide-react";
 import { Card } from "@/components/atoms/Card";
+import { HoverHint } from "@/components/atoms/HoverHint";
 import type { ScanResult } from "@/types/database";
 
 interface Props {
@@ -77,7 +79,12 @@ export function SentimentByFeature({ results, businessName, competitors }: Props
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* Sentiment by Feature */}
       <Card className="overflow-x-auto">
-        <h3 className="text-sm font-semibold text-[var(--color-fg)] mb-1">Sentiment by Prompt</h3>
+        <div className="flex items-center gap-1.5 mb-1">
+          <h3 className="text-sm font-semibold text-[var(--color-fg)]">Sentiment by Prompt</h3>
+          <HoverHint hint="For each customer question, the percentage of AI responses that mention your brand positively. Color scale runs red (0–19%) → green (80–100%).">
+            <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+          </HoverHint>
+        </div>
         <p className="text-xs text-[var(--color-fg-muted)] mb-4">% of positive AI mentions per prompt</p>
 
         <table className="w-full text-xs border-separate border-spacing-y-1">
@@ -139,7 +146,12 @@ export function SentimentByFeature({ results, businessName, competitors }: Props
 
       {/* Mentions by Feature */}
       <Card className="overflow-x-auto">
-        <h3 className="text-sm font-semibold text-[var(--color-fg)] mb-1">Mentions by Prompt</h3>
+        <div className="flex items-center gap-1.5 mb-1">
+          <h3 className="text-sm font-semibold text-[var(--color-fg)]">Mentions by Prompt</h3>
+          <HoverHint hint="How many AI models mentioned your brand (or each competitor) for each customer question. Darker blue = more models mentioned them.">
+            <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+          </HoverHint>
+        </div>
         <p className="text-xs text-[var(--color-fg-muted)] mb-4">How often each prompt mentions your brand vs competitors</p>
 
         <table className="w-full text-xs border-separate border-spacing-y-1">

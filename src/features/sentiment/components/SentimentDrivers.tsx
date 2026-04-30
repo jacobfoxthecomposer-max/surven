@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { ShieldCheck, AlertCircle } from "lucide-react";
+import { ShieldCheck, AlertCircle, Info } from "lucide-react";
+import Link from "next/link";
 import { Card } from "@/components/atoms/Card";
+import { HoverHint } from "@/components/atoms/HoverHint";
 import type { ScanResult, ModelName } from "@/types/database";
 
 const MODEL_LABELS: Record<ModelName, string> = {
@@ -90,6 +92,9 @@ export function SentimentDrivers({ results, businessName }: Props) {
             <ShieldCheck className="h-4 w-4 text-[#566A47]" />
           </div>
           <h3 className="text-sm font-semibold text-[var(--color-fg)]">Brand Strengths</h3>
+            <HoverHint hint="Prompts where AI consistently mentions your brand positively across multiple platforms — your strongest signals for GEO content strategy.">
+              <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+            </HoverHint>
         </div>
         {strengths.length === 0 ? (
           <p className="text-sm text-[var(--color-fg-muted)]">Run a scan to see strength signals.</p>
@@ -98,7 +103,10 @@ export function SentimentDrivers({ results, businessName }: Props) {
             {strengths.map((s, i) => (
               <div key={i} className="bg-[#96A283]/10 rounded-lg px-3 py-2.5">
                 <p className="text-sm text-[var(--color-fg)] leading-snug line-clamp-2">{s.text}</p>
-                <p className="text-xs text-[#566A47] mt-1">{s.detail}</p>
+                <div className="flex items-center justify-between mt-1">
+                  <p className="text-xs text-[#566A47]">{s.detail}</p>
+                  <Link href="/sentiment" className="text-xs text-[#566A47] hover:underline whitespace-nowrap ml-2">View prompts →</Link>
+                </div>
               </div>
             ))}
           </div>
@@ -112,6 +120,9 @@ export function SentimentDrivers({ results, businessName }: Props) {
             <AlertCircle className="h-4 w-4 text-[#8C3522]" />
           </div>
           <h3 className="text-sm font-semibold text-[var(--color-fg)]">Areas for Improvement</h3>
+            <HoverHint hint="Prompts where AI gives your brand negative sentiment or doesn't mention you at all. These are high-leverage targets for Optimizer work.">
+              <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+            </HoverHint>
         </div>
         {improvements.length === 0 ? (
           <p className="text-sm text-[var(--color-fg-muted)]">No risk signals found. Sentiment looks clean.</p>
@@ -125,9 +136,17 @@ export function SentimentDrivers({ results, businessName }: Props) {
                 }`}
               >
                 <p className="text-sm text-[var(--color-fg)] leading-snug line-clamp-2">{item.text}</p>
-                <p className={`text-xs mt-1 ${item.type === "negative" ? "text-[#8C3522]" : "text-[var(--color-fg-muted)]"}`}>
-                  {item.detail}
-                </p>
+                <div className="flex items-center justify-between mt-1">
+                  <p className={`text-xs ${item.type === "negative" ? "text-[#8C3522]" : "text-[var(--color-fg-muted)]"}`}>
+                    {item.detail}
+                  </p>
+                  <Link
+                    href="/audit"
+                    className={`text-xs hover:underline whitespace-nowrap ml-2 ${item.type === "negative" ? "text-[#8C3522]" : "text-[var(--color-fg-muted)]"}`}
+                  >
+                    Open audit →
+                  </Link>
+                </div>
               </div>
             ))}
           </div>

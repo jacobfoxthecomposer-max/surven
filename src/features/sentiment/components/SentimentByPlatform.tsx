@@ -1,8 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
+import { Info } from "lucide-react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/atoms/Card";
+import { HoverHint } from "@/components/atoms/HoverHint";
+import { EngineIcon } from "@/components/atoms/EngineIcon";
 import type { ScanResult, ModelName } from "@/types/database";
 
 const MODELS: ModelName[] = ["chatgpt", "claude", "gemini", "google_ai"];
@@ -37,12 +40,20 @@ export function SentimentByPlatform({ results }: Props) {
 
   return (
     <Card>
-      <h3 className="text-sm font-semibold text-[var(--color-fg)] mb-5">Sentiment by AI Platform</h3>
+      <div className="flex items-center gap-1.5 mb-5">
+        <h3 className="text-sm font-semibold text-[var(--color-fg)]">Sentiment by AI Platform</h3>
+        <HoverHint hint="How each AI platform rates your brand's tone when it mentions you. Positive means favorable language; negative means critical or dismissive.">
+          <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+        </HoverHint>
+      </div>
       <div className="space-y-5">
         {rows.map((row, i) => (
           <div key={row.model}>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[var(--color-fg)]">{MODEL_LABELS[row.model]}</span>
+              <span className="flex items-center gap-1.5 text-sm text-[var(--color-fg)]">
+                <EngineIcon id={row.model} size={13} />
+                {MODEL_LABELS[row.model]}
+              </span>
               <span className="text-xs text-[var(--color-fg-muted)]">{row.total} mention{row.total !== 1 ? "s" : ""}</span>
             </div>
             {/* Stacked bar */}

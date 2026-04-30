@@ -89,7 +89,7 @@ export default function SentimentPage() {
           <>
             {/* Insight cards */}
             <motion.div {...reveal}>
-              <SentimentInsights results={results} />
+              <SentimentInsights results={results} sentimentHistory={sentimentHistory} />
             </motion.div>
 
             {/* Donut + Platform breakdown */}
