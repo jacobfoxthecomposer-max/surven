@@ -54,6 +54,18 @@ export default function SentimentPage() {
   const results = latestScan?.results ?? [];
   const competitorNames = competitors.map((c) => c.name);
 
+  // Derive dominant sentiment for headline
+  const mentioned = results.filter((r) => r.business_mentioned && r.sentiment);
+  const sentimentCounts = { positive: 0, neutral: 0, negative: 0 };
+  for (const r of mentioned) {
+    if (r.sentiment) sentimentCounts[r.sentiment as keyof typeof sentimentCounts]++;
+  }
+  const dominant = mentioned.length > 0
+    ? (Object.entries(sentimentCounts).sort((a, b) => b[1] - a[1])[0][0] as "positive" | "neutral" | "negative")
+    : null;
+  const sentimentWord = dominant === "positive" ? "Positive" : dominant === "negative" ? "Negative" : "Neutral";
+  const sentimentColor = dominant === "positive" ? "#7D8E6C" : dominant === "negative" ? "#B54631" : "#A09890";
+
   return (
     <DashboardLayout>
       <div className="space-y-8 w-full">
@@ -63,8 +75,25 @@ export default function SentimentPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease }}
         >
-          <h1 className="text-2xl font-semibold text-[var(--color-fg)]">Brand Sentiment</h1>
-          <p className="text-sm text-[var(--color-fg-muted)] mt-1">
+          <h1
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(32px, 4vw, 52px)",
+              fontWeight: 600,
+              lineHeight: 1.15,
+              letterSpacing: "-0.01em",
+              color: "var(--color-fg)",
+            }}
+          >
+            Your brand sentiment is{" "}
+            {dominant ? (
+              <span style={{ color: sentimentColor, fontStyle: "italic" }}>{sentimentWord}</span>
+            ) : (
+              <span style={{ color: "var(--color-fg-muted)", fontStyle: "italic" }}>unknown</span>
+            )}
+            .
+          </h1>
+          <p className="text-sm text-[var(--color-fg-muted)] mt-2">
             How AI models perceive and describe {business.name} across platforms.
           </p>
         </motion.div>

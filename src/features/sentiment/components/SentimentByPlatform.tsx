@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
+import { AIOverview } from "@/components/atoms/AIOverview";
 import type { ScanResult, ModelName } from "@/types/database";
 
 const MODELS: ModelName[] = ["chatgpt", "claude", "gemini", "google_ai"];
@@ -21,8 +22,8 @@ interface Props {
 }
 
 export function SentimentByPlatform({ results }: Props) {
-  const rows = useMemo(() => {
-    return MODELS.map((model) => {
+  const { rows, insight } = useMemo(() => {
+    const rows = MODELS.map((model) => {
       const modelResults = results.filter((r) => r.business_mentioned && r.model_name === model);
       const total = modelResults.length;
       if (total === 0) return { model, total: 0, positive: 0, neutral: 0, negative: 0 };
@@ -34,18 +35,30 @@ export function SentimentByPlatform({ results }: Props) {
         negative: Math.round((modelResults.filter((r) => r.sentiment === "negative").length / total) * 100),
       };
     }).filter((r) => r.total > 0);
+
+    const withData = rows.filter((r) => r.total > 0);
+    const best  = withData.length > 0 ? withData.reduce((a, b) => a.positive >= b.positive ? a : b) : null;
+    const worst = withData.length > 1 ? withData.reduce((a, b) => a.positive <= b.positive ? a : b) : null;
+    const insight = best && worst && best.model !== worst.model
+      ? `Strongest on ${MODEL_LABELS[best.model]} (${best.positive}% positive) — weakest on ${MODEL_LABELS[worst.model]} (${worst.positive}%). Closing this gap is your biggest lever.`
+      : best
+      ? `${MODEL_LABELS[best.model]} gives you the most favorable mentions at ${best.positive}% positive.`
+      : null;
+
+    return { rows, insight };
   }, [results]);
 
   if (rows.length === 0) return null;
 
   return (
     <Card>
-      <div className="flex items-center gap-1.5 mb-5">
+      <div className="flex items-center gap-1.5 mb-3">
         <h3 className="text-sm font-semibold text-[var(--color-fg)]">Sentiment by AI Platform</h3>
         <HoverHint hint="How each AI platform rates your brand's tone when it mentions you. Positive means favorable language; negative means critical or dismissive.">
           <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
         </HoverHint>
       </div>
+      {insight && <div className="mb-5"><AIOverview text={insight} size="sm" /></div>}
       <div className="space-y-5">
         {rows.map((row, i) => (
           <div key={row.model}>

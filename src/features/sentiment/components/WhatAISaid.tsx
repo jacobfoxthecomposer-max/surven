@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Card } from "@/components/atoms/Card";
+import { EngineIcon } from "@/components/atoms/EngineIcon";
+import { AIOverview } from "@/components/atoms/AIOverview";
 import { cn } from "@/utils/cn";
 import type { ScanResult, ModelName } from "@/types/database";
 
@@ -38,12 +40,19 @@ export function WhatAISaid({ results, businessName }: Props) {
 
   if (mentioned.length === 0) return null;
 
+  const negativeCount = mentioned.filter((r) => r.sentiment === "negative").length;
+  const positiveCount = mentioned.filter((r) => r.sentiment === "positive").length;
+  const insight = negativeCount > 0
+    ? `${negativeCount} of ${mentioned.length} mention${mentioned.length !== 1 ? "s" : ""} contain negative language — expand those rows to see exactly what AI said.`
+    : `All ${mentioned.length} mention${mentioned.length !== 1 ? "s" : ""} are positive or neutral. Expand any row to read the full AI response.`;
+
   return (
     <Card>
       <h3 className="text-sm font-semibold text-[var(--color-fg)] mb-1">What AI Said About You</h3>
-      <p className="text-xs text-[var(--color-fg-muted)] mb-4">
+      <p className="text-xs text-[var(--color-fg-muted)] mb-3">
         Actual responses from AI models that mentioned {businessName}.
       </p>
+      <div className="mb-4"><AIOverview text={insight} size="sm" /></div>
 
       <div className="space-y-2">
         {mentioned.map((r, i) => {
@@ -62,12 +71,11 @@ export function WhatAISaid({ results, businessName }: Props) {
                 className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-[var(--color-surface-alt)] transition-colors"
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  {/* Model dot */}
-                  <div
-                    className="h-2 w-2 rounded-full flex-shrink-0"
-                    style={{ background: MODEL_COLOR[r.model_name] }}
-                  />
-                  <span className="text-xs font-medium text-[var(--color-fg-muted)] shrink-0">
+                  <span
+                    className="flex items-center gap-1.5 text-xs font-medium shrink-0"
+                    style={{ color: MODEL_COLOR[r.model_name] }}
+                  >
+                    <EngineIcon id={r.model_name} size={12} />
                     {MODEL_LABELS[r.model_name]}
                   </span>
                   <span className="text-sm text-[var(--color-fg)] truncate">{r.prompt_text}</span>

@@ -86,15 +86,20 @@ export function SentimentDrivers({ results, businessName }: Props) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {/* Strengths */}
-      <Card>
-        <div className="flex items-center gap-2 mb-4">
-          <div className="h-8 w-8 rounded-lg bg-[#96A283]/15 flex items-center justify-center">
-            <ShieldCheck className="h-4 w-4 text-[#566A47]" />
-          </div>
-          <h3 className="text-sm font-semibold text-[var(--color-fg)]">Brand Strengths</h3>
+      <Card className="overflow-hidden">
+        <div
+          className="-mx-5 -mt-5 px-5 py-4 mb-5"
+          style={{ background: "linear-gradient(135deg, rgba(150,162,131,0.18), rgba(150,162,131,0.04))" }}
+        >
+          <div className="flex items-center gap-2">
+            <div className="h-7 w-7 rounded-lg bg-[#96A283]/20 flex items-center justify-center">
+              <ShieldCheck className="h-4 w-4 text-[#566A47]" />
+            </div>
+            <h3 className="text-sm font-semibold text-[var(--color-fg)]">Brand Strengths</h3>
             <HoverHint hint="Prompts where AI consistently mentions your brand positively across multiple platforms — your strongest signals for GEO content strategy.">
               <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
             </HoverHint>
+          </div>
         </div>
         {strengths.length === 0 ? (
           <p className="text-sm text-[var(--color-fg-muted)]">Run a scan to see strength signals.</p>
@@ -114,15 +119,20 @@ export function SentimentDrivers({ results, businessName }: Props) {
       </Card>
 
       {/* Improvements */}
-      <Card>
-        <div className="flex items-center gap-2 mb-4">
-          <div className="h-8 w-8 rounded-lg bg-[#B54631]/10 flex items-center justify-center">
-            <AlertCircle className="h-4 w-4 text-[#8C3522]" />
-          </div>
-          <h3 className="text-sm font-semibold text-[var(--color-fg)]">Areas for Improvement</h3>
+      <Card className="overflow-hidden">
+        <div
+          className="-mx-5 -mt-5 px-5 py-4 mb-5"
+          style={{ background: "linear-gradient(135deg, rgba(181,70,49,0.10), rgba(181,70,49,0.02))" }}
+        >
+          <div className="flex items-center gap-2">
+            <div className="h-7 w-7 rounded-lg bg-[#B54631]/15 flex items-center justify-center">
+              <AlertCircle className="h-4 w-4 text-[#8C3522]" />
+            </div>
+            <h3 className="text-sm font-semibold text-[var(--color-fg)]">Areas for Improvement</h3>
             <HoverHint hint="Prompts where AI gives your brand negative sentiment or doesn't mention you at all. These are high-leverage targets for Optimizer work.">
               <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
             </HoverHint>
+          </div>
         </div>
         {improvements.length === 0 ? (
           <p className="text-sm text-[var(--color-fg-muted)]">No risk signals found. Sentiment looks clean.</p>
