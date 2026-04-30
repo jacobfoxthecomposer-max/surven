@@ -3,7 +3,8 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/atoms/Card";
-import { AlertTriangle, CheckCircle } from "lucide-react";
+import { HoverHint } from "@/components/atoms/HoverHint";
+import { AlertTriangle, CheckCircle, Info } from "lucide-react";
 import type { ScanResult } from "@/types/database";
 
 interface GapItem {
@@ -91,19 +92,22 @@ export function CompetitorGaps({
 
   return (
     <section id="gaps-section">
-      <h2 className="text-lg font-semibold mb-1">Competitive Gaps & Advantages</h2>
-      <p className="text-sm text-[var(--color-fg-muted)] mb-4">
-        Prompts where competitors outrank you (gaps) or where you outrank them (advantages).
-      </p>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Gaps */}
-        <Card>
-          <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle className="h-4 w-4 text-red-400" />
-            <h3 className="text-sm font-semibold text-red-400">
-              Gaps ({gaps.length})
-            </h3>
+        <Card className="overflow-hidden">
+          <div
+            className="-mx-5 -mt-5 px-5 py-4 mb-5"
+            style={{ background: "linear-gradient(135deg, rgba(181,70,49,0.10), rgba(181,70,49,0.02))" }}
+          >
+            <div className="flex items-center gap-2">
+              <div className="h-7 w-7 rounded-lg bg-[#8C3522]/20 flex items-center justify-center">
+                <AlertTriangle className="h-4 w-4 text-[#8C3522]" />
+              </div>
+              <h3 className="text-sm font-semibold text-[var(--color-fg)]">Gaps ({gaps.length})</h3>
+              <HoverHint hint="Prompts where competitors appear but you don't. Focus here to improve.">
+                <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+              </HoverHint>
+            </div>
           </div>
           {gaps.length === 0 ? (
             <p className="text-sm text-[var(--color-fg-muted)]">No gaps found — you're keeping up.</p>
@@ -142,12 +146,20 @@ export function CompetitorGaps({
         </Card>
 
         {/* Advantages */}
-        <Card>
-          <div className="flex items-center gap-2 mb-4">
-            <CheckCircle className="h-4 w-4 text-emerald-400" />
-            <h3 className="text-sm font-semibold text-emerald-400">
-              Advantages ({advantages.length})
-            </h3>
+        <Card className="overflow-hidden">
+          <div
+            className="-mx-5 -mt-5 px-5 py-4 mb-5"
+            style={{ background: "linear-gradient(135deg, rgba(150,162,131,0.18), rgba(150,162,131,0.04))" }}
+          >
+            <div className="flex items-center gap-2">
+              <div className="h-7 w-7 rounded-lg bg-[#96A283]/20 flex items-center justify-center">
+                <CheckCircle className="h-4 w-4 text-[#566A47]" />
+              </div>
+              <h3 className="text-sm font-semibold text-[var(--color-fg)]">Advantages ({advantages.length})</h3>
+              <HoverHint hint="Prompts where you appear but competitors don't. Keep building on these strengths.">
+                <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+              </HoverHint>
+            </div>
           </div>
           {advantages.length === 0 ? (
             <p className="text-sm text-[var(--color-fg-muted)]">No advantages yet — keep building visibility.</p>

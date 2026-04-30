@@ -2,7 +2,10 @@
 
 import { useMemo } from "react";
 import { motion } from "framer-motion";
+import { Info } from "lucide-react";
 import { Card } from "@/components/atoms/Card";
+import { HoverHint } from "@/components/atoms/HoverHint";
+import { EngineIcon } from "@/components/atoms/EngineIcon";
 import type { ScanResult, ModelName } from "@/types/database";
 
 const MODELS: { id: ModelName; label: string }[] = [
@@ -98,11 +101,21 @@ export function CompetitorHeatmap({
 
   return (
     <section id="heatmap-section">
-      <h2 className="text-lg font-semibold mb-1">AI Platform Visibility Heatmap</h2>
-      <p className="text-sm text-[var(--color-fg-muted)] mb-4">
-        Visibility score per AI platform. Darker = higher presence. "—" means no mentions detected.
-      </p>
-      <Card className="overflow-x-auto">
+      <Card className="overflow-x-auto overflow-hidden">
+        <div
+          className="-mx-5 -mt-5 px-5 py-4 mb-5"
+          style={{ background: "linear-gradient(135deg, rgba(150,162,131,0.18), rgba(150,162,131,0.04))" }}
+        >
+          <div className="flex items-center gap-2">
+            <div className="h-7 w-7 rounded-lg bg-[#96A283]/20 flex items-center justify-center">
+              <span style={{ fontSize: 14, fontWeight: 600, color: "#566A47" }}>🔥</span>
+            </div>
+            <h3 className="text-sm font-semibold text-[var(--color-fg)]">AI Platform Visibility Heatmap</h3>
+            <HoverHint hint="Visibility score per AI platform. Darker shades indicate higher presence and mentions.">
+              <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+            </HoverHint>
+          </div>
+        </div>
         <table className="w-full min-w-[520px] border-collapse">
           <thead>
             <tr>
@@ -114,7 +127,10 @@ export function CompetitorHeatmap({
                   key={m.id}
                   className="text-center text-xs font-semibold text-[var(--color-fg-muted)] pb-3 px-2"
                 >
-                  {m.label}
+                  <span className="flex items-center justify-center gap-1.5">
+                    <EngineIcon id={m.id} size={12} />
+                    {m.label}
+                  </span>
                 </th>
               ))}
             </tr>

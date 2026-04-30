@@ -3,7 +3,8 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/atoms/Card";
-import { ExternalLink } from "lucide-react";
+import { HoverHint } from "@/components/atoms/HoverHint";
+import { ExternalLink, Info } from "lucide-react";
 import type { ScanResult } from "@/types/database";
 
 interface DomainStat {
@@ -82,10 +83,17 @@ export function CompetitorCitedDomains({
 
   return (
     <section id="citations-section">
-      <h2 className="text-lg font-semibold mb-1">Top Cited Domains</h2>
-      <p className="text-sm text-[var(--color-fg-muted)] mb-4">
-        Domains AI models cite in responses where each business is mentioned.
-      </p>
+      <div className="mb-4">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-[var(--color-fg)]">Top Cited Domains</h3>
+          <HoverHint hint="Domains that AI models cite in responses mentioning each business. Authority sources your competitors are using.">
+            <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+          </HoverHint>
+        </div>
+        <p className="text-xs text-[var(--color-fg-muted)] mt-1">
+          Domains AI models cite in responses where each business is mentioned.
+        </p>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {entities.map((entity, entityIdx) => {
@@ -97,16 +105,21 @@ export function CompetitorCitedDomains({
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, delay: entityIdx * 0.07 }}
             >
-              <Card className="h-full">
-                <div className="flex items-center gap-2 mb-4">
-                  <h3 className="text-sm font-semibold text-[var(--color-fg)] truncate">
-                    {entity.name}
-                  </h3>
-                  {entity.isClient && (
-                    <span className="text-[10px] bg-[var(--color-primary)]/20 text-[var(--color-primary)] px-1.5 py-0.5 rounded-full font-medium shrink-0">
-                      You
-                    </span>
-                  )}
+              <Card className="h-full overflow-hidden">
+                <div
+                  className="-mx-5 -mt-5 px-5 py-3 mb-4"
+                  style={{ background: "linear-gradient(135deg, rgba(150,162,131,0.08), rgba(150,162,131,0.02))" }}
+                >
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-semibold text-[var(--color-fg)] truncate">
+                      {entity.name}
+                    </h3>
+                    {entity.isClient && (
+                      <span className="text-[10px] bg-[var(--color-primary)]/20 text-[var(--color-primary)] px-1.5 py-0.5 rounded-full font-medium shrink-0">
+                        You
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {entity.domains.length === 0 ? (
