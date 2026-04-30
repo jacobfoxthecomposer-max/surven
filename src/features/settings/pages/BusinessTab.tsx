@@ -258,7 +258,7 @@ export function BusinessTab() {
                   onClick={() => handleDeleteCompetitor(c.id)}
                   disabled={isDeleting}
                   aria-label="Remove competitor"
-                  className="p-1.5 rounded-md text-[var(--color-fg-muted)] hover:text-[var(--color-danger)] hover:bg-red-500/10 transition-colors"
+                  className="p-1.5 rounded-md text-[var(--color-fg-muted)] hover:text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 transition-colors"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -276,7 +276,7 @@ export function BusinessTab() {
       <div className="space-y-3 pt-4 border-t border-[var(--color-border)]">
         <h3 className="text-sm font-semibold text-[var(--color-danger)]">Danger Zone</h3>
         {confirmDelete ? (
-          <div className="p-4 rounded-lg border border-red-500/40 bg-red-500/5 space-y-3">
+          <div className="p-4 rounded-lg border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/5 space-y-3">
             <p className="text-sm text-[var(--color-fg)]">
               Delete <span className="font-semibold">{business.name}</span>? This removes all scans, results, and data for this business. This cannot be undone.
             </p>
@@ -286,9 +286,9 @@ export function BusinessTab() {
               </Button>
               <Button
                 size="sm"
+                variant="danger"
                 onClick={handleDeleteBusiness}
                 loading={deleting}
-                className="bg-red-500 hover:bg-red-600 text-white border-red-500"
               >
                 Yes, delete it
               </Button>
@@ -299,7 +299,7 @@ export function BusinessTab() {
             variant="ghost"
             size="sm"
             onClick={() => setConfirmDelete(true)}
-            className="text-[var(--color-danger)] hover:bg-red-500/10"
+            className="text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10"
           >
             <Trash2 className="h-4 w-4" />
             Delete this business

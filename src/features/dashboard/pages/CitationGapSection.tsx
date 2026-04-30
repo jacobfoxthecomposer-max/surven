@@ -87,7 +87,7 @@ export function CitationGapSection({ results, businessName }: CitationGapSection
                 <div className="flex-1 h-2 rounded-full bg-[var(--color-surface-alt)]">
                   <motion.div
                     className="h-2 rounded-full"
-                    style={{ backgroundColor: isGap ? "#ef4444" : "#06d6a0" }}
+                    style={{ backgroundColor: isGap ? "var(--color-danger)" : "var(--color-success)" }}
                     initial={{ width: 0 }}
                     animate={{ width: `${pct}%` }}
                     transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
@@ -103,8 +103,8 @@ export function CitationGapSection({ results, businessName }: CitationGapSection
                 <span
                   className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium w-14 text-center shrink-0 ${
                     isGap
-                      ? "bg-red-500/15 text-red-400"
-                      : "bg-emerald-500/15 text-emerald-400"
+                      ? "bg-[var(--color-danger)]/15 text-[#8C3522]"
+                      : "bg-[var(--color-success)]/15 text-[#566A47]"
                   }`}
                 >
                   {isGap ? "Gap" : "Listed"}
@@ -115,8 +115,8 @@ export function CitationGapSection({ results, businessName }: CitationGapSection
         </div>
 
         <p className="text-xs text-[var(--color-fg-muted)] mt-4">
-          <span className="text-emerald-400 font-medium">Listed</span> = {businessName} appeared in responses that cited this domain. &nbsp;
-          <span className="text-red-400 font-medium">Gap</span> = domain cited but {businessName} never mentioned — consider getting listed there.
+          <span className="text-[#566A47] font-medium">Listed</span> = {businessName} appeared in responses that cited this domain. &nbsp;
+          <span className="text-[#8C3522] font-medium">Gap</span> = domain cited but {businessName} never mentioned — consider getting listed there.
         </p>
       </Card>
     </section>

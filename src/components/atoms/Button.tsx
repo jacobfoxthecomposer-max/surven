@@ -11,7 +11,7 @@ const variantStyles = {
   secondary:
     "bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)] text-[var(--color-fg)] border border-[var(--color-border)]",
   danger:
-    "bg-[var(--color-danger)] hover:bg-red-600 text-white",
+    "bg-[var(--color-danger)] hover:bg-[var(--color-danger-hover)] text-white",
   ghost:
     "bg-transparent hover:bg-[var(--color-surface)] text-[var(--color-fg-secondary)]",
   outline:

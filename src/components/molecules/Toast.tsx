@@ -33,10 +33,10 @@ const icons: Record<ToastType, ReactNode> = {
 };
 
 const styles: Record<ToastType, string> = {
-  success: "bg-emerald-500/15 border-emerald-500/30 text-emerald-300",
-  error: "bg-red-500/15 border-red-500/30 text-red-300",
-  warning: "bg-orange-500/15 border-orange-500/30 text-orange-300",
-  info: "bg-blue-500/15 border-blue-500/30 text-blue-300",
+  success: "bg-[var(--color-success)]/15 border-[var(--color-success)]/30 text-[#566A47]",
+  error:   "bg-[var(--color-danger)]/15 border-[var(--color-danger)]/30 text-[#8C3522]",
+  warning: "bg-[var(--color-warning)]/15 border-[var(--color-warning)]/30 text-[#9A5D28]",
+  info:    "bg-[var(--color-info)]/15 border-[var(--color-info)]/30 text-[#2E6ACF]",
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {

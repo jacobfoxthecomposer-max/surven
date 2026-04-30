@@ -1,21 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { MessageSquare, Brain, Globe, Globe2 } from "lucide-react";
 import { Badge } from "@/components/atoms/Badge";
 import { Card } from "@/components/atoms/Card";
+import { BrandChip, AI_BRAND_DEFS, getBrandDef } from "@/components/atoms/BrandChip";
 import type { ModelName } from "@/types/database";
 import { cn } from "@/utils/cn";
-
-const modelConfig: Record<
-  ModelName,
-  { icon: typeof MessageSquare; label: string; color: string }
-> = {
-  chatgpt: { icon: MessageSquare, label: "ChatGPT", color: "#5BAF92" },
-  claude: { icon: Brain, label: "Claude", color: "#D4943A" },
-  gemini: { icon: Globe, label: "Gemini", color: "#6BA3F5" },
-  google_ai: { icon: Globe2, label: "Google AI", color: "#5CBF74" },
-};
 
 interface ModelBreakdownCardProps {
   model: ModelName;
@@ -30,8 +20,7 @@ export function ModelBreakdownCard({
   total,
   index = 0,
 }: ModelBreakdownCardProps) {
-  const config = modelConfig[model];
-  const Icon = config.icon;
+  const config = getBrandDef(model, AI_BRAND_DEFS);
   const pct = total > 0 ? (mentioned / total) * 100 : 0;
   const isMentioned = mentioned > 0;
 
@@ -47,15 +36,7 @@ export function ModelBreakdownCard({
       >
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div
-              className="flex items-center justify-center w-8 h-8 rounded-lg"
-              style={{ backgroundColor: `${config.color}20` }}
-            >
-              <Icon className="h-4 w-4" style={{ color: config.color }} />
-            </div>
-            <span className="font-semibold text-sm">{config.label}</span>
-          </div>
+          <BrandChip brand={config} />
           <Badge variant={isMentioned ? "success" : "neutral"}>
             {isMentioned ? "Mentioned" : "Not Found"}
           </Badge>

@@ -99,7 +99,7 @@ export function PromptsTab() {
                 onClick={() => handleDelete(p.id)}
                 disabled={isDeleting}
                 aria-label="Remove prompt"
-                className="p-1.5 rounded-md text-[var(--color-fg-muted)] hover:text-[var(--color-danger)] hover:bg-red-500/10 transition-colors"
+                className="p-1.5 rounded-md text-[var(--color-fg-muted)] hover:text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 transition-colors"
               >
                 <Trash2 className="h-4 w-4" />
               </button>

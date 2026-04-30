@@ -11,7 +11,7 @@ import {
   CartesianGrid,
   Cell,
 } from "recharts";
-import { COLORS } from "@/utils/constants";
+import { COLORS, COMPETITOR_PALETTE } from "@/utils/constants";
 import type { CompetitorScore } from "@/types/database";
 
 interface ComparisonChartProps {
@@ -20,12 +20,7 @@ interface ComparisonChartProps {
   competitors: CompetitorScore[];
 }
 
-const BAR_COLORS = [
-  COLORS.primary,
-  "#f97316",
-  "#fbbf24",
-  "#ef4444",
-];
+const BAR_COLORS = [COLORS.primary, ...COMPETITOR_PALETTE];
 
 export function ComparisonChart({
   businessName,

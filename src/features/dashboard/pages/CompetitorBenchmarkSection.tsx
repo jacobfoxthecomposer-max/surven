@@ -4,7 +4,10 @@ import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/atoms/Card";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { BrandChip, buildCompetitorDef } from "@/components/atoms/BrandChip";
 import type { ScanResult, ModelName } from "@/types/database";
+
+const YOU_DEF = { id: "you", label: "You", color: "#96A283" };
 
 const MODELS: ModelName[] = ["chatgpt", "claude", "gemini", "google_ai"];
 const MODEL_LABELS: Record<ModelName, string> = {
@@ -92,9 +95,9 @@ export function CompetitorBenchmarkSection({
             <Card>
               {/* Header row */}
               <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-xs text-[var(--color-fg-muted)] mb-0.5">vs</p>
-                  <h3 className="text-base font-semibold text-[var(--color-fg)]">{bench.name}</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[var(--color-fg-muted)]">vs</span>
+                  <BrandChip brand={buildCompetitorDef(bench.name, i)} />
                 </div>
                 <OverallDeltaBadge delta={bench.delta} yourScore={bench.yourOverall} theirScore={bench.theirOverall} />
               </div>
@@ -110,8 +113,8 @@ export function CompetitorBenchmarkSection({
                     <DualBar
                       yourScore={m.yourScore}
                       theirScore={m.theirScore}
-                      yourLabel={businessName}
-                      theirLabel={bench.name}
+                      competitorIndex={i}
+                      competitorName={bench.name}
                     />
                   </div>
                 ))}
@@ -138,7 +141,7 @@ function OverallDeltaBadge({
   return (
     <div className={`flex flex-col items-end gap-0.5`}>
       <div className={`flex items-center gap-1 text-sm font-semibold ${
-        tied ? "text-[var(--color-fg-muted)]" : winning ? "text-emerald-400" : "text-red-400"
+        tied ? "text-[var(--color-fg-muted)]" : winning ? "text-[#7D8E6C]" : "text-[#B54631]"
       }`}>
         {tied ? <Minus className="h-4 w-4" /> : winning ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
         {tied ? "Tied" : `${winning ? "+" : ""}${delta}%`}
@@ -152,7 +155,7 @@ function DeltaLabel({ delta }: { delta: number }) {
   if (delta === 0) return <span className="text-[var(--color-fg-muted)]">Tied</span>;
   const winning = delta > 0;
   return (
-    <span className={winning ? "text-emerald-400" : "text-red-400"}>
+    <span className={winning ? "text-[#7D8E6C]" : "text-[#B54631]"}>
       {winning ? "+" : ""}{delta}%
     </span>
   );
@@ -161,21 +164,25 @@ function DeltaLabel({ delta }: { delta: number }) {
 function DualBar({
   yourScore,
   theirScore,
-  yourLabel,
-  theirLabel,
+  competitorIndex,
+  competitorName,
 }: {
   yourScore: number;
   theirScore: number;
-  yourLabel: string;
-  theirLabel: string;
+  competitorIndex: number;
+  competitorName: string;
 }) {
+  const compDef = buildCompetitorDef(competitorName, competitorIndex);
   return (
     <div className="space-y-1">
       <div className="flex items-center gap-2">
-        <span className="text-[10px] text-[var(--color-fg-muted)] w-24 truncate shrink-0">{yourLabel}</span>
+        <div className="w-24 shrink-0">
+          <BrandChip brand={YOU_DEF} size="sm" isYou />
+        </div>
         <div className="flex-1 h-1.5 rounded-full bg-[var(--color-surface-alt)]">
           <motion.div
-            className="h-1.5 rounded-full bg-[var(--color-primary)]"
+            className="h-1.5 rounded-full"
+            style={{ backgroundColor: YOU_DEF.color }}
             initial={{ width: 0 }}
             animate={{ width: `${yourScore}%` }}
             transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
@@ -184,11 +191,13 @@ function DualBar({
         <span className="text-[10px] text-[var(--color-fg-muted)] w-8 text-right shrink-0">{yourScore}%</span>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-[10px] text-[var(--color-fg-muted)] w-24 truncate shrink-0">{theirLabel}</span>
+        <div className="w-24 shrink-0">
+          <BrandChip brand={compDef} size="sm" />
+        </div>
         <div className="flex-1 h-1.5 rounded-full bg-[var(--color-surface-alt)]">
           <motion.div
             className="h-1.5 rounded-full"
-            style={{ backgroundColor: "#8b5cf6" }}
+            style={{ backgroundColor: compDef.color }}
             initial={{ width: 0 }}
             animate={{ width: `${theirScore}%` }}
             transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
