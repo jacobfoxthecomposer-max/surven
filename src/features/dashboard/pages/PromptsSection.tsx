@@ -2911,6 +2911,28 @@ function SentimentByTypeCard({ items }: { items: SentimentByType[] }) {
         ))}
       </div>
 
+      <ChartExplainer
+        blocks={[
+          {
+            label: "Rows",
+            body: "Each row is one prompt-intent type — branded, comparison, transactional, etc. Sorted by positive sentiment (best at top).",
+          },
+          {
+            label: "Bar segments",
+            body: "Each bar is split into positive / neutral / negative shares, always summing to 100% per intent. Sage = positive, gray = neutral, rust = negative.",
+          },
+          {
+            label: "Mention count",
+            body: "Right-aligned number is total AI mentions across all engines for that intent. Low counts mean less reliable sentiment signal.",
+          },
+          {
+            label: "Colors",
+            body: "Semantic — sage means favorable, rust means critical. A rust-heavy bar means AI engines are describing you negatively for that intent.",
+          },
+        ]}
+        tip="Hover the row label for the exact positive/neutral/negative split."
+      />
+
       <div className="mt-4 pt-3 border-t border-[var(--color-border)]">
         <CtaLink
           icon={Smile}
