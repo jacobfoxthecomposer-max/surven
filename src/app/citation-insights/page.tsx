@@ -21,6 +21,7 @@ import { CitationsByEngine } from "@/features/citation-insights/CitationsByEngin
 import { CitedDomainsTable } from "@/features/citation-insights/CitedDomainsTable";
 import { AI_MODELS } from "@/utils/constants";
 import { getAuthority } from "@/utils/citationAuthority";
+import { colorForValue, SURVEN_THRESHOLDS } from "@/utils/brandColors";
 
 type TimeRange = "14d" | "30d" | "90d" | "ytd" | "all";
 const TIME_RANGES: { key: TimeRange; label: string }[] = [
