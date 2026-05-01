@@ -32,6 +32,7 @@ import { HoverHint } from "@/components/atoms/HoverHint";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { SectionHeading } from "@/components/atoms/SectionHeading";
 import { NextScanCard } from "@/components/atoms/NextScanCard";
+import { ChartExplainer } from "@/components/atoms/ChartExplainer";
 import { COLORS } from "@/utils/constants";
 
 /* ============================================================================
