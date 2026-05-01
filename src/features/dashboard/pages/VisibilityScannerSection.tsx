@@ -125,7 +125,7 @@ const SHARED_BASE = {
   tabLabelSize: 14,
   bodyBumpPx: 2,
   chartHeight: 460,
-  strokeYou: 2.3,
+  strokeYou: 1.3,
   strokeHovered: 3.75,
   strokeDefault: 1,
   tooltipFontSize: 10,
@@ -1690,7 +1690,7 @@ function PositionChart({
 
   const filterFor = (s: PositionStat) =>
     s.brand.isYou
-      ? `drop-shadow(0 0 2px ${s.brand.color}) drop-shadow(0 0 3.2px ${s.brand.color})`
+      ? `drop-shadow(0 0 1px ${s.brand.color}) drop-shadow(0 0 1.6px ${s.brand.color})`
       : undefined;
 
   const sovDomain = useMemo<[number, number]>(() => {
