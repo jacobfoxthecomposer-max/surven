@@ -63,11 +63,24 @@ export function useCrawlabilityAudit() {
     setError(null);
   }
 
+  function markFindingApplied(findingId: string) {
+    setResult((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        findings: current.findings.map((f) =>
+          f.id === findingId ? { ...f, isApplied: true } : f
+        ),
+      };
+    });
+  }
+
   return {
     scanning,
     result,
     error,
     runScan,
     reset,
+    markFindingApplied,
   };
 }

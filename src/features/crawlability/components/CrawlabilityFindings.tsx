@@ -10,6 +10,8 @@ import {
   Copy,
   Check,
   Lock,
+  Wand2,
+  CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { HoverHint } from "@/components/atoms/HoverHint";
@@ -21,7 +23,11 @@ interface CrawlabilityFindingsProps {
   pagesCrawled: number;
   pagesCapped: boolean;
   plan: "free" | "plus" | "premium" | "admin";
+  hasGithubConnection?: boolean;
+  onApplyFix?: (finding: CrawlabilityFinding) => void;
 }
+
+const AUTO_APPLIABLE_FIX_TYPES = new Set(["robots", "sitemap"]);
 
 const SEVERITY_CONFIG: Record<
   AuditSeverity,
@@ -64,10 +70,15 @@ export function CrawlabilityFindings({
   pagesCrawled,
   pagesCapped,
   plan,
+  hasGithubConnection = false,
+  onApplyFix,
 }: CrawlabilityFindingsProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterTab>("all");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const isPremium = plan === "premium" || plan === "admin";
+  const isPlus = plan === "plus";
 
   const counts = useMemo(() => {
     const c = { all: findings.length, critical: 0, high: 0, medium: 0, low: 0 };
@@ -169,7 +180,9 @@ export function CrawlabilityFindings({
           const Icon = cfg.icon;
           const isExpanded = expandedId === finding.id;
           const hasFixCode = !!finding.fixCode;
-          const isPlus = plan === "plus";
+          const isAutoAppliable = !!finding.fixType && AUTO_APPLIABLE_FIX_TYPES.has(finding.fixType);
+          const canApply = isPremium && hasGithubConnection && isAutoAppliable && !finding.isApplied;
+          const showApplyLock = (isPlus || (isPremium && !hasGithubConnection)) && isAutoAppliable && !finding.isApplied;
 
           return (
             <motion.div
@@ -198,6 +211,12 @@ export function CrawlabilityFindings({
                   )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                  {finding.isApplied && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#96A283]/15 text-[#566A47]">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Applied
+                    </span>
+                  )}
                   <span
                     className={cn(
                       "text-[11px] font-semibold px-2 py-0.5 rounded-full",
@@ -305,18 +324,38 @@ export function CrawlabilityFindings({
                           </p>
                         </div>
                         <div className="ml-auto">
-                          {finding.fixType ? (
-                            isPlus ? (
-                              <HoverHint hint="Upgrade to Premium to apply this fix directly to your site.">
-                                <span
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] text-xs font-medium text-[var(--color-fg-muted)] bg-[var(--color-bg)]/40"
-                                  style={{ cursor: "help" }}
-                                >
-                                  <Lock className="h-3 w-3" />
-                                  Apply Fix
-                                </span>
-                              </HoverHint>
-                            ) : null
+                          {finding.isApplied ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] text-xs font-medium text-[#566A47] bg-[#96A283]/15 border border-[#96A283]/30">
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              Fix Applied
+                            </span>
+                          ) : canApply ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onApplyFix?.(finding);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] text-xs font-semibold bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white shadow-sm transition-colors cursor-pointer"
+                            >
+                              <Wand2 className="h-3.5 w-3.5" />
+                              Apply Fix
+                            </button>
+                          ) : showApplyLock ? (
+                            <HoverHint
+                              hint={
+                                isPlus
+                                  ? "Upgrade to Premium to apply this fix directly to your site."
+                                  : "Connect GitHub in Settings → Integrations to enable Apply Fix."
+                              }
+                            >
+                              <span
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] text-xs font-medium text-[var(--color-fg-muted)] bg-[var(--color-bg)]/40"
+                                style={{ cursor: "help" }}
+                              >
+                                <Lock className="h-3 w-3" />
+                                Apply Fix
+                              </span>
+                            </HoverHint>
                           ) : null}
                         </div>
                       </div>

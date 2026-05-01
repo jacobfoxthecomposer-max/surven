@@ -31,6 +31,8 @@ import { StatusCodeDonut } from "@/features/crawlability/components/StatusCodeDo
 import { CategoryScoresBars } from "@/features/crawlability/components/CategoryScoresBars";
 import { ScanProgressIndicator } from "@/features/crawlability/components/ScanProgressIndicator";
 import { CrawlabilityFindings } from "@/features/crawlability/components/CrawlabilityFindings";
+import { ApplyFixModal } from "@/features/crawlability/components/ApplyFixModal";
+import type { CrawlabilityFinding } from "@/types/crawlability";
 
 const ease = [0.16, 1, 0.3, 1] as const;
 const reveal = {
@@ -52,13 +54,53 @@ export function CrawlabilityAuditPage({
   plan,
 }: CrawlabilityAuditPageProps) {
   const [siteUrl, setSiteUrl] = useState("");
-  const { scanning, result, error, runScan, reset } = useCrawlabilityAudit();
+  const { scanning, result, error, runScan, reset, markFindingApplied } = useCrawlabilityAudit();
 
   const isFree = plan === "free";
   const isPremium = plan === "premium" || plan === "admin";
 
   const { connections } = useSiteConnections(isPremium ? businessId : undefined);
   const activeConnection = connections.find((c) => c.status === "active");
+  const githubConnection = connections.find(
+    (c) => c.platform === "github" && c.status === "active"
+  );
+
+  // Apply Fix modal state
+  const [applyFixFinding, setApplyFixFinding] = useState<CrawlabilityFinding | null>(null);
+
+  async function handleApplyFix(finding: CrawlabilityFinding): Promise<{
+    ok: boolean;
+    error?: string;
+    committedSha?: string;
+    commitUrl?: string;
+    filePath?: string;
+  }> {
+    if (!result) return { ok: false, error: "No scan loaded" };
+    try {
+      const res = await fetch("/api/crawlability/apply-fix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          businessId,
+          auditId: result.id,
+          findingId: finding.id,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { ok: false, error: data?.message ?? data?.error ?? "Apply failed" };
+      }
+      markFindingApplied(finding.id);
+      return {
+        ok: true,
+        committedSha: data.committedSha,
+        commitUrl: data.commitUrl,
+        filePath: data.filePath,
+      };
+    } catch {
+      return { ok: false, error: "Network error" };
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -385,6 +427,8 @@ export function CrawlabilityAuditPage({
               pagesCrawled={result.crawlStats.pagesCrawled}
               pagesCapped={result.crawlStats.pagesCapped}
               plan={plan}
+              hasGithubConnection={!!githubConnection}
+              onApplyFix={(f) => setApplyFixFinding(f)}
             />
           </motion.div>
 
@@ -393,6 +437,18 @@ export function CrawlabilityAuditPage({
             Crawlability results cached for 24 hours. Use Re-scan to force a fresh audit.
           </p>
         </>
+      )}
+
+      {/* Apply Fix Modal (Premium only) */}
+      {githubConnection && (
+        <ApplyFixModal
+          open={!!applyFixFinding}
+          finding={applyFixFinding}
+          repo={githubConnection.repo ?? ""}
+          branch={githubConnection.branch ?? "main"}
+          onClose={() => setApplyFixFinding(null)}
+          onConfirm={handleApplyFix}
+        />
       )}
     </div>
   );
