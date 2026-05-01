@@ -156,6 +156,28 @@ export function SentimentByFeature({ results, businessName, competitors }: Props
             </div>
           ))}
         </div>
+
+        <ChartExplainer
+          blocks={[
+            {
+              label: "Rows",
+              body: "Each row is one prompt that was sent to AI engines during the scan.",
+            },
+            {
+              label: "Columns",
+              body: "Your business column shows positive sentiment %; competitor columns show plain mention counts (we don't compute sentiment for competitors).",
+            },
+            {
+              label: "Cell value",
+              body: "Your column: percentage of AI mentions that were positive (e.g., 80% means 4 of 5 mentions used favorable language). Em dash means no mentions.",
+            },
+            {
+              label: "Colors",
+              body: "Five-step thermal scale — rust = critical (0–19%), orange = mostly negative, mustard = mixed (40–59%), sage = mostly positive, dark green = excellent (80%+).",
+            },
+          ]}
+          tip="Hover any cell for the full prompt text."
+        />
       </Card>
 
       {/* Mentions by Feature */}
