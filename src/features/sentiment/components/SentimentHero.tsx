@@ -104,7 +104,7 @@ export function SentimentHero({ results, history, businessName }: Props) {
               <circle
                 cx="80" cy="80" r={ringRadius}
                 fill="none"
-                stroke={status.color}
+                stroke={SURVEN_SEMANTIC.good}
                 strokeWidth={ringStroke}
                 strokeLinecap="round"
                 strokeDasharray={circumference}
