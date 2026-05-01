@@ -5,6 +5,7 @@ import { Info } from "lucide-react";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { AIOverview } from "@/components/atoms/AIOverview";
+import { ChartExplainer } from "@/components/atoms/ChartExplainer";
 import type { ScanResult } from "@/types/database";
 
 interface Props {
