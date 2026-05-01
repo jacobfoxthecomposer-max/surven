@@ -58,7 +58,7 @@ export function HistoryChart({ scans }: HistoryChartProps) {
         <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
           <defs>
             <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={COLORS.primary} stopOpacity={0.08} />
+              <stop offset="0%" stopColor={COLORS.primary} stopOpacity={0.03} />
               <stop offset="100%" stopColor={COLORS.primary} stopOpacity={0} />
             </linearGradient>
           </defs>
