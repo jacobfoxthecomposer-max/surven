@@ -149,6 +149,28 @@ export function SourceCategoryBreakdown({ results }: SourceCategoryBreakdownProp
           </motion.div>
         ))}
       </div>
+
+      <ChartExplainer
+        blocks={[
+          {
+            label: "Stacked bar (top)",
+            body: "All your citations grouped by source type — directories, social, news, wiki, your own site, industry, other. Always sums to 100%.",
+          },
+          {
+            label: "Rows below",
+            body: "One row per category showing top-cited domain, total source count, citation count, and percentage share.",
+          },
+          {
+            label: "Colors",
+            body: "Visual differentiation between source types only. Sage marks your own site as the anchor — other colors don't indicate good or bad.",
+          },
+          {
+            label: "What to look for",
+            body: "Healthy mixes have your site, directories, and a couple of authoritative sources (news, wiki). If 'Other' dominates, AI is pulling from low-quality long-tail sources.",
+          },
+        ]}
+        tip="Hover the stacked bar for raw counts per category."
+      />
     </Card>
   );
 }
