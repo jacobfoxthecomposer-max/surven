@@ -31,6 +31,7 @@ import {
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { SectionHeading } from "@/components/atoms/SectionHeading";
+import { NextScanCard } from "@/components/atoms/NextScanCard";
 import { COLORS } from "@/utils/constants";
 
 /* ============================================================================
@@ -917,67 +918,6 @@ function HeroDescription() {
     >
       {HERO_DESCRIPTION}
     </p>
-  );
-}
-
-// ─── NEXT SCAN CARD ────────────────────────────────────────────────────────
-
-function fmtScanDate(d: Date) {
-  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-}
-
-function NextScanCard({ data }: { data: PromptsData }) {
-  return (
-    <div
-      className="rounded-[var(--radius-lg)] px-5 py-4 shrink-0"
-      style={{
-        borderLeft: `4px solid ${COLORS.primary}`,
-        backgroundColor: "rgba(150,162,131,0.10)",
-        width: 320,
-      }}
-    >
-      <p
-        className="uppercase tracking-wider text-[var(--color-fg-muted)] font-semibold mb-1"
-        style={{ fontSize: 11, letterSpacing: "0.12em" }}
-      >
-        Next scan
-      </p>
-      <HoverHint
-        hint="Days until your next automatic scan across every AI tool."
-        display="inline-block"
-        placement="left"
-      >
-        <div className="flex items-baseline gap-1.5 mb-1">
-          <span
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: 36,
-              fontWeight: 600,
-              color: "var(--color-fg)",
-              letterSpacing: "-0.02em",
-              lineHeight: 1,
-            }}
-          >
-            {data.nextScanDays}
-          </span>
-          <span
-            className="text-[var(--color-fg-secondary)]"
-            style={{ fontSize: 13, fontWeight: 500 }}
-          >
-            {data.nextScanDays === 1 ? "day" : "days"}
-          </span>
-        </div>
-      </HoverHint>
-      <HoverHint
-        hint={`Next scan date and the ${data.nextScanPromptCount} prompts we'll run.`}
-        display="block"
-        placement="left"
-      >
-        <p className="text-[var(--color-fg-muted)]" style={{ fontSize: 12 }}>
-          {fmtScanDate(data.nextScanDate)} · {data.nextScanPromptCount} prompts
-        </p>
-      </HoverHint>
-    </div>
   );
 }
 
@@ -3130,7 +3070,11 @@ export function PromptsSection() {
           </div>
         </div>
         <div className="shrink-0 mt-1">
-          <NextScanCard data={data} />
+          <NextScanCard
+            days={data.nextScanDays}
+            date={data.nextScanDate}
+            promptCount={data.nextScanPromptCount}
+          />
         </div>
       </motion.div>
 

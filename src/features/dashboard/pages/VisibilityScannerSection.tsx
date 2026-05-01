@@ -24,6 +24,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
+import { NextScanCard } from "@/components/atoms/NextScanCard";
 import { COLORS, ANIMATION } from "@/utils/constants";
 import { ScrollReveal } from "@/components/molecules/ScrollReveal";
 import {
@@ -969,79 +970,6 @@ function HeroDescription({ text }: { text: string }) {
     <p className="text-[var(--color-fg-muted)]" style={{ fontSize: 14, lineHeight: 1.55, maxWidth: 760 }}>
       {text}
     </p>
-  );
-}
-
-// ─── NEXT SCAN INDICATOR ────────────────────────────────────────────────────
-
-function getNextScan() {
-  const now = new Date();
-  const dayOfWeek = now.getDay(); // 0 = Sun, 1 = Mon
-  let daysUntilMonday = (1 - dayOfWeek + 7) % 7;
-  if (daysUntilMonday === 0) daysUntilMonday = 7;
-  const next = new Date(now);
-  next.setDate(now.getDate() + daysUntilMonday);
-  next.setHours(9, 0, 0, 0);
-  return { date: next, days: daysUntilMonday };
-}
-
-function fmtScanDate(d: Date) {
-  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-}
-
-function NextScanCard() {
-  const { date, days } = getNextScan();
-  return (
-    <div
-      className="rounded-[var(--radius-lg)] px-5 py-4"
-      style={{
-        borderLeft: `4px solid ${COLORS.primary}`,
-        backgroundColor: "rgba(150,162,131,0.10)",
-        width: 320,
-      }}
-    >
-      <p
-        className="uppercase tracking-wider text-[var(--color-fg-muted)] font-semibold mb-1"
-        style={{ fontSize: 11, letterSpacing: "0.12em" }}
-      >
-        Next scan
-      </p>
-      <HoverHint
-        hint="Days until your next automatic scan across every AI tool."
-        display="inline-block"
-        placement="left"
-      >
-        <div className="flex items-baseline gap-1.5 mb-1">
-          <span
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: 36,
-              fontWeight: 600,
-              color: "var(--color-fg)",
-              letterSpacing: "-0.02em",
-              lineHeight: 1,
-            }}
-          >
-            {days}
-          </span>
-          <span
-            className="text-[var(--color-fg-secondary)]"
-            style={{ fontSize: 13, fontWeight: 500 }}
-          >
-            {days === 1 ? "day" : "days"}
-          </span>
-        </div>
-      </HoverHint>
-      <HoverHint
-        hint={`Next scan date and the ${NEXT_SCAN_PROMPT_COUNT} prompts we'll run.`}
-        display="block"
-        placement="left"
-      >
-        <p className="text-[var(--color-fg-muted)]" style={{ fontSize: 12 }}>
-          {fmtScanDate(date)} · {NEXT_SCAN_PROMPT_COUNT} prompts
-        </p>
-      </HoverHint>
-    </div>
   );
 }
 

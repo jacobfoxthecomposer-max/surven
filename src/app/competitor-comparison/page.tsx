@@ -11,6 +11,7 @@ import { Card } from "@/components/atoms/Card";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { AIOverview } from "@/components/atoms/AIOverview";
+import { NextScanCard } from "@/components/atoms/NextScanCard";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
 import { useScan } from "@/features/dashboard/hooks/useScan";
@@ -145,27 +146,33 @@ export default function CompetitorComparisonPage() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease }}
+          className="flex items-start justify-between gap-6"
         >
-          <h1 style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "clamp(32px, 4vw, 52px)",
-            fontWeight: 600,
-            lineHeight: 1.15,
-            letterSpacing: "-0.01em",
-            color: "var(--color-fg)",
-          }}>
-            You're{" "}
-            <span style={{
-              color: overallTrend === "ahead" ? "#7D8E6C" : overallTrend === "behind" ? "#B54631" : "#A09890",
-              fontStyle: "italic",
+          <div className="space-y-2 min-w-0 flex-1">
+            <h1 style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(32px, 4vw, 52px)",
+              fontWeight: 600,
+              lineHeight: 1.15,
+              letterSpacing: "-0.01em",
+              color: "var(--color-fg)",
             }}>
-              {overallTrend === "ahead" ? "outpacing" : overallTrend === "behind" ? "losing ground to" : "matching"}
-            </span>{" "}
-            the competition.
-          </h1>
-          <p className="text-sm text-[var(--color-fg-muted)] mt-1.5">
-            See how {business.name} compares across AI platforms.
-          </p>
+              You're{" "}
+              <span style={{
+                color: overallTrend === "ahead" ? "#7D8E6C" : overallTrend === "behind" ? "#B54631" : "#A09890",
+                fontStyle: "italic",
+              }}>
+                {overallTrend === "ahead" ? "outpacing" : overallTrend === "behind" ? "losing ground to" : "matching"}
+              </span>{" "}
+              the competition.
+            </h1>
+            <p className="text-sm text-[var(--color-fg-muted)] mt-1.5">
+              See how {business.name} compares across AI platforms.
+            </p>
+          </div>
+          <div className="shrink-0 mt-1">
+            <NextScanCard />
+          </div>
         </motion.div>
 
         {hasResults && (

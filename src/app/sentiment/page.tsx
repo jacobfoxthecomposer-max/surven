@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Spinner } from "@/components/atoms/Spinner";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
+import { NextScanCard } from "@/components/atoms/NextScanCard";
 import { Calendar } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
@@ -127,28 +128,34 @@ export default function SentimentPage() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease }}
+          className="flex items-start justify-between gap-6"
         >
-          <h1
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: "clamp(32px, 4vw, 52px)",
-              fontWeight: 600,
-              lineHeight: 1.15,
-              letterSpacing: "-0.01em",
-              color: "var(--color-fg)",
-            }}
-          >
-            Your brand sentiment is{" "}
-            {dominant ? (
-              <span style={{ color: sentimentColor, fontStyle: "italic" }}>{sentimentWord}</span>
-            ) : (
-              <span style={{ color: "var(--color-fg-muted)", fontStyle: "italic" }}>unknown</span>
-            )}
-            .
-          </h1>
-          <p className="text-sm text-[var(--color-fg-muted)] mt-1.5">
-            How AI models perceive and describe {business.name} across platforms.
-          </p>
+          <div className="space-y-2 min-w-0 flex-1">
+            <h1
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "clamp(32px, 4vw, 52px)",
+                fontWeight: 600,
+                lineHeight: 1.15,
+                letterSpacing: "-0.01em",
+                color: "var(--color-fg)",
+              }}
+            >
+              Your brand sentiment is{" "}
+              {dominant ? (
+                <span style={{ color: sentimentColor, fontStyle: "italic" }}>{sentimentWord}</span>
+              ) : (
+                <span style={{ color: "var(--color-fg-muted)", fontStyle: "italic" }}>unknown</span>
+              )}
+              .
+            </h1>
+            <p className="text-sm text-[var(--color-fg-muted)] mt-1.5">
+              How AI models perceive and describe {business.name} across platforms.
+            </p>
+          </div>
+          <div className="shrink-0 mt-1">
+            <NextScanCard />
+          </div>
         </motion.div>
 
         {/* ── Global filter bar ── */}
