@@ -125,7 +125,7 @@ const SHARED_BASE = {
   tabLabelSize: 14,
   bodyBumpPx: 2,
   chartHeight: 460,
-  strokeYou: 3.5,
+  strokeYou: 3,
   strokeHovered: 3.75,
   strokeDefault: 1,
   tooltipFontSize: 10,
