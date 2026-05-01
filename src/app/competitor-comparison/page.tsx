@@ -3,11 +3,12 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { GitCompare, Calendar } from "lucide-react";
+import { GitCompare, Calendar, Download, RefreshCw } from "lucide-react";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Spinner } from "@/components/atoms/Spinner";
 import { Card } from "@/components/atoms/Card";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
+import { NextScanCard } from "@/components/atoms/NextScanCard";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
 import { useScan } from "@/features/dashboard/hooks/useScan";
@@ -118,24 +119,24 @@ export default function CompetitorComparisonPage() {
   return (
     <DashboardLayout>
       <div className="space-y-8" id="competitor-dashboard">
-        {/* Hero — headline + action panel */}
-        <CompetitorHero
-          businessName={business.name}
-          score={score}
-          avgCompetitorScore={avgCompetitorScore}
-          competitorCount={competitorNames.length}
-          onExport={() => setExportOpen(true)}
-        />
+        {/* Hero zone — headline + filter + engine bars (left col), action panel (right col) */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-6 items-start">
+          <div className="space-y-5 min-w-0">
+            <CompetitorHero
+              businessName={business.name}
+              score={score}
+              avgCompetitorScore={avgCompetitorScore}
+              competitorCount={competitorNames.length}
+            />
 
-        {hasResults && (
-          <>
-            {/* Filter bar */}
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.1, ease }}
-              className="flex flex-wrap items-center gap-2 pb-4 border-b border-[var(--color-border)]"
-            >
+            {hasResults && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.1, ease }}
+                  className="flex flex-wrap items-center gap-2 pb-4 border-b border-[var(--color-border)]"
+                >
               <div className="inline-flex rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-1 gap-1">
                 {TIME_RANGES.map(({ key, label }) => (
                   <button
@@ -192,12 +193,37 @@ export default function CompetitorComparisonPage() {
               </div>
             </motion.div>
 
-            {/* Per-engine you-vs-competitor bars */}
-            <EngineComparisonBars
-              results={filteredResults}
-              competitors={competitorNames}
-            />
+                {/* Per-engine you-vs-competitor bars */}
+                <EngineComparisonBars
+                  results={filteredResults}
+                  competitors={competitorNames}
+                />
+              </>
+            )}
+          </div>
 
+          {/* Right col — action panel (pinned right, top-aligned) */}
+          <div className="flex flex-col gap-2 shrink-0 lg:sticky lg:top-4">
+            <NextScanCard />
+            <button
+              onClick={() => setExportOpen(true)}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] border border-[var(--color-border)] text-sm font-medium text-[var(--color-fg-secondary)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)] transition-colors"
+            >
+              <Download className="h-4 w-4" />
+              Export PDF
+            </button>
+            <a
+              href="/settings"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] border border-[var(--color-border)] text-sm font-medium text-[var(--color-fg-secondary)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)] transition-colors"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Manage competitors
+            </a>
+          </div>
+        </div>
+
+        {hasResults && (
+          <>
             {/* Diagnostic callout band */}
             <DiagnosticBand
               businessName={business.name}
