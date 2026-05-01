@@ -3,7 +3,7 @@ import type {
   Variant,
   TaxonomyCategory,
   EngineId,
-  KeywordResearchData,
+  PromptResearchData,
   EntityGridData,
 } from "./types";
 import { TAXONOMY_TO_INTENT } from "./taxonomy";
@@ -175,13 +175,13 @@ function buildTemplates(brand: string, category: string, city: string, competito
   } satisfies Record<TaxonomyCategory, string[]>;
 }
 
-export function generateKeywordResearchData(
+export function generatePromptResearchData(
   businessId: string,
   businessName: string,
   industry: string,
   city: string,
   competitors: { name: string }[]
-): KeywordResearchData {
+): PromptResearchData {
   const seed = hashSeed(businessId || businessName);
   const rng = mulberry(seed);
 

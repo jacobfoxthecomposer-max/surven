@@ -60,7 +60,7 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
     items: [
       { label: "Prompts", href: "/prompts", icon: MessageSquare },
       { label: "Citation Insights", href: "/citation-insights", icon: Eye },
-      { label: "Keyword Research", href: "/keyword-research", icon: BookOpen },
+      { label: "Prompt Research", href: "/prompt-research", icon: BookOpen },
     ],
   },
   {

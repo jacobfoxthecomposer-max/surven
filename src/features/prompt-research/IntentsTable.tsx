@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
+import { ChartExplainer } from "@/components/atoms/ChartExplainer";
 import {
   Info,
   Search,
@@ -143,7 +144,7 @@ export function IntentsTable({ intents, onSendToTracker }: IntentsTableProps) {
             <h3 className="text-sm font-semibold text-[var(--color-fg)]">
               All intents
             </h3>
-            <HoverHint hint="Every keyword intent we've researched. Each row is one intent with N paraphrased variants. Check the rows you want, click Send to Tracker.">
+            <HoverHint hint="Every prompt intent we've researched. Each row is one intent with N paraphrased variants. Check the rows you want, click Send to Tracker.">
               <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
             </HoverHint>
           </div>
@@ -331,6 +332,28 @@ export function IntentsTable({ intents, onSendToTracker }: IntentsTableProps) {
         <p className="text-[11px] text-[var(--color-fg-muted)]">
           Showing {sorted.length} of {intents.length} intents.
         </p>
+
+        <ChartExplainer
+          blocks={[
+            {
+              label: "Intent",
+              body: 'A researched prompt someone might ask AI. Each row is one intent — multiple paraphrasings of the same question (like three ways of asking "best plumber in Denver") roll up underneath it.',
+            },
+            {
+              label: "Type & Intent columns",
+              body: '"Type" is the prompt taxonomy (defensive, comparative, validation, and so on). "Intent" is what job the prompt is doing for the user (commercial, validation, informational). Hover the table headers to learn more.',
+            },
+            {
+              label: "Variants & Coverage",
+              body: "Variants is how many paraphrasings live under that intent. Coverage is the percent of those variants where AI mentions your brand. Coverage above 60% (sage) is strong, 30–60% (yellow) is mid-pack, under 30% (rust) is a gap.",
+            },
+            {
+              label: "Importance & Tracked",
+              body: "Importance is our 0–100 score for how much this intent matters to your business — sort by it to find the highest-leverage prompts to track first. The Tracked column shows a checkmark for prompts already running in Tracker.",
+            },
+          ]}
+          tip="Use the search and filters above to narrow the list, check the rows you want, then click Send to Tracker."
+        />
       </div>
     </Card>
   );
