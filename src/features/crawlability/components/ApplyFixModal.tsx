@@ -37,6 +37,43 @@ export function ApplyFixModal({
   onClose,
   onConfirm,
 }: ApplyFixModalProps) {
+  return (
+    <AnimatePresence>
+      {open && finding && (
+        <ApplyFixModalInner
+          key={finding.id}
+          finding={finding}
+          repo={repo}
+          branch={branch}
+          onClose={onClose}
+          onConfirm={onConfirm}
+        />
+      )}
+    </AnimatePresence>
+  );
+}
+
+interface InnerProps {
+  finding: CrawlabilityFinding;
+  repo: string;
+  branch: string;
+  onClose: () => void;
+  onConfirm: (finding: CrawlabilityFinding) => Promise<{
+    ok: boolean;
+    error?: string;
+    committedSha?: string;
+    commitUrl?: string;
+    filePath?: string;
+  }>;
+}
+
+function ApplyFixModalInner({
+  finding,
+  repo,
+  branch,
+  onClose,
+  onConfirm,
+}: InnerProps) {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<{
     commitUrl?: string;
@@ -44,19 +81,7 @@ export function ApplyFixModal({
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Reset state when modal opens with a new finding
-  useEffect(() => {
-    if (open) {
-      setSubmitting(false);
-      setSuccess(null);
-      setError(null);
-    }
-  }, [open, finding?.id]);
-
-  if (!finding) return null;
-
   async function handleConfirm() {
-    if (!finding) return;
     setSubmitting(true);
     setError(null);
     const result = await onConfirm(finding);
@@ -76,8 +101,6 @@ export function ApplyFixModal({
       : "(unknown)";
 
   return (
-    <AnimatePresence>
-      {open && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
