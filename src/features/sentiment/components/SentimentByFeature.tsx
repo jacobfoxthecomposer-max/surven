@@ -245,6 +245,27 @@ export function SentimentByFeature({ results, businessName, competitors }: Props
             </div>
           ))}
         </div>
+
+        <ChartExplainer
+          blocks={[
+            {
+              label: "Rows",
+              body: "Same prompts as the Sentiment table on the left, in the same order. Easy to scan side-by-side.",
+            },
+            {
+              label: "Cell value",
+              body: "Number of AI engines (out of 4) that mentioned the entity for that prompt. Em dash means no engine mentioned them.",
+            },
+            {
+              label: "Colors",
+              body: "Blue density scale — lighter blue means few engines mentioned the entity, darker blue means many. Blue here is a count gradient, it doesn't indicate good or bad.",
+            },
+            {
+              label: "Why two tables",
+              body: "Sentiment table tells you what AI engines said about you. Mentions table tells you how often they said anything at all — competitors with high mentions but no sentiment data are appearing more than you.",
+            },
+          ]}
+        />
       </Card>
       </div>
     </div>
