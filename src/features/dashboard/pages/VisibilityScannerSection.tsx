@@ -132,7 +132,7 @@ const SHARED_BASE = {
   gridStroke: "rgba(60,62,60,0.35)",
   gridOpacity: 1,
   tabStyle: "bold" as TabStyle,
-  youGlowBlur: 0.5,
+  youGlowBlur: 2,
   yPadding: 5,
 } as const;
 
