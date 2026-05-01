@@ -9,7 +9,9 @@ import {
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { AIOverview } from "@/components/atoms/AIOverview";
+import { ChartExplainer } from "@/components/atoms/ChartExplainer";
 import { Spinner } from "@/components/atoms/Spinner";
+import { SURVEN_SEMANTIC } from "@/utils/brandColors";
 import type { SentimentDataPoint } from "@/features/sentiment/hooks/useSentimentHistory";
 
 interface Props {
