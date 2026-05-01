@@ -95,7 +95,7 @@ export function SentimentDrivers({ results, businessName }: Props) {
             <div className="h-7 w-7 rounded-lg bg-[#96A283]/20 flex items-center justify-center">
               <ShieldCheck className="h-4 w-4 text-[#566A47]" />
             </div>
-            <h3 className="text-sm font-semibold text-[var(--color-fg)]">Brand Strengths</h3>
+            <h3 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, color: "var(--color-fg)" }}>Brand Strengths</h3>
             <HoverHint hint="Prompts where AI consistently mentions your brand positively across multiple platforms — your strongest signals for GEO content strategy.">
               <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
             </HoverHint>
