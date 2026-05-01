@@ -1690,7 +1690,7 @@ function PositionChart({
 
   const filterFor = (s: PositionStat) =>
     s.brand.isYou
-      ? `drop-shadow(0 0 6px ${s.brand.color}) drop-shadow(0 0 12px ${s.brand.color})`
+      ? `drop-shadow(0 0 2px ${s.brand.color}) drop-shadow(0 0 3.2px ${s.brand.color})`
       : undefined;
 
   const sovDomain = useMemo<[number, number]>(() => {
