@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
+import { ChartExplainer } from "@/components/atoms/ChartExplainer";
 import { Database, Info, ExternalLink, ArrowUpDown } from "lucide-react";
 import {
   AUTHORITY_COLOR,
