@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useId, useMemo, useState } from "react";
+import { Fragment, useEffect, useId, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Sparkles,
@@ -27,7 +27,10 @@ import {
   RotateCcw,
   X,
   HelpCircle,
+  Plus,
 } from "lucide-react";
+import { Card } from "@/components/atoms/Card";
+import { BadgeDelta } from "@/components/atoms/BadgeDelta";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { SectionHeading } from "@/components/atoms/SectionHeading";
@@ -83,6 +86,29 @@ const fadeUp = {
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.45, ease: EASE },
 } as const;
+
+// ─── INTENT COLOR SYSTEM ───────────────────────────────────────────────────
+// Single source of truth for intent colors. Used by the Coverage by Intent
+// donut, the prompts table cell pills, the Intent filter dropdown, and the
+// highlights table cells.
+
+const INTENT_COLORS: Record<string, string> = {
+  "Brand lookup": "#7D8E6C", // sage
+  Comparison: "#7A8FA6", // slate-blue
+  Local: "#C9A845", // mustard
+  Informational: "#9B6FA6", // plum
+  Transactional: "#C97B45", // rust
+};
+
+// Tint + readable text color for an intent chip.
+function intentChip(intent: string): { fg: string; bg: string; border: string } {
+  const base = INTENT_COLORS[intent] ?? "#666";
+  return {
+    fg: base,
+    bg: `${base}1F`, // ~12% alpha
+    border: `${base}55`, // ~33% alpha
+  };
+}
 
 // Subtle accent palettes for stat cards — used to differentiate sibling cards
 // like Branded vs Unbranded without straying from the cream/sage system.
@@ -243,7 +269,7 @@ function VisibilityGauge({
   const cx = 50;
   const cy = 46;
   const r = 36;
-  const strokeWidth = 7;
+  const strokeWidth = 9;
 
   function point(angleDeg: number) {
     const rad = (angleDeg * Math.PI) / 180;
@@ -261,26 +287,13 @@ function VisibilityGauge({
   const trackPath = `M ${startPt.x} ${startPt.y} A ${r} ${r} 0 0 1 ${endPt.x} ${endPt.y}`;
   const progressPath = `M ${startPt.x} ${startPt.y} A ${r} ${r} 0 0 1 ${progressPt.x} ${progressPt.y}`;
 
+  // Suppress unused-var on gradientId — kept for future hover/focus states.
+  void gradientId;
+
   return (
     <div className="flex flex-col items-center" style={{ width: 88 }}>
-      <svg viewBox="0 0 100 56" width={72} height={40} aria-hidden>
-        <defs>
-          {/* Bounded gradient: spans only the visible portion of the arc.
-              Start at the arc's leftmost point in the previous tier color,
-              end at the progress endpoint in the current tier color. */}
-          <linearGradient
-            id={gradientId}
-            gradientUnits="userSpaceOnUse"
-            x1={startPt.x}
-            y1={0}
-            x2={Math.max(progressPt.x, startPt.x + 0.01)}
-            y2={0}
-          >
-            <stop offset="0%" stopColor={tier.startColor} />
-            <stop offset="100%" stopColor={tier.color} />
-          </linearGradient>
-        </defs>
-        {/* Track */}
+      <svg viewBox="0 0 100 56" width={80} height={44} aria-hidden>
+        {/* Track — soft cream ring matching the brand sentiment donut */}
         <path
           d={trackPath}
           stroke="rgba(60,62,60,0.10)"
@@ -288,18 +301,25 @@ function VisibilityGauge({
           strokeLinecap="round"
           fill="none"
         />
-        {/* Progress */}
+        {/* Progress — animated draw-in on mount, mirrors the brand sentiment
+            donut's mount sweep. pathLength: 0 → 1 over ~1s. */}
         {pct > 0 && (
-          <path
+          <motion.path
             d={progressPath}
-            stroke={`url(#${gradientId})`}
+            stroke={tier.color}
             strokeWidth={strokeWidth}
             strokeLinecap="round"
             fill="none"
+            initial={{ pathLength: 0, opacity: 0 }}
+            animate={{ pathLength: 1, opacity: 1 }}
+            transition={{
+              pathLength: { duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.1 },
+              opacity: { duration: 0.2, ease: "linear" },
+            }}
           />
         )}
       </svg>
-      <div className="flex items-center gap-1 mt-0.5">
+      <div className="flex items-center gap-1 -mt-0.5">
         <span
           className="uppercase tabular-nums"
           style={{
@@ -607,6 +627,8 @@ interface PromptsData {
   sentimentByType: SentimentByType[];
 
   pageSummary: string;
+  pageSummaryGood: string;
+  pageSummaryFix: string;
   pageSummaryCta: { label: string; href: string };
   promptsTableSummary: string;
   wins: InsightItemData[];
@@ -827,7 +849,11 @@ function usePromptsData(): PromptsData {
         { type: "Transactional", positive: 28, neutral: 51, negative: 21, total: 14 },
       ],
       pageSummary:
-        "You're winning at brand & trust prompts (82% coverage) but losing transactional ones (28%) — that's where revenue actually lives. Three of your top-five money prompts are completely missing across all 5 AI engines. Closing the transactional gap is your single biggest lever this period.",
+        "You're winning at brand & trust prompts (82% coverage) but losing transactional ones (28%) — that's where revenue actually lives. Three of your top-five money prompts are completely missing across all 4 AI engines. Closing the transactional gap is your single biggest lever this period.",
+      pageSummaryGood:
+        "You're winning at brand & trust prompts (82% coverage),",
+      pageSummaryFix:
+        "but losing transactional ones (28%) — three of your top-five money prompts are completely missing across all 4 AI engines. Closing the transactional gap is your single biggest lever this period.",
       pageSummaryCta: { label: "Fix transactional gaps", href: "/audit" },
       promptsTableSummary:
         "Your highest-volume prompt — 'what to do after a slip and fall' (12.4K/mo) — has zero engine coverage; competitors own that answer outright. Branded queries are dominating (88% avg), but unbranded informational and transactional prompts (5.5K–6.7K/mo) are leaking across 3+ engines. Capture those answer-capsule formats first.",
@@ -848,7 +874,7 @@ function usePromptsData(): PromptsData {
         },
         {
           iconKey: "check",
-          title: "'morgan and morgan reviews' on all 5 engines",
+          title: "'morgan and morgan reviews' on all 4 engines",
           description:
             "Your top branded prompt (8.4K/mo) is hitting 100% coverage with positive sentiment everywhere. Review pages are doing real work.",
           cta: { label: "Inspect prompt", href: "/prompts" },
@@ -1029,14 +1055,14 @@ function EngineChips({
 function PageAISummary({ data }: { data: PromptsData }) {
   return (
     <div
-      className="rounded-[var(--radius-lg)] p-6"
+      className="rounded-[var(--radius-md)] px-4 py-3"
       style={{
-        borderLeft: `5px solid ${COLORS.primary}`,
+        borderLeft: `3px solid ${COLORS.primary}`,
         backgroundColor: TOK.primarySoftBg,
       }}
     >
-      <div className="flex items-center gap-2.5 mb-3">
-        <Sparkles className="h-5 w-5 shrink-0" style={{ color: COLORS.primary }} />
+      <div className="flex items-center gap-2.5 mb-1.5">
+        <Sparkles className="h-3.5 w-3.5 shrink-0" style={{ color: COLORS.primary }} />
         <p
           className="uppercase tracking-wider text-[var(--color-fg-secondary)] font-semibold"
           style={{ fontSize: 11, letterSpacing: "0.12em" }}
@@ -1045,19 +1071,20 @@ function PageAISummary({ data }: { data: PromptsData }) {
         </p>
       </div>
       <p
-        className="text-[var(--color-fg)] mb-4"
-        style={{ fontSize: 15, lineHeight: 1.6 }}
+        className="text-[var(--color-fg)]"
+        style={{ fontSize: 13, lineHeight: 1.55, fontFamily: "var(--font-sans)" }}
       >
-        {data.pageSummary}
+        {data.pageSummaryGood}{" "}
+        <span style={{ color: TOK.loseText }}>{data.pageSummaryFix}</span>{" "}
+        <a
+          href={data.pageSummaryCta.href}
+          className="inline-flex items-center gap-1 font-semibold transition-opacity hover:opacity-80 whitespace-nowrap"
+          style={{ color: COLORS.primaryHover }}
+        >
+          {data.pageSummaryCta.label}
+          <ArrowRight className="h-3 w-3" />
+        </a>
       </p>
-      <a
-        href={data.pageSummaryCta.href}
-        className="inline-flex items-center gap-1.5 font-semibold transition-opacity hover:opacity-80"
-        style={{ fontSize: 13, color: COLORS.primaryHover }}
-      >
-        {data.pageSummaryCta.label}
-        <ArrowRight className="h-3.5 w-3.5" />
-      </a>
     </div>
   );
 }
@@ -1539,6 +1566,238 @@ function PromptsLedger({ rows }: { rows: LedgerRowSpec[] }) {
   );
 }
 
+// ─── CLEAN STAT STRIP ──────────────────────────────────────────────────────
+// Brand-sentiment-style 4-card strip — minimal, equal weight, no gauges.
+// Each card: icon tile + label + info icon + Cormorant value + delta + sub.
+
+interface CleanStatCardSpec {
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  label: string;
+  hint: string;
+  value: string;
+  sub: string;
+  delta?: { direction: "up" | "down" | "flat"; pct: number; suffix?: string };
+  /** When set, renders a half-circle gauge to the right of the content. */
+  gauge?: { type: "branded" | "unbranded" | "citation" | "position"; pct: number };
+  /** Bigger value type — used by the Prompts Tracked anchor card. */
+  featured?: boolean;
+  /** Plan-tier comparison rendered to the right of the content. */
+  planTier?: {
+    currentPlan: string;
+    currentPrompts: number;
+    upgradePlan: string;
+    upgradePrompts: number;
+    href: string;
+  };
+  /** Applies the same sage row tint used on branded prompt rows. */
+  branded?: boolean;
+}
+
+function CleanStatStrip({ data }: { data: PromptsData }) {
+  const cards: CleanStatCardSpec[] = [
+    {
+      icon: ListChecks,
+      label: "Prompts Tracked",
+      hint: "Total prompts Surven monitors across all AI engines. Scanned every Monday.",
+      value: data.promptsTracked.toString(),
+      sub: `${data.promptsLanding} of ${data.promptsTracked} prompts cited at least once`,
+      featured: true,
+      planTier: {
+        currentPlan: "Plus",
+        currentPrompts: 100,
+        upgradePlan: "Premium",
+        upgradePrompts: 300,
+        href: "/pricing",
+      },
+    },
+    {
+      icon: Tag,
+      label: "Branded Visibility",
+      hint: "How often you appear when someone searches for your business by name.",
+      value: `${data.brandedVisibility}%`,
+      sub: `${data.brandedHits} of ${data.brandedTotal} branded prompts`,
+      delta: {
+        direction:
+          data.brandedVisibilityDelta > 0
+            ? "up"
+            : data.brandedVisibilityDelta < 0
+            ? "down"
+            : "flat",
+        pct: data.brandedVisibilityDelta,
+      },
+      gauge: { type: "branded", pct: data.brandedVisibility },
+      branded: true,
+    },
+    {
+      icon: Search,
+      label: "Unbranded Visibility",
+      hint: "How often you appear in category searches where your name isn't mentioned.",
+      value: `${data.unbrandedVisibility}%`,
+      sub: `${data.unbrandedHits} of ${data.unbrandedTotal} unbranded prompts`,
+      delta: {
+        direction:
+          data.unbrandedVisibilityDelta > 0
+            ? "up"
+            : data.unbrandedVisibilityDelta < 0
+            ? "down"
+            : "flat",
+        pct: data.unbrandedVisibilityDelta,
+      },
+      gauge: { type: "unbranded", pct: data.unbrandedVisibility },
+    },
+    {
+      icon: Link2,
+      label: "Link Citation Rate",
+      hint: "Percentage of your AI mentions that include a direct clickable URL.",
+      value: `${data.linkCitationRate}%`,
+      sub: `Of ${data.linkCitationMentions} AI mentions`,
+      delta: {
+        direction:
+          data.linkCitationDelta > 0
+            ? "up"
+            : data.linkCitationDelta < 0
+            ? "down"
+            : "flat",
+        pct: data.linkCitationDelta,
+      },
+      gauge: { type: "citation", pct: data.linkCitationRate },
+    },
+  ];
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {cards.map((c) => {
+        const Icon = c.icon;
+        const deltaType =
+          c.delta == null
+            ? null
+            : c.delta.direction === "up"
+            ? "increase"
+            : c.delta.direction === "down"
+            ? "decrease"
+            : "neutral";
+        return (
+          <Card key={c.label} className="flex flex-col p-5" style={c.branded ? { backgroundColor: "rgba(140,165,118,0.13)" } : undefined}>
+            <div className="flex items-start gap-3 flex-1">
+              <div
+                className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: "rgba(150,162,131,0.16)" }}
+              >
+                <Icon className="h-5 w-5" style={{ color: "#5E7250" }} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1 mb-0.5">
+                  <p
+                    className="text-[var(--color-fg-muted)]"
+                    style={{ fontSize: 12 }}
+                  >
+                    {c.label}
+                  </p>
+                  <HoverHint hint={c.hint} placement="top">
+                    <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+                  </HoverHint>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p
+                    style={{
+                      fontFamily: "var(--font-display)",
+                      fontSize: c.featured ? 48 : 34,
+                      fontWeight: 600,
+                      lineHeight: 1.05,
+                      color: "var(--color-fg)",
+                      letterSpacing: "-0.02em",
+                    }}
+                  >
+                    {c.value}
+                  </p>
+                  {deltaType && c.delta && c.delta.direction !== "flat" && (
+                    <BadgeDelta
+                      deltaType={deltaType}
+                      value={`${c.delta.pct > 0 ? "+" : ""}${c.delta.pct.toFixed(
+                        1,
+                      )}%`}
+                      variant="solid"
+                    />
+                  )}
+                </div>
+                <p
+                  className="text-[var(--color-fg-muted)] mt-0.5"
+                  style={{ fontSize: 12, lineHeight: 1.4 }}
+                >
+                  {c.sub}
+                </p>
+              </div>
+              {c.gauge && (
+                <div className="shrink-0 self-center">
+                  <VisibilityGauge type={c.gauge.type} pct={c.gauge.pct} />
+                </div>
+              )}
+            </div>
+
+            {c.planTier && (
+              <div
+                className="mt-4 rounded-md border px-3 py-2 flex items-center justify-between gap-2 flex-wrap"
+                style={{
+                  borderColor: "rgba(150,162,131,0.35)",
+                  backgroundColor: "rgba(150,162,131,0.06)",
+                }}
+              >
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2
+                      className="h-3.5 w-3.5 shrink-0"
+                      style={{ color: TOK.greenFg }}
+                    />
+                    <span
+                      className="uppercase tabular-nums whitespace-nowrap"
+                      style={{
+                        fontSize: 11.5,
+                        letterSpacing: "0.04em",
+                        fontWeight: 700,
+                        color: TOK.greenFg,
+                      }}
+                    >
+                      {c.planTier.currentPlan} · {c.planTier.currentPrompts}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Crown
+                      className="h-3.5 w-3.5 shrink-0"
+                      style={{ color: "#C97B45" }}
+                    />
+                    <span
+                      className="uppercase tabular-nums whitespace-nowrap"
+                      style={{
+                        fontSize: 11.5,
+                        letterSpacing: "0.04em",
+                        fontWeight: 700,
+                        color: "var(--color-fg-secondary)",
+                      }}
+                    >
+                      {c.planTier.upgradePlan} · {c.planTier.upgradePrompts}
+                    </span>
+                  </div>
+                </div>
+                <a
+                  href={c.planTier.href}
+                  className="group inline-flex items-center gap-1 font-semibold whitespace-nowrap hover:opacity-80 transition-opacity"
+                  style={{
+                    fontSize: 12,
+                    color: TOK.amberFg,
+                  }}
+                >
+                  Upgrade
+                  <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+                </a>
+              </div>
+            )}
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
 function StatStrip({ data }: { data: PromptsData }) {
   const rows: LedgerRowSpec[] = [
     {
@@ -1661,27 +1920,22 @@ function BrandedCallout({
 
   if (isClean) {
     return (
-      <div
-        className="rounded-[var(--radius-lg)] p-5 flex items-start gap-3"
-        style={{
-          backgroundColor: TOK.greenBg,
-          borderLeft: `4px solid ${TOK.greenBorderLeft}`,
-        }}
-      >
-        <div
-          className="h-9 w-9 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
-          style={{ backgroundColor: "rgba(150,162,131,0.28)" }}
+      <div className="flex items-center gap-2.5">
+        <CheckCircle2
+          className="h-3.5 w-3.5 shrink-0"
+          style={{ color: TOK.greenFg }}
+        />
+        <p
+          className="flex-1"
+          style={{
+            fontSize: 13,
+            fontWeight: 600,
+            color: TOK.greenFg,
+            fontFamily: "var(--font-sans)",
+          }}
         >
-          <CheckCircle2 className="h-5 w-5" style={{ color: TOK.greenFg }} />
-        </div>
-        <div className="flex-1">
-          <p style={{ fontSize: 14, fontWeight: 600, color: TOK.greenFg, marginBottom: 2 }}>
-            Every AI tool shows you first when customers search your business by name
-          </p>
-          <p className="text-[var(--color-fg-muted)]" style={{ fontSize: 12 }}>
-            Searches by your business name come from people who already know you — your warmest leads. You're winning all of them. Strong foundation.
-          </p>
-        </div>
+          Every AI tool shows you first when customers search your business by name.
+        </p>
       </div>
     );
   }
@@ -1692,57 +1946,59 @@ function BrandedCallout({
     .join(" · ");
 
   const title = isPartial
-    ? `1 AI tool shows a competitor when customers search your business by name`
-    : `Customers searching your business by name are seeing competitors first on ${failCount} of ${data.brandedTopRankTotal} AI tools`;
-
-  const subline = isPartial
-    ? `When someone types your business name into ${failedEngines}, it names a competitor before you. People searching by name already know your brand and want to find you — these are your warmest leads. Close this last gap before anything else.`
-    : `When someone types your business name into ${failedEngines}, the AI mentions a competitor before you. People searching by name already know your business and want to find you — these are the warmest leads you'll ever get. Losing them here is the most expensive gap on your dashboard.`;
+    ? "1 AI tool shows a competitor when customers search your business by name"
+    : `Customers see competitors first on ${failCount} of ${data.brandedTopRankTotal} AI tools when searching your name`;
 
   return (
-    <div
-      className="rounded-[var(--radius-lg)] p-5 flex items-start gap-3"
-      style={{
-        backgroundColor: TOK.amberBg,
-        borderLeft: `4px solid ${TOK.amberBorderLeft}`,
-      }}
-    >
-      <div
-        className="h-9 w-9 rounded-[var(--radius-md)] flex items-center justify-center shrink-0 mt-0.5"
-        style={{ backgroundColor: "rgba(201,123,69,0.28)" }}
+    <div className="flex items-start gap-2.5 flex-wrap">
+      <AlertTriangle
+        className="h-3.5 w-3.5 shrink-0"
+        style={{ color: TOK.amberFg, marginTop: 2 }}
+      />
+      <p
+        className="flex-1 min-w-0"
+        style={{
+          fontSize: 13,
+          lineHeight: 1.5,
+          color: TOK.amberFg,
+          fontFamily: "var(--font-sans)",
+        }}
       >
-        <AlertTriangle className="h-5 w-5" style={{ color: TOK.amberFg }} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p style={{ fontSize: 14, fontWeight: 600, color: TOK.amberFg, marginBottom: 4 }}>
-          {title}
-        </p>
-        <p
-          className="text-[var(--color-fg-secondary)]"
-          style={{ fontSize: 12.5, lineHeight: 1.55 }}
+        <span style={{ fontWeight: 600 }}>{title}</span>{" "}
+        <span
+          className="text-[var(--color-fg-muted)]"
+          style={{ fontWeight: 400 }}
         >
-          {subline}
-        </p>
-      </div>
-      <div className="flex flex-col items-end gap-2 shrink-0 mt-1">
+          on {failedEngines}.
+        </span>
+      </p>
+      <div className="flex items-center gap-4 shrink-0">
         {onSeeBranded && (
           <button
             type="button"
             onClick={onSeeBranded}
-            className="inline-flex items-center gap-1.5 font-semibold whitespace-nowrap hover:opacity-80 transition-opacity"
-            style={{ fontSize: 13, color: TOK.amberFg, fontFamily: "var(--font-sans)" }}
+            className="inline-flex items-center gap-1 font-semibold whitespace-nowrap hover:opacity-80 transition-opacity"
+            style={{
+              fontSize: 12,
+              color: TOK.amberFg,
+              fontFamily: "var(--font-sans)",
+            }}
           >
-            See branded prompts
-            <ChevronDown className="h-3.5 w-3.5" />
+            See branded
+            <ChevronDown className="h-3 w-3" />
           </button>
         )}
         <a
           href="/audit"
-          className="inline-flex items-center gap-1.5 font-semibold whitespace-nowrap hover:opacity-80 transition-opacity"
-          style={{ fontSize: 13, color: TOK.amberFg }}
+          className="inline-flex items-center gap-1 font-semibold whitespace-nowrap hover:opacity-80 transition-opacity"
+          style={{
+            fontSize: 12,
+            color: TOK.amberFg,
+            fontFamily: "var(--font-sans)",
+          }}
         >
           Fix with GEO Audit
-          <ArrowRight className="h-3.5 w-3.5" />
+          <ArrowRight className="h-3 w-3" />
         </a>
       </div>
     </div>
@@ -1754,7 +2010,22 @@ function BrandedCallout({
 
 // ─── PROMPTS TABLE ─────────────────────────────────────────────────────────
 
-type PromptsTab = "all" | "branded" | "unbranded";
+type PromptsFilter = "branded" | "unbranded" | "cited" | "uncited";
+// Kept for the "All" reset button — not a filter itself, just a signal.
+type PromptsTab = "all" | PromptsFilter;
+
+const PROMPTS_TAB_HINTS: Record<PromptsTab, string> = {
+  all: "Clear all filters — show every prompt we track.",
+  branded: "Searches that include your business name — credibility checks.",
+  unbranded: "Category searches without your name — discovery opportunities.",
+  cited: "Prompts where at least one AI engine mentioned you.",
+  uncited: "Prompts where no engine cited you — visibility leaks to fix.",
+};
+
+// Each axis is OR within itself, AND across axes. Selecting both branded
+// + unbranded is identical to no type filter (same logic for cited/uncited).
+const TYPE_FILTERS: PromptsFilter[] = ["branded", "unbranded"];
+const STATUS_FILTERS: PromptsFilter[] = ["cited", "uncited"];
 
 
 function sentimentBucket(s: number): "pos" | "neu" | "neg" {
@@ -1912,29 +2183,281 @@ function fmtVolume(n: number): string {
   return n.toString();
 }
 
+// ─── INTENT FILTER DROPDOWN ────────────────────────────────────────────────
+// Replaces the sortable up/down arrows on the Intent column header — sort
+// makes no sense across many discrete intent buckets, but multi-select
+// filtering does.
+
+function IntentFilterHeader({
+  allIntents,
+  selected,
+  onApply,
+}: {
+  allIntents: string[];
+  selected: Set<string>;
+  onApply: (next: Set<string>) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<Set<string>>(selected);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Sync draft from committed state every time we open the dropdown.
+  useEffect(() => {
+    if (open) setDraft(new Set(selected));
+  }, [open, selected]);
+
+  // Click-outside to dismiss without applying.
+  useEffect(() => {
+    if (!open) return;
+    const onDocMouseDown = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocMouseDown);
+    return () => document.removeEventListener("mousedown", onDocMouseDown);
+  }, [open]);
+
+  const isFiltered =
+    selected.size > 0 && selected.size < allIntents.length;
+
+  function toggle(intent: string) {
+    setDraft((prev) => {
+      const next = new Set(prev);
+      if (next.has(intent)) next.delete(intent);
+      else next.add(intent);
+      return next;
+    });
+  }
+
+  function apply() {
+    onApply(new Set(draft));
+    setOpen(false);
+  }
+
+  function selectAll() {
+    setDraft(new Set(allIntents));
+  }
+
+  function clearAll() {
+    setDraft(new Set());
+  }
+
+  return (
+    <div ref={ref} className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="inline-flex items-center gap-1 group"
+        style={{ fontFamily: "var(--font-sans)" }}
+      >
+        <span
+          className="font-semibold uppercase text-[var(--color-fg-muted)] group-hover:text-[var(--color-fg-secondary)] transition-colors"
+          style={{ fontSize: 11, letterSpacing: "0.08em" }}
+        >
+          Intent
+        </span>
+        {isFiltered && (
+          <span
+            className="inline-flex items-center justify-center rounded-full tabular-nums"
+            style={{
+              minWidth: 16,
+              height: 16,
+              fontSize: 10,
+              fontWeight: 700,
+              backgroundColor: COLORS.primary,
+              color: "white",
+              padding: "0 4px",
+            }}
+          >
+            {selected.size}
+          </span>
+        )}
+        <ChevronDown
+          className={
+            "h-3 w-3 text-[var(--color-fg-muted)] transition-transform " +
+            (open ? "rotate-180" : "")
+          }
+        />
+      </button>
+
+      {open && (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.15, ease: EASE }}
+          className="absolute top-full left-0 mt-1.5 z-50 rounded-md shadow-lg overflow-hidden"
+          style={{
+            backgroundColor: "var(--color-surface)",
+            border: "1px solid var(--color-border)",
+            minWidth: 200,
+          }}
+        >
+          <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--color-border)]">
+            <span
+              className="font-semibold uppercase text-[var(--color-fg-muted)]"
+              style={{ fontSize: 10, letterSpacing: "0.08em" }}
+            >
+              Filter by intent
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={selectAll}
+                className="text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors"
+                style={{ fontSize: 11 }}
+              >
+                All
+              </button>
+              <span className="text-[var(--color-border)]">·</span>
+              <button
+                type="button"
+                onClick={clearAll}
+                className="text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors"
+                style={{ fontSize: 11 }}
+              >
+                None
+              </button>
+            </div>
+          </div>
+
+          <div className="py-1.5">
+            {allIntents.map((intent) => {
+              const checked = draft.has(intent);
+              const c = intentChip(intent);
+              return (
+                <label
+                  key={intent}
+                  className="flex items-center gap-2.5 px-3 py-1.5 cursor-pointer hover:bg-[var(--color-surface-alt)]/50 transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggle(intent)}
+                    className="h-3.5 w-3.5 cursor-pointer accent-[var(--color-primary)]"
+                  />
+                  <span
+                    className="inline-block rounded-full shrink-0"
+                    style={{
+                      width: 9,
+                      height: 9,
+                      backgroundColor: c.fg,
+                    }}
+                  />
+                  <span
+                    className="flex-1"
+                    style={{
+                      fontSize: 13,
+                      color: "var(--color-fg)",
+                      fontFamily: "var(--font-sans)",
+                    }}
+                  >
+                    {intent}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+
+          <div className="px-3 py-2 border-t border-[var(--color-border)] flex justify-end">
+            <motion.button
+              type="button"
+              onClick={apply}
+              whileTap={{ scale: 0.95 }}
+              transition={{ duration: 0.15, ease: EASE }}
+              className="rounded-[var(--radius-sm)] font-semibold transition-colors"
+              style={{
+                fontSize: 12,
+                padding: "5px 14px",
+                backgroundColor: COLORS.primary,
+                color: "white",
+              }}
+            >
+              Apply
+            </motion.button>
+          </div>
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
 function PromptsTable({
   prompts,
   summary,
-  tab,
-  onTabChange,
+  selectedFilters,
+  onToggleFilter,
+  onClearFilters,
+  data,
+  onSeeBranded,
 }: {
   prompts: PromptRow[];
   summary: string;
-  tab: PromptsTab;
-  onTabChange: (t: PromptsTab) => void;
+  selectedFilters: Set<PromptsFilter>;
+  onToggleFilter: (f: PromptsFilter) => void;
+  onClearFilters: () => void;
+  data: PromptsData;
+  onSeeBranded?: () => void;
 }) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
+  const [pageSize, setPageSize] = useState<number | "all">(20);
+
+  // Distinct intents available, derived from current prompts (stable order).
+  const allIntents = useMemo(() => {
+    const seen: string[] = [];
+    for (const p of prompts) if (!seen.includes(p.intent)) seen.push(p.intent);
+    return seen;
+  }, [prompts]);
+
+  // Selected intents for filtering. Default to all selected (no filter).
+  const [selectedIntents, setSelectedIntents] = useState<Set<string>>(
+    () => new Set(allIntents),
+  );
+
+  // Re-sync if the underlying intent set changes (e.g., new prompts arrive).
+  useEffect(() => {
+    setSelectedIntents((prev) => {
+      const next = new Set<string>();
+      for (const i of allIntents) {
+        if (prev.size === 0 || prev.has(i)) next.add(i);
+      }
+      // If the previous set covered everything before, keep it covering everything.
+      if (next.size === 0) return new Set(allIntents);
+      return next;
+    });
+  }, [allIntents]);
 
   const filtered = useMemo(() => {
-    const base = tab === "all" ? prompts : prompts.filter((p) => p.type === tab);
-    const sorted = [...base];
+    // Type axis: branded XOR unbranded. If both or neither, no filter applied.
+    const wantBranded = selectedFilters.has("branded");
+    const wantUnbranded = selectedFilters.has("unbranded");
+    const typeActive = wantBranded !== wantUnbranded;
+    // Status axis: cited XOR uncited. If both or neither, no filter applied.
+    const wantCited = selectedFilters.has("cited");
+    const wantUncited = selectedFilters.has("uncited");
+    const statusActive = wantCited !== wantUncited;
+
+    const base = prompts.filter((p) => {
+      if (typeActive) {
+        if (wantBranded && p.type !== "branded") return false;
+        if (wantUnbranded && p.type !== "unbranded") return false;
+      }
+      if (statusActive) {
+        const cited = p.position != null;
+        if (wantCited && !cited) return false;
+        if (wantUncited && cited) return false;
+      }
+      return true;
+    });
+    const intentFiltered = selectedIntents.size === allIntents.length
+      ? base
+      : base.filter((p) => selectedIntents.has(p.intent));
+    const sorted = [...intentFiltered];
     sorted.sort((a, b) => {
       const cmp = comparePrompts(a, b, sort.column);
       return sort.direction === "desc" ? -cmp : cmp;
     });
     return sorted;
-  }, [tab, prompts, sort]);
+  }, [selectedFilters, prompts, sort, selectedIntents, allIntents.length]);
 
   function toggleRow(id: string) {
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -1957,6 +2480,9 @@ function PromptsTable({
     sort.column === DEFAULT_SORT.column &&
     sort.direction === DEFAULT_SORT.direction;
 
+  const visible = pageSize === "all" ? filtered : filtered.slice(0, pageSize);
+  const truncated = pageSize !== "all" && filtered.length > visible.length;
+
   const rowBorder = "1.5px solid rgba(60,62,60,0.18)";
 
   return (
@@ -1964,7 +2490,7 @@ function PromptsTable({
       id="prompts-table"
       className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] scroll-mt-6"
     >
-      <div className="grid grid-cols-3 items-center gap-3 px-6 py-5 border-b border-[var(--color-border)]">
+      <div className="grid grid-cols-3 items-center gap-3 px-6 py-4 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-2.5">
           <h2
             style={{
@@ -1980,26 +2506,79 @@ function PromptsTable({
           </h2>
           <InfoTooltip hint="Every prompt we run on your behalf, ranked by monthly search volume." />
         </div>
-        <div className="justify-self-center inline-flex rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] p-1 gap-1">
-          {(["all", "branded", "unbranded"] as PromptsTab[]).map((t) => (
+        <div className="justify-self-center inline-flex items-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] p-1 gap-1">
+          <HoverHint hint={PROMPTS_TAB_HINTS.all}>
             <motion.button
-              key={t}
               whileTap={{ scale: 0.94 }}
               transition={{ duration: 0.15, ease: EASE }}
-              onClick={() => onTabChange(t)}
+              onClick={onClearFilters}
               className={
-                "px-5 py-2 font-medium rounded-[var(--radius-md)] transition-colors capitalize " +
-                (tab === t
+                "px-3 py-1 rounded-[var(--radius-md)] transition-colors capitalize whitespace-nowrap " +
+                (selectedFilters.size === 0
                   ? "bg-[var(--color-primary)] text-white"
                   : "text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-alt)]")
               }
-              style={{ fontSize: 19, fontFamily: "var(--font-sans)" }}
+              style={{ fontSize: 18, fontFamily: "var(--font-display)", fontWeight: 500, letterSpacing: "0.01em" }}
             >
-              {t}
+              All
             </motion.button>
-          ))}
+          </HoverHint>
+          <span
+            aria-hidden
+            className="self-stretch w-px mx-0.5"
+            style={{ backgroundColor: "var(--color-border)" }}
+          />
+          {TYPE_FILTERS.map((f) => {
+            const active = selectedFilters.has(f);
+            return (
+              <HoverHint key={f} hint={PROMPTS_TAB_HINTS[f]}>
+                <motion.button
+                  whileTap={{ scale: 0.94 }}
+                  transition={{ duration: 0.15, ease: EASE }}
+                  onClick={() => onToggleFilter(f)}
+                  aria-pressed={active}
+                  className={
+                    "px-3 py-1 rounded-[var(--radius-md)] transition-colors capitalize border whitespace-nowrap " +
+                    (active
+                      ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                      : "text-[var(--color-fg-secondary)] border-transparent hover:bg-[var(--color-surface-alt)]")
+                  }
+                  style={{ fontSize: 18, fontFamily: "var(--font-display)", fontWeight: 500, letterSpacing: "0.01em" }}
+                >
+                  {f}
+                </motion.button>
+              </HoverHint>
+            );
+          })}
+          <span
+            aria-hidden
+            className="self-stretch w-px mx-0.5"
+            style={{ backgroundColor: "var(--color-border)" }}
+          />
+          {STATUS_FILTERS.map((f) => {
+            const active = selectedFilters.has(f);
+            return (
+              <HoverHint key={f} hint={PROMPTS_TAB_HINTS[f]}>
+                <motion.button
+                  whileTap={{ scale: 0.94 }}
+                  transition={{ duration: 0.15, ease: EASE }}
+                  onClick={() => onToggleFilter(f)}
+                  aria-pressed={active}
+                  className={
+                    "px-3 py-1 rounded-[var(--radius-md)] transition-colors capitalize border whitespace-nowrap " +
+                    (active
+                      ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                      : "text-[var(--color-fg-secondary)] border-transparent hover:bg-[var(--color-surface-alt)]")
+                  }
+                  style={{ fontSize: 18, fontFamily: "var(--font-display)", fontWeight: 500, letterSpacing: "0.01em" }}
+                >
+                  {f === "uncited" ? "Not cited" : f}
+                </motion.button>
+              </HoverHint>
+            );
+          })}
         </div>
-        <div className="justify-self-end">
+        <div className="justify-self-end inline-flex items-center gap-2">
           {!isDefaultSort && (
             <motion.button
               type="button"
@@ -2020,73 +2599,80 @@ function PromptsTable({
               Reset sort
             </motion.button>
           )}
-        </div>
-      </div>
-
-      {/* Tab description — wrapped per §8 anti-pattern #10 (no orphan body copy) */}
-      <div className="px-6 pt-5">
-        <div
-          className="rounded-[var(--radius-md)] border-l-2 px-4 py-3"
-          style={{
-            borderLeftColor: "var(--color-border)",
-            backgroundColor: "rgba(150,162,131,0.06)",
-          }}
-        >
-          <div className="space-y-1.5">
-            <p style={{ fontSize: 14, lineHeight: 1.55 }}>
-              <strong style={{ color: "var(--color-fg)", fontWeight: 700 }}>
-                Branded
-              </strong>
-              <span className="text-[var(--color-fg-secondary)]">
-                {" — Prompts that name your business directly. "}
-              </span>
-              <span style={{ color: TOK.loseText, fontWeight: 700 }}>
-                Anything below 95% is a credibility leak.
-              </span>
-              <span style={{ color: "var(--color-fg)", fontWeight: 600 }}>
-                {" AI can't be 100% consistent."}
-              </span>
-            </p>
-            <p style={{ fontSize: 14, lineHeight: 1.55 }}>
-              <strong style={{ color: "var(--color-fg)", fontWeight: 700 }}>
-                Unbranded
-              </strong>
-              <span className="text-[var(--color-fg-secondary)]">
-                {" — Prompts that don't mention you. These reveal where you can steal share from competitors."}
-              </span>
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* AI summary block */}
-      <div className="px-6 pt-4">
-        <div
-          className="rounded-[var(--radius-lg)] p-5"
-          style={{
-            borderLeft: `5px solid ${COLORS.primary}`,
-            backgroundColor: TOK.primarySoftBg,
-          }}
-        >
-          <div className="flex items-center gap-2.5 mb-2">
-            <Sparkles className="h-4 w-4 shrink-0" style={{ color: COLORS.primary }} />
-            <p
-              className="uppercase tracking-wider text-[var(--color-fg-secondary)] font-semibold"
-              style={{ fontSize: 11, letterSpacing: "0.12em" }}
+          <HoverHint hint="Research and add new prompts to track.">
+            <motion.a
+              href="/keyword-research"
+              whileTap={{ scale: 0.96 }}
+              whileHover={{ y: -1 }}
+              transition={{ duration: 0.15, ease: EASE }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] border transition-all"
+              style={{
+                fontSize: 13,
+                fontFamily: "var(--font-sans)",
+                fontWeight: 600,
+                color: COLORS.primaryHover,
+                borderColor: "rgba(150,162,131,0.45)",
+                backgroundColor: "rgba(150,162,131,0.10)",
+              }}
             >
-              AI summary
-            </p>
-          </div>
-          <p
-            className="text-[var(--color-fg)]"
-            style={{ fontSize: 14, lineHeight: 1.55 }}
-          >
-            {summary}
-          </p>
+              <Plus className="h-3.5 w-3.5" />
+              Add prompts
+            </motion.a>
+          </HoverHint>
         </div>
       </div>
 
-      <div className="px-6 py-4 overflow-x-auto">
+      {/* Branded warning (minimalist text) + sage-boxed AI summary using
+          good/fix structure — fix portion auto-tints rust to match the
+          branded < 95% red coding rule. */}
+      <div className="px-6 pt-4 pb-1 space-y-3">
+        <BrandedCallout data={data} onSeeBranded={onSeeBranded} />
+        {(() => {
+          const brandedLeak = data.brandedVisibility < 95;
+          const good = brandedLeak ? (
+            <>
+              Link citation rate is climbing to{" "}
+              <strong>{data.linkCitationRate}%</strong>
+              {data.linkCitationDelta > 0
+                ? ` (+${data.linkCitationDelta.toFixed(1)}%)`
+                : ""}
+              , and branded coverage trended up{" "}
+              <strong>+{data.brandedVisibilityDelta.toFixed(1)}%</strong> over
+              the period.
+            </>
+          ) : (
+            <>
+              Branded queries are landing at{" "}
+              <strong>{data.brandedVisibility}%</strong> with strong sentiment,
+              and citation rate is up{" "}
+              <strong>+{data.linkCitationDelta.toFixed(1)}%</strong>.
+            </>
+          );
+          const fix = brandedLeak ? (
+            <>
+              Branded coverage sits at{" "}
+              <strong>{data.brandedVisibility}%</strong> — below the 95%
+              credibility threshold; competitors take warm leads on{" "}
+              {data.brandedTopRankTotal - data.brandedTopRankCount} of{" "}
+              {data.brandedTopRankTotal} engines. Close that gap before
+              unbranded.
+            </>
+          ) : (
+            <>
+              Unbranded coverage at{" "}
+              <strong>{data.unbrandedVisibility}%</strong> is leaking traffic on
+              high-volume informational and transactional prompts — capture
+              answer-capsule formats first.
+            </>
+          );
+          return <AISummaryStrip good={good} fix={fix} />;
+        })()}
+      </div>
+
+      <div
+        className="px-6 py-4 overflow-y-auto overflow-x-auto"
+        style={{ maxHeight: 760 }}
+      >
         <table
           className="w-full"
           style={{ fontSize: 13, tableLayout: "fixed" }}
@@ -2095,12 +2681,16 @@ function PromptsTable({
             <col style={{ width: 30 }} />
             <col />
             <col style={{ width: 100 }} />
+            <col style={{ width: 110 }} />
             <col style={{ width: 130 }} />
             <col style={{ width: 240 }} />
-            <col style={{ width: 80 }} />
+            <col style={{ width: 100 }} />
             <col style={{ width: 140 }} />
           </colgroup>
-          <thead>
+          <thead
+            className="sticky top-0 z-10"
+            style={{ backgroundColor: "var(--color-surface)" }}
+          >
             <tr
               style={{
                 borderBottom: "2px solid rgba(60,62,60,0.22)",
@@ -2123,7 +2713,27 @@ function PromptsTable({
                 <SortableHeader label="Volume" column="volume" sort={sort} onSort={handleSort} onReset={handleResetSort} />
               </th>
               <th className="py-2 pr-4">
-                <SortableHeader label="Intent" column="intent" sort={sort} onSort={handleSort} onReset={handleResetSort} />
+                <span
+                  className="inline-flex items-center font-semibold uppercase text-[var(--color-fg-muted)]"
+                  style={{
+                    fontSize: 11,
+                    letterSpacing: "0.08em",
+                    fontFamily: "var(--font-sans)",
+                  }}
+                >
+                  Status
+                </span>
+              </th>
+              <th className="py-2 pr-4">
+                <IntentFilterHeader
+                  allIntents={allIntents}
+                  selected={selectedIntents}
+                  onApply={(next) => {
+                    // If the user unselected everything, treat that as "all"
+                    // so the table doesn't go empty (better UX than blank).
+                    setSelectedIntents(next.size === 0 ? new Set(allIntents) : next);
+                  }}
+                />
               </th>
               <th className="py-2 pr-4">
                 <span className="inline-flex items-center gap-1">
@@ -2153,7 +2763,7 @@ function PromptsTable({
             </tr>
           </thead>
           <tbody>
-            {filtered.map((p, idx) => {
+            {visible.map((p, idx) => {
               const hits = Object.values(p.engineHits).filter(Boolean).length;
               const totalEngines = Object.keys(p.engineHits).length;
               const coveragePct = Math.round((hits / totalEngines) * 100);
@@ -2174,7 +2784,15 @@ function PromptsTable({
                     }}
                     onClick={() => toggleRow(p.id)}
                     className="cursor-pointer hover:bg-[var(--color-surface-alt)]/40 transition-colors"
-                    style={{ borderBottom: rowBorder }}
+                    style={{
+                      borderBottom: rowBorder,
+                      // Branded prompts get a subtle full-row sage tint to
+                      // visually distinguish them from unbranded rows.
+                      backgroundColor:
+                        p.type === "branded"
+                          ? "rgba(150,162,131,0.07)"
+                          : undefined,
+                    }}
                     aria-expanded={isOpen}
                   >
                     <td className="py-2 pr-2 align-middle">
@@ -2219,11 +2837,54 @@ function PromptsTable({
                         </span>
                       </div>
                     </td>
-                    <td
-                      className="py-2 pr-4 text-[var(--color-fg-secondary)]"
-                      style={{ fontSize: 15 }}
-                    >
-                      {p.intent}
+                    <td className="py-2 pr-4">
+                      {(() => {
+                        const cited = p.position != null;
+                        return (
+                          <span
+                            className="inline-flex items-center gap-1.5"
+                            style={{
+                              fontSize: 12.5,
+                              color: cited ? "#5E7250" : "#B54631",
+                              fontFamily: "var(--font-sans)",
+                              fontWeight: 500,
+                            }}
+                          >
+                            <span
+                              className="rounded-full shrink-0"
+                              style={{
+                                width: 8,
+                                height: 8,
+                                backgroundColor: cited ? "#5E7250" : "#B54631",
+                              }}
+                            />
+                            {cited ? "Cited" : "Not cited"}
+                          </span>
+                        );
+                      })()}
+                    </td>
+                    <td className="py-2 pr-4 overflow-hidden">
+                      {(() => {
+                        const c = intentChip(p.intent);
+                        return (
+                          <span
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-medium max-w-full"
+                            style={{
+                              fontSize: 12.5,
+                              color: c.fg,
+                              backgroundColor: c.bg,
+                              border: `1px solid ${c.border}`,
+                            }}
+                            title={p.intent}
+                          >
+                            <span
+                              className="rounded-full shrink-0"
+                              style={{ width: 7, height: 7, backgroundColor: c.fg }}
+                            />
+                            <span className="truncate">{p.intent}</span>
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="py-2 pr-4">
                       <div className="flex items-center gap-2.5">
@@ -2236,7 +2897,12 @@ function PromptsTable({
                             style={{
                               width: `${coveragePct}%`,
                               backgroundColor:
-                                hits / totalEngines >= 0.6
+                                p.type === "branded"
+                                  ? // Branded: <95% is a credibility leak — red
+                                    coveragePct >= 95
+                                    ? COLORS.primary
+                                    : "#B54631"
+                                  : hits / totalEngines >= 0.6
                                   ? COLORS.primary
                                   : hits / totalEngines >= 0.4
                                   ? "#C97B45"
@@ -2249,7 +2915,10 @@ function PromptsTable({
                             fontFamily: "var(--font-display)",
                             fontSize: 19,
                             fontWeight: 500,
-                            color: "var(--color-fg)",
+                            color:
+                              p.type === "branded" && coveragePct < 95
+                                ? "#B54631"
+                                : "var(--color-fg)",
                             letterSpacing: "-0.01em",
                           }}
                         >
@@ -2308,7 +2977,7 @@ function PromptsTable({
                       style={{ borderBottom: rowBorder }}
                     >
                       <td
-                        colSpan={7}
+                        colSpan={8}
                         className="px-4 py-5"
                         style={{ backgroundColor: "rgba(150,162,131,0.06)" }}
                       >
@@ -2403,19 +3072,118 @@ function PromptsTable({
           </tbody>
         </table>
       </div>
+
+      {/* Footer — row count + page-size selector */}
+      <div className="flex items-center justify-between gap-3 px-6 py-3 border-t border-[var(--color-border)] flex-wrap">
+        <p
+          className="text-[var(--color-fg-muted)]"
+          style={{ fontSize: 12.5, fontFamily: "var(--font-sans)" }}
+        >
+          Showing{" "}
+          <span style={{ color: "var(--color-fg)", fontWeight: 600 }}>
+            {visible.length}
+          </span>{" "}
+          of{" "}
+          <span style={{ color: "var(--color-fg)", fontWeight: 600 }}>
+            {filtered.length}
+          </span>{" "}
+          prompts
+          {truncated && (
+            <span className="text-[var(--color-fg-muted)]">
+              {" "}
+              · scroll or expand below
+            </span>
+          )}
+        </p>
+        <div className="inline-flex items-center gap-2">
+          <span
+            className="uppercase tracking-wider text-[var(--color-fg-muted)] font-semibold"
+            style={{ fontSize: 11, letterSpacing: "0.08em", fontFamily: "var(--font-sans)" }}
+          >
+            Show
+          </span>
+          <div className="inline-flex items-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] p-0.5 gap-0.5">
+            {([20, 50, 100, "all"] as const).map((opt) => {
+              const active = pageSize === opt;
+              const label = opt === "all" ? "All" : String(opt);
+              return (
+                <motion.button
+                  key={String(opt)}
+                  type="button"
+                  whileTap={{ scale: 0.94 }}
+                  transition={{ duration: 0.15, ease: EASE }}
+                  onClick={() => setPageSize(opt)}
+                  aria-pressed={active}
+                  className={
+                    "px-3 py-1 rounded-[var(--radius-sm)] transition-colors " +
+                    (active
+                      ? "bg-[var(--color-primary)] text-white"
+                      : "text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-alt)]")
+                  }
+                  style={{
+                    fontSize: 12.5,
+                    fontFamily: "var(--font-sans)",
+                    fontWeight: 600,
+                  }}
+                >
+                  {label}
+                </motion.button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
 
-// ─── COVERAGE BY INTENT (DONUT + INTERACTIVE LIST) ─────────────────────────
+// ─── AI SUMMARY STRIP ──────────────────────────────────────────────────────
+// Compact two-line callout used at the top of mid-page cards. Surfaces one
+// thing that's working + one thing to fix. Fix row gets a soft red tint per
+// the rule: "color the area for improvement slightly red."
 
-const INTENT_COLORS: Record<string, string> = {
-  "Brand lookup": "#7D8E6C", // sage
-  Comparison: "#7A8FA6", // slate-blue
-  Local: "#C9A845", // mustard
-  Informational: "#9B6FA6", // plum
-  Transactional: "#C97B45", // rust
-};
+function AISummaryStrip({
+  good,
+  fix,
+  className = "",
+}: {
+  good: React.ReactNode;
+  fix: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`rounded-[var(--radius-md)] px-4 py-3 ${className}`}
+      style={{
+        borderLeft: `3px solid ${COLORS.primary}`,
+        backgroundColor: TOK.primarySoftBg,
+      }}
+    >
+      <div className="flex items-center gap-2.5 mb-1.5">
+        <Sparkles
+          className="h-3.5 w-3.5 shrink-0"
+          style={{ color: COLORS.primary }}
+        />
+        <p
+          className="uppercase tracking-wider text-[var(--color-fg-secondary)] font-semibold"
+          style={{ fontSize: 11, letterSpacing: "0.12em" }}
+        >
+          AI summary
+        </p>
+      </div>
+      <p
+        className="text-[var(--color-fg)]"
+        style={{
+          fontSize: 13,
+          lineHeight: 1.55,
+          fontFamily: "var(--font-sans)",
+        }}
+      >
+        {good} <span style={{ color: TOK.loseText }}>{fix}</span>
+      </p>
+    </div>
+  );
+}
 
 function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
   const rad = ((angleDeg - 90) * Math.PI) / 180;
@@ -2487,25 +3255,37 @@ function CoverageDonut({ items }: { items: IntentCoverage[] }) {
         </div>
       </div>
 
-      <div
-        className="rounded-[var(--radius-md)] border-l-2 px-4 py-3 mb-5"
-        style={{
-          borderLeftColor: "var(--color-border)",
-          backgroundColor: "rgba(150,162,131,0.06)",
-          maxWidth: 820,
-        }}
-      >
-        <p
-          className="text-[var(--color-fg-secondary)]"
-          style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.55 }}
-        >
-          {"Each row measures coverage "}
-          <span style={{ fontStyle: "italic", fontWeight: 700, color: "var(--color-fg)" }}>
-            within
-          </span>
-          {" its own category — what share of those prompts mention you. They don't add up to 100% because each is its own independent score, not a slice of the same pie."}
-        </p>
-      </div>
+      {(() => {
+        const ranked = [...items].sort((a, b) => b.coveragePct - a.coveragePct);
+        const best = ranked[0];
+        const worst = ranked[ranked.length - 1];
+        if (!best || !worst) return null;
+        const bestDelta =
+          best.coverageDelta > 0
+            ? ` (+${best.coverageDelta.toFixed(1)}%)`
+            : "";
+        const worstDelta =
+          worst.coverageDelta < 0
+            ? ` (${worst.coverageDelta.toFixed(1)}%)`
+            : "";
+        return (
+          <AISummaryStrip
+            className="mb-5"
+            good={
+              <>
+                <strong>{best.intent}</strong> leads at {best.coveragePct}%
+                {bestDelta}.
+              </>
+            }
+            fix={
+              <>
+                <strong>{worst.intent}</strong> sits at {worst.coveragePct}%
+                {worstDelta} — biggest catch-up.
+              </>
+            }
+          />
+        );
+      })()}
 
       <div className="grid grid-cols-1 md:grid-cols-[280px_minmax(0,1fr)] gap-6 items-center">
         {/* Donut */}
@@ -2709,6 +3489,600 @@ function CoverageDonut({ items }: { items: IntentCoverage[] }) {
   );
 }
 
+// ─── PROMPT HIGHLIGHTS (BEST PERFORMING + FLAGGED) ─────────────────────────
+
+interface HighlightItem {
+  prompt: PromptRow;
+  /** Short uppercase reason chip — e.g., "Branded miss". */
+  reasonTag: string;
+  /** One-line caption explaining why the engine surfaced this prompt. */
+  reasonCaption: string;
+}
+
+/**
+ * Derive the three best-performing and three flagged prompts from the full
+ * prompts array. Each gets a short tag + caption telling the user why the
+ * engine selected it. Selection is rule-based — we walk a priority list and
+ * skip duplicates so the same prompt never lands in both columns.
+ */
+function derivePromptHighlights(prompts: PromptRow[]): {
+  best: HighlightItem[];
+  flagged: HighlightItem[];
+} {
+  const coverage = (p: PromptRow) => {
+    const total = Object.keys(p.engineHits).length;
+    const hits = Object.values(p.engineHits).filter(Boolean).length;
+    return total === 0 ? 0 : hits / total;
+  };
+
+  const used = new Set<string>();
+  const take = <T extends { prompt: PromptRow }>(list: T[], limit: number) => {
+    const out: T[] = [];
+    for (const item of list) {
+      if (used.has(item.prompt.id)) continue;
+      out.push(item);
+      used.add(item.prompt.id);
+      if (out.length >= limit) break;
+    }
+    return out;
+  };
+
+  // ── Flagged candidates (priority order) ───────────────────────────────
+  // 1. Branded prompt with any engine missing — your own brand should be
+  //    everywhere; even one miss is a credibility leak.
+  const brandedMisses: HighlightItem[] = prompts
+    .filter((p) => p.type === "branded" && coverage(p) < 1)
+    .sort((a, b) => coverage(a) - coverage(b))
+    .map((p) => ({
+      prompt: p,
+      reasonTag: "Branded miss",
+      reasonCaption:
+        "Your own brand query — every engine should mention you, but at least one didn't.",
+    }));
+
+  // 2. High-volume prompt with low coverage — biggest traffic loss.
+  const highVolumeMisses: HighlightItem[] = prompts
+    .filter((p) => p.volume >= 4000 && coverage(p) <= 0.5)
+    .sort((a, b) => b.volume - a.volume)
+    .map((p) => ({
+      prompt: p,
+      reasonTag: "High-volume miss",
+      reasonCaption: `${p.volume.toLocaleString()} searches/month and you're cited in ${Math.round(
+        coverage(p) * 100,
+      )}% of engines — major traffic leak.`,
+    }));
+
+  // 3. Negative or weak sentiment when cited.
+  const weakSentiment: HighlightItem[] = prompts
+    .filter((p) => p.sentiment <= 0.25 && coverage(p) > 0)
+    .sort((a, b) => a.sentiment - b.sentiment)
+    .map((p) => ({
+      prompt: p,
+      reasonTag: "Weak sentiment",
+      reasonCaption:
+        "AI mentions you but the framing is neutral or critical — coverage without conviction.",
+    }));
+
+  // 4. Worst average rank when cited.
+  const poorRank: HighlightItem[] = prompts
+    .filter((p) => p.position !== null && p.position >= 3)
+    .sort((a, b) => (b.position ?? 0) - (a.position ?? 0))
+    .map((p) => ({
+      prompt: p,
+      reasonTag: "Low rank",
+      reasonCaption: `When AI does mention you, you average #${p.position?.toFixed(
+        1,
+      )} — competitors are getting top placement.`,
+    }));
+
+  const flagged = [
+    ...take(brandedMisses, 1),
+    ...take(highVolumeMisses, 1),
+    ...take(weakSentiment, 1),
+    ...take(poorRank, 1),
+  ].slice(0, 3);
+
+  // ── Best-performing candidates (priority order) ──────────────────────
+  // 1. 100% engine coverage AND #1 rank — the gold standard.
+  const perfect: HighlightItem[] = prompts
+    .filter((p) => coverage(p) >= 1 && (p.position ?? 99) <= 1.5)
+    .sort((a, b) => (a.position ?? 99) - (b.position ?? 99))
+    .map((p) => ({
+      prompt: p,
+      reasonTag: "Top tier",
+      reasonCaption:
+        "Cited by every engine and ranked #1 — you own this prompt outright.",
+    }));
+
+  // 2. 100% coverage on a high-volume prompt — even if not #1.
+  const fullCoverHighVol: HighlightItem[] = prompts
+    .filter((p) => coverage(p) >= 1 && p.volume >= 1500)
+    .sort((a, b) => b.volume - a.volume)
+    .map((p) => ({
+      prompt: p,
+      reasonTag: "Full coverage",
+      reasonCaption: `Cited by all 4 engines on a ${p.volume.toLocaleString()} searches/month query — strong distribution.`,
+    }));
+
+  // 3. Strong rank (#1) with decent coverage — wins against competitors.
+  const topRanked: HighlightItem[] = prompts
+    .filter((p) => p.position !== null && p.position <= 1.5 && coverage(p) >= 0.5)
+    .sort((a, b) => (a.position ?? 99) - (b.position ?? 99))
+    .map((p) => ({
+      prompt: p,
+      reasonTag: "Ranked #1",
+      reasonCaption: `Average rank ${p.position?.toFixed(
+        1,
+      )} when cited — you're the named answer, not the runner-up.`,
+    }));
+
+  const best = [
+    ...take(perfect, 1),
+    ...take(fullCoverHighVol, 1),
+    ...take(topRanked, 1),
+  ].slice(0, 3);
+
+  return { best, flagged };
+}
+
+/**
+ * Mini prompts-table mirroring the main PromptsTable structure: same columns
+ * (Prompt, Volume, Intent, Coverage, Position, Sentiment) and the same
+ * expand-row "What AI said" engine grid. Used twice — once for best-performing
+ * picks, once for flagged picks. Each row gets a small reason chip + caption
+ * showing why the engine selected it.
+ */
+function HighlightsTable({
+  title,
+  info,
+  variant,
+  items,
+  emptyText,
+  footerCta,
+}: {
+  title: string;
+  info: string;
+  variant: "best" | "flagged";
+  items: HighlightItem[];
+  emptyText: string;
+  footerCta: {
+    icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+    label: string;
+    href: string;
+  };
+}) {
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const toggleRow = (id: string) =>
+    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+
+  const palette =
+    variant === "best"
+      ? {
+          tagBg: "rgba(150,162,131,0.18)",
+          tagFg: "#5E7250",
+          tagBorder: "rgba(150,162,131,0.45)",
+        }
+      : {
+          tagBg: "rgba(201,123,69,0.16)",
+          tagFg: TOK.amberFg,
+          tagBorder: "rgba(201,123,69,0.4)",
+        };
+
+  const rowBorder = "1.5px solid rgba(60,62,60,0.18)";
+
+  return (
+    <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col h-full">
+      {/* Header — mirrors PromptsTable header style */}
+      <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[var(--color-border)]">
+        <SectionHeading text={title} info={info} />
+        <a
+          href="#prompts-table"
+          className="inline-flex items-center gap-1 font-medium hover:underline whitespace-nowrap"
+          style={{ fontSize: 12.5, color: COLORS.primaryHover }}
+        >
+          View all
+          <ArrowRight className="h-3.5 w-3.5" />
+        </a>
+      </div>
+
+      {/* Table */}
+      <div className="px-3 py-2 overflow-x-auto flex-1">
+        {items.length === 0 ? (
+          <p
+            className="text-[var(--color-fg-muted)] py-6 text-center"
+            style={{ fontSize: 13 }}
+          >
+            {emptyText}
+          </p>
+        ) : (
+          <table className="w-full" style={{ fontSize: 12.5, tableLayout: "fixed" }}>
+            <colgroup>
+              <col style={{ width: 22 }} />
+              <col />
+              <col style={{ width: 60 }} />
+              <col style={{ width: 108 }} />
+              <col style={{ width: 96 }} />
+              <col style={{ width: 76 }} />
+              <col style={{ width: 92 }} />
+            </colgroup>
+            <thead>
+              <tr style={{ borderBottom: "2px solid rgba(60,62,60,0.22)" }}>
+                <th />
+                {["Prompt", "Volume", "Intent", "Coverage", "Position", "Sentiment"].map(
+                  (label, idx) => (
+                    <th
+                      key={label}
+                      className={
+                        "py-2 pr-2 " +
+                        (idx === 4 || idx === 5 ? "text-right" : "text-left")
+                      }
+                    >
+                      <span
+                        className="font-semibold uppercase text-[var(--color-fg-muted)]"
+                        style={{
+                          fontSize: 10.5,
+                          letterSpacing: "0.08em",
+                          fontFamily: "var(--font-sans)",
+                        }}
+                      >
+                        {label}
+                      </span>
+                    </th>
+                  ),
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item, idx) => {
+                const p = item.prompt;
+                const hits = Object.values(p.engineHits).filter(Boolean).length;
+                const totalEngines = Object.keys(p.engineHits).length;
+                const coveragePct = Math.round((hits / totalEngines) * 100);
+                const bucket = sentimentBucket(p.sentiment);
+                const sent = SENTIMENT_STYLE[bucket];
+                const SentIcon = sent.Icon;
+                const isOpen = !!expanded[p.id];
+
+                return (
+                  <Fragment key={p.id}>
+                    <motion.tr
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{
+                        duration: 0.3,
+                        ease: EASE,
+                        delay: Math.min(idx * 0.04, 0.2),
+                      }}
+                      onClick={() => toggleRow(p.id)}
+                      className="cursor-pointer hover:bg-[var(--color-surface-alt)]/40 transition-colors"
+                      style={{ borderBottom: rowBorder }}
+                      aria-expanded={isOpen}
+                    >
+                      <td className="py-2 pr-1 align-middle">
+                        <ChevronDown
+                          className={
+                            "h-4 w-4 text-[var(--color-fg-muted)] transition-transform duration-200 " +
+                            (isOpen ? "rotate-180" : "")
+                          }
+                        />
+                      </td>
+                      <td className="py-2 pr-2 align-top">
+                        {/* Reason chip stacked above the prompt text */}
+                        <span
+                          className="inline-flex items-center px-1.5 py-0.5 rounded-full font-semibold uppercase whitespace-nowrap mb-1"
+                          style={{
+                            fontSize: 9.5,
+                            letterSpacing: "0.08em",
+                            backgroundColor: palette.tagBg,
+                            color: palette.tagFg,
+                            border: `1px solid ${palette.tagBorder}`,
+                          }}
+                        >
+                          {item.reasonTag}
+                        </span>
+                        <p
+                          style={{
+                            fontFamily: "var(--font-display)",
+                            fontSize: 15.5,
+                            color: "var(--color-fg)",
+                            letterSpacing: "-0.01em",
+                            lineHeight: 1.25,
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          "{p.text}"
+                        </p>
+                      </td>
+                      <td className="py-2 pr-2 align-middle">
+                        <div className="flex items-baseline gap-0.5">
+                          <span
+                            className="tabular-nums"
+                            style={{
+                              fontFamily: "var(--font-display)",
+                              fontSize: 17,
+                              fontWeight: 500,
+                              color: "var(--color-fg)",
+                              letterSpacing: "-0.01em",
+                            }}
+                          >
+                            {fmtVolume(p.volume)}
+                          </span>
+                          <span
+                            className="text-[var(--color-fg-muted)]"
+                            style={{ fontSize: 11 }}
+                          >
+                            /mo
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-2 pr-2 align-middle overflow-hidden">
+                        {(() => {
+                          const c = intentChip(p.intent);
+                          return (
+                            <span
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full font-medium max-w-full"
+                              style={{
+                                fontSize: 11,
+                                color: c.fg,
+                                backgroundColor: c.bg,
+                                border: `1px solid ${c.border}`,
+                              }}
+                              title={p.intent}
+                            >
+                              <span
+                                className="rounded-full shrink-0"
+                                style={{ width: 6, height: 6, backgroundColor: c.fg }}
+                              />
+                              <span className="truncate">{p.intent}</span>
+                            </span>
+                          );
+                        })()}
+                      </td>
+                      <td className="py-2 pr-2 align-middle">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="relative rounded-full bg-[var(--color-surface-alt)]"
+                            style={{ width: 64, height: 6 }}
+                          >
+                            <div
+                              className="absolute inset-y-0 left-0 rounded-full"
+                              style={{
+                                width: `${coveragePct}%`,
+                                backgroundColor:
+                                  hits / totalEngines >= 0.6
+                                    ? COLORS.primary
+                                    : hits / totalEngines >= 0.4
+                                    ? "#C97B45"
+                                    : "#B54631",
+                              }}
+                            />
+                          </div>
+                          <span
+                            className="tabular-nums"
+                            style={{
+                              fontFamily: "var(--font-display)",
+                              fontSize: 15,
+                              fontWeight: 500,
+                              color: "var(--color-fg)",
+                              letterSpacing: "-0.01em",
+                            }}
+                          >
+                            {coveragePct}%
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-2 pr-2 text-right align-middle tabular-nums">
+                        {p.position === null ? (
+                          <span
+                            className="text-[var(--color-fg-muted)]"
+                            style={{ fontSize: 15 }}
+                          >
+                            —
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              fontFamily: "var(--font-display)",
+                              fontSize: 17,
+                              color: "var(--color-fg)",
+                              fontWeight: 500,
+                            }}
+                          >
+                            #{p.position.toFixed(1)}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2 pl-1 align-middle">
+                        <div className="flex justify-end">
+                          <span
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md font-medium"
+                            style={{
+                              fontSize: 11.5,
+                              color: sent.color,
+                              backgroundColor: sent.bg,
+                            }}
+                          >
+                            <SentIcon className="h-3 w-3" />
+                            {sent.label}
+                          </span>
+                        </div>
+                      </td>
+                    </motion.tr>
+
+                    {isOpen && (
+                      <motion.tr
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.25, ease: EASE }}
+                        style={{ borderBottom: rowBorder }}
+                      >
+                        <td
+                          colSpan={7}
+                          className="px-4 py-4"
+                          style={{ backgroundColor: "rgba(150,162,131,0.06)" }}
+                        >
+                          {/* Why it was selected */}
+                          <p
+                            className="text-[var(--color-fg-secondary)] mb-3"
+                            style={{ fontSize: 12.5, lineHeight: 1.5 }}
+                          >
+                            <span
+                              className="uppercase font-semibold mr-1.5"
+                              style={{
+                                fontSize: 10,
+                                letterSpacing: "0.1em",
+                                color: palette.tagFg,
+                              }}
+                            >
+                              Why this is {variant === "best" ? "winning" : "flagged"}:
+                            </span>
+                            {item.reasonCaption}
+                          </p>
+
+                          <p
+                            className="uppercase tracking-wider text-[var(--color-fg-muted)] font-semibold mb-2"
+                            style={{ fontSize: 10.5, letterSpacing: "0.12em" }}
+                          >
+                            What AI said
+                          </p>
+                          <motion.div
+                            initial="initial"
+                            animate="animate"
+                            transition={{
+                              staggerChildren: 0.04,
+                              delayChildren: 0.05,
+                            }}
+                            className="grid grid-cols-1 md:grid-cols-2 gap-2.5"
+                          >
+                            {ENGINES.map((e) => {
+                              const r = p.responses.find((x) => x.engine === e.id);
+                              const cited = p.engineHits[e.id];
+                              return (
+                                <motion.div
+                                  key={e.id}
+                                  variants={{
+                                    initial: { opacity: 0 },
+                                    animate: { opacity: 1 },
+                                  }}
+                                  transition={{ duration: 0.3, ease: EASE }}
+                                  whileHover={{ y: -2 }}
+                                  className="rounded-md border bg-[var(--color-surface)] p-2.5 flex flex-col"
+                                  style={{
+                                    borderColor: cited
+                                      ? "rgba(150,162,131,0.45)"
+                                      : "var(--color-border)",
+                                    borderLeftWidth: 3,
+                                    borderLeftColor: cited
+                                      ? "#7D8E6C"
+                                      : "rgba(181,70,49,0.4)",
+                                  }}
+                                >
+                                  <div className="flex items-center justify-between mb-1.5">
+                                    <div className="flex items-center gap-1.5">
+                                      <EngineIcon id={e.id} size={12} />
+                                      <span
+                                        style={{
+                                          fontSize: 11.5,
+                                          fontWeight: 600,
+                                          color: "var(--color-fg)",
+                                        }}
+                                      >
+                                        {e.label}
+                                      </span>
+                                    </div>
+                                    <span
+                                      className="uppercase tabular-nums"
+                                      style={{
+                                        fontSize: 9,
+                                        fontWeight: 700,
+                                        letterSpacing: "0.08em",
+                                        color: cited ? "#5E7250" : TOK.loseText,
+                                      }}
+                                    >
+                                      {cited ? "Cited" : "Missing"}
+                                    </span>
+                                  </div>
+                                  <p
+                                    className="text-[var(--color-fg-secondary)]"
+                                    style={{ fontSize: 11.5, lineHeight: 1.45 }}
+                                  >
+                                    {r?.excerpt ?? "No response captured."}
+                                  </p>
+                                  {!cited && (
+                                    <a
+                                      href="/audit"
+                                      className="group inline-flex items-center gap-1 mt-auto pt-1.5 font-semibold transition-opacity hover:opacity-80"
+                                      style={{
+                                        fontSize: 10.5,
+                                        color: TOK.amberFg,
+                                        fontWeight: 600,
+                                      }}
+                                    >
+                                      Diagnose in GEO Audit
+                                      <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+                                    </a>
+                                  )}
+                                </motion.div>
+                              );
+                            })}
+                          </motion.div>
+                        </td>
+                      </motion.tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Footer CTA */}
+      <div className="px-5 py-3 border-t border-[var(--color-border)]">
+        <CtaLink
+          icon={footerCta.icon}
+          label={footerCta.label}
+          href={footerCta.href}
+        />
+      </div>
+    </section>
+  );
+}
+
+function BestPerformingPromptsCard({ items }: { items: HighlightItem[] }) {
+  return (
+    <HighlightsTable
+      title="Best performing prompts"
+      info="Where you're winning right now — full engine coverage, top rank, or both."
+      variant="best"
+      items={items}
+      emptyText="No prompts hit the win threshold this period."
+      footerCta={{
+        icon: CheckCircle2,
+        label: "Replicate these patterns on weaker prompts",
+        href: "/audit",
+      }}
+    />
+  );
+}
+
+function FlaggedPromptsCard({ items }: { items: HighlightItem[] }) {
+  return (
+    <HighlightsTable
+      title="Flagged prompts"
+      info="Prompts that need attention — branded misses, high-volume gaps, weak sentiment, or low rank."
+      variant="flagged"
+      items={items}
+      emptyText="No prompts crossed the flag thresholds this period."
+      footerCta={{
+        icon: AlertTriangle,
+        label: "Diagnose these gaps in a GEO audit",
+        href: "/audit",
+      }}
+    />
+  );
+}
+
 // ─── CITATION SOURCES ──────────────────────────────────────────────────────
 
 const CITATION_SOURCE_COLORS: Record<string, string> = {
@@ -2723,10 +4097,13 @@ const CITATION_SOURCE_COLORS: Record<string, string> = {
 function CitationSourcesCard({ items }: { items: CitationSource[] }) {
   const max = Math.max(...items.map((i) => i.pct));
   const sorted = [...items].sort((a, b) => b.pct - a.pct);
+  const top = sorted[0];
+  // Lowest non-trivial source is the gap to close.
+  const fixSource = sorted[sorted.length - 1];
 
   return (
     <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 flex flex-col h-full">
-      <div className="mb-4 pb-3 border-b border-[var(--color-border)]">
+      <div className="mb-3 pb-3 border-b border-[var(--color-border)]">
         <div className="flex items-center justify-between gap-4">
           <SectionHeading
             text="Citation sources"
@@ -2742,6 +4119,23 @@ function CitationSourcesCard({ items }: { items: CitationSource[] }) {
           </a>
         </div>
       </div>
+
+      {top && fixSource && (
+        <AISummaryStrip
+          className="mb-4"
+          good={
+            <>
+              <strong>{top.source}</strong> leads at {top.pct}% of citations.
+            </>
+          }
+          fix={
+            <>
+              Only {fixSource.pct}% from <strong>{fixSource.source}</strong> —
+              earn ground there.
+            </>
+          }
+        />
+      )}
 
       <div className="flex-1 flex flex-col justify-between">
         {sorted.map((s) => {
@@ -2795,10 +4189,15 @@ function CitationSourcesCard({ items }: { items: CitationSource[] }) {
 
 function SentimentByTypeCard({ items }: { items: SentimentByType[] }) {
   const sorted = [...items].sort((a, b) => b.positive - a.positive);
+  const best = sorted[0];
+  // Worst = highest negative% (or fall back to lowest positive%).
+  const fixCandidate =
+    [...items].sort((a, b) => b.negative - a.negative)[0] ??
+    sorted[sorted.length - 1];
 
   return (
     <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 flex flex-col h-full">
-      <div className="mb-4 pb-3 border-b border-[var(--color-border)]">
+      <div className="mb-3 pb-3 border-b border-[var(--color-border)]">
         <div className="flex items-center justify-between gap-4">
           <SectionHeading
             text="Sentiment by prompt type"
@@ -2814,6 +4213,23 @@ function SentimentByTypeCard({ items }: { items: SentimentByType[] }) {
           </a>
         </div>
       </div>
+
+      {best && fixCandidate && (
+        <AISummaryStrip
+          className="mb-4"
+          good={
+            <>
+              <strong>{best.type}</strong> reads {best.positive}% positive.
+            </>
+          }
+          fix={
+            <>
+              <strong>{fixCandidate.type}</strong> has {fixCandidate.negative}%
+              negative — flip the framing.
+            </>
+          }
+        />
+      )}
 
       <div className="flex-1 flex flex-col justify-between">
         {sorted.map((row) => (
@@ -3022,28 +4438,146 @@ function InsightCard({ variant, tag, title, summary, items }: InsightCardProps) 
   );
 }
 
+// ─── FILTER PIPELINE ───────────────────────────────────────────────────────
+// Recomputes hits, coverage, deltas, and per-engine breakdowns from the base
+// dataset given the current range pill + engine chip selection. Mock data, but
+// the shape mirrors what the live /api/scan response will produce.
+
+const RANGE_DELTA_FACTOR: Record<Range, number> = {
+  "14d": 0.4,
+  "30d": 0.7,
+  "90d": 1,
+  YTD: 1.5,
+  All: 2.2,
+  custom: 1,
+};
+
+function applyFilters(
+  base: PromptsData,
+  range: Range,
+  engines: Set<string>,
+): PromptsData {
+  const allEngines = ENGINES.map((e) => e.id);
+  const enabled = engines.size === 0 ? new Set(allEngines) : engines;
+  const allEnginesActive = enabled.size === allEngines.length;
+  const factor = RANGE_DELTA_FACTOR[range] ?? 1;
+  const round1 = (n: number) => Math.round(n * 10) / 10;
+
+  // Filter prompts: each prompt's engineHits/responses are restricted to
+  // enabled engines; position becomes null if no enabled engine cited it.
+  const prompts: PromptRow[] = base.prompts.map((p) => {
+    const engineHits: Record<string, boolean> = {};
+    for (const id of allEngines) {
+      engineHits[id] = enabled.has(id) ? !!p.engineHits[id] : false;
+    }
+    const responses = p.responses.filter((r) => enabled.has(r.engine));
+    const anyHit = Object.values(engineHits).some(Boolean);
+    return {
+      ...p,
+      engineHits,
+      responses,
+      position: anyHit ? p.position : null,
+    };
+  });
+
+  // Recompute branded / unbranded hit counts from the filtered prompt set.
+  const branded = prompts.filter((p) => p.type === "branded");
+  const unbranded = prompts.filter((p) => p.type === "unbranded");
+  const brandedHits = branded.filter((p) => p.position != null).length;
+  const unbrandedHits = unbranded.filter((p) => p.position != null).length;
+  const brandedTotal = branded.length;
+  const unbrandedTotal = unbranded.length;
+  const brandedVisibility = brandedTotal === 0 ? 0 : Math.round((brandedHits / brandedTotal) * 100);
+  const unbrandedVisibility = unbrandedTotal === 0 ? 0 : Math.round((unbrandedHits / unbrandedTotal) * 100);
+
+  // Per-engine OR across prompts of each type — true if any prompt got a hit
+  // in that engine. Engines toggled off render as misses everywhere.
+  const brandedEngineHits: Record<string, boolean> = {};
+  const unbrandedEngineHits: Record<string, boolean> = {};
+  for (const id of allEngines) {
+    brandedEngineHits[id] = enabled.has(id) && branded.some((p) => p.engineHits[id]);
+    unbrandedEngineHits[id] = enabled.has(id) && unbranded.some((p) => p.engineHits[id]);
+  }
+  const brandedTopRankFailEngines = ENGINES
+    .filter((e) => enabled.has(e.id) && !brandedEngineHits[e.id])
+    .map((e) => e.label);
+
+  // Citation mentions are bounded by enabled engines.
+  const engineRatio = allEnginesActive ? 1 : enabled.size / allEngines.length;
+  const linkCitationMentions = Math.round(base.linkCitationMentions * engineRatio);
+
+  return {
+    ...base,
+    prompts,
+    brandedHits,
+    brandedTotal,
+    brandedVisibility,
+    unbrandedHits,
+    unbrandedTotal,
+    unbrandedVisibility,
+    brandedEngineHits,
+    unbrandedEngineHits,
+    brandedTopRankCount: brandedHits,
+    brandedTopRankTotal: brandedTotal,
+    brandedTopRankFailEngines,
+    linkCitationMentions,
+    // Range only affects comparison-period deltas, not absolute values.
+    brandedVisibilityDelta: round1(base.brandedVisibilityDelta * factor),
+    unbrandedVisibilityDelta: round1(base.unbrandedVisibilityDelta * factor),
+    linkCitationDelta: round1(base.linkCitationDelta * factor),
+    avgPositionDelta: round1(base.avgPositionDelta * factor),
+    promptsTrackedDelta: Math.round(base.promptsTrackedDelta * factor),
+  };
+}
+
 // ─── MAIN EXPORT ───────────────────────────────────────────────────────────
 
 export function PromptsSection() {
-  const data = usePromptsData();
+  const baseData = usePromptsData();
   const [range, setRange] = useState<Range>("90d");
   const [enabledEngines, setEnabledEngines] = useState<Set<string>>(
     new Set(ENGINES.map((e) => e.id)),
   );
-  const [activeTab, setActiveTab] = useState<PromptsTab>("all");
+  const [selectedFilters, setSelectedFilters] = useState<Set<PromptsFilter>>(
+    () => new Set(),
+  );
+
+  const data = useMemo(
+    () => applyFilters(baseData, range, enabledEngines),
+    [baseData, range, enabledEngines],
+  );
+  const highlights = useMemo(
+    () => derivePromptHighlights(data.prompts),
+    [data.prompts],
+  );
 
   function toggleEngine(id: string) {
     setEnabledEngines((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      // Never let the user turn off every engine — keep at least one selected.
+      if (next.size === 0) return prev;
       return next;
     });
   }
 
+  function toggleFilter(f: PromptsFilter) {
+    setSelectedFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(f)) next.delete(f);
+      else next.add(f);
+      return next;
+    });
+  }
+
+  function clearFilters() {
+    setSelectedFilters(new Set());
+  }
+
   function showBrandedPrompts() {
-    setActiveTab("branded");
-    // Defer scroll until after the tab state has flushed and re-rendered
+    setSelectedFilters(new Set<PromptsFilter>(["branded"]));
+    // Defer scroll until after state has flushed and re-rendered
     setTimeout(() => {
       document
         .getElementById("prompts-table")
@@ -3058,16 +4592,9 @@ export function PromptsSection() {
         {...fadeUp}
         className="flex items-start justify-between gap-6"
       >
-        <div className="space-y-3 min-w-0 flex-1">
+        <div className="space-y-2 min-w-0 flex-1">
           <HeroTitle data={data} />
           <HeroDescription />
-          <div style={{ maxWidth: 760 }}>
-            <CtaLink
-              icon={Target}
-              label="Fix the gaps with a GEO audit"
-              href="/audit"
-            />
-          </div>
         </div>
         <div className="shrink-0 mt-1">
           <NextScanCard
@@ -3092,24 +4619,33 @@ export function PromptsSection() {
       {/* Divider */}
       <div className="border-t border-[var(--color-border)]" />
 
-      {/* Stat strip */}
+      {/* Stat strip — clean 4-card grid (brand-sentiment style) */}
       <motion.div {...reveal}>
-        <StatStrip data={data} />
+        <CleanStatStrip data={data} />
       </motion.div>
 
-      {/* Conditional branded callout */}
+      {/* Page-level AI summary — sits between stats and prompts table */}
       <motion.div {...reveal}>
-        <BrandedCallout data={data} onSeeBranded={showBrandedPrompts} />
+        <PageAISummary data={data} />
       </motion.div>
 
-      {/* Chunk 2 — Prompts table + Coverage by intent + Citation/Sentiment */}
+      {/* Chunk 2 — Prompts table (with branded callout inside) + Coverage by intent + Citation/Sentiment */}
       <motion.div {...reveal}>
         <PromptsTable
           prompts={data.prompts}
           summary={data.promptsTableSummary}
-          tab={activeTab}
-          onTabChange={setActiveTab}
+          selectedFilters={selectedFilters}
+          onToggleFilter={toggleFilter}
+          onClearFilters={clearFilters}
+          data={data}
+          onSeeBranded={showBrandedPrompts}
         />
+      </motion.div>
+
+      {/* Best-performing + Flagged prompts (50/50) */}
+      <motion.div {...reveal} className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <BestPerformingPromptsCard items={highlights.best} />
+        <FlaggedPromptsCard items={highlights.flagged} />
       </motion.div>
 
       <motion.div {...reveal}>
@@ -3126,14 +4662,14 @@ export function PromptsSection() {
         <InsightCard
           variant="wins"
           tag="What's working"
-          title="3 wins this period"
+          title={`${data.wins.length} ${data.wins.length === 1 ? "win" : "wins"} this period`}
           summary="Patterns where you're outpacing the field — keep the pressure on."
           items={data.wins}
         />
         <InsightCard
           variant="concerns"
           tag="What to watch"
-          title="3 leaks costing visibility"
+          title={`${data.concerns.length} ${data.concerns.length === 1 ? "leak" : "leaks"} costing visibility`}
           summary="Highest-leverage fixes — these are where coverage is bleeding."
           items={data.concerns}
         />
