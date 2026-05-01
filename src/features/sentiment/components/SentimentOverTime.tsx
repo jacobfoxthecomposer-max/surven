@@ -25,9 +25,9 @@ function formatDate(iso: string) {
 }
 
 const LINES = [
-  { key: "Positive", color: "#96A283" },
-  { key: "Neutral",  color: "#C8C2B4" },
-  { key: "Negative", color: "#B54631" },
+  { key: "Positive", color: SURVEN_SEMANTIC.goodAlt },
+  { key: "Neutral",  color: SURVEN_SEMANTIC.neutral },
+  { key: "Negative", color: SURVEN_SEMANTIC.bad },
 ] as const;
 
 // Custom SVG end-of-line pill for the Positive line
