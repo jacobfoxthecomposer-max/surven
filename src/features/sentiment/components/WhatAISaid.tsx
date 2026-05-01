@@ -48,7 +48,7 @@ export function WhatAISaid({ results, businessName }: Props) {
 
   return (
     <Card>
-      <h3 className="text-sm font-semibold text-[var(--color-fg)] mb-1">What AI Said About You</h3>
+      <h3 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, color: "var(--color-fg)", marginBottom: 4 }}>What AI Said About You</h3>
       <p className="text-xs text-[var(--color-fg-muted)] mb-3">
         Actual responses from AI models that mentioned {businessName}.
       </p>
