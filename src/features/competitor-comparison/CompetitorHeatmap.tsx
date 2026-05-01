@@ -214,6 +214,28 @@ export function CompetitorHeatmap({
             <span className="text-xs text-[var(--color-fg-muted)]">No mentions</span>
           </div>
         </div>
+
+        <ChartExplainer
+          blocks={[
+            {
+              label: "Rows",
+              body: "Your business sits at the top with a 'You' badge; each row below is one competitor you've added in Settings.",
+            },
+            {
+              label: "Columns",
+              body: "Each column is one AI engine — ChatGPT, Claude, Gemini, Google AI. Engines that returned no data for the scan show an em dash.",
+            },
+            {
+              label: "Cell value",
+              body: "Visibility score on that engine — the share of prompts where the entity was mentioned. 0% and missing data both show as an em dash.",
+            },
+            {
+              label: "Colors",
+              body: "Sage from light (low visibility) to dark (top visibility). Sage here is semantic — darker is better. Transparent cells mean the entity wasn't mentioned at all.",
+            },
+          ]}
+          tip="Look for cells where you're light but a competitor is dark — those are your weakest engines and biggest opportunities."
+        />
       </Card>
     </section>
   );
