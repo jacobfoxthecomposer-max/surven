@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
+import { ChartExplainer } from "@/components/atoms/ChartExplainer";
 import { Cpu, Info, ExternalLink } from "lucide-react";
 import { AI_MODELS } from "@/utils/constants";
 import type { ScanResult, ModelName } from "@/types/database";
