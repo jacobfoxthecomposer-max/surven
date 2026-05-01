@@ -33,7 +33,7 @@ const PLATFORM_META: Record<
   github: {
     label: "GitHub",
     description: "Commit fixes directly to your repo. Vercel/Netlify auto-deploy.",
-    icon: Github,
+    icon: GitBranch,
     color: "#1A1C1A",
     tokenHelp: "Generate a Personal Access Token with the 'repo' scope.",
     tokenLink: {
