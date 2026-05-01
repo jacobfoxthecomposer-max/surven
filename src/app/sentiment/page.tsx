@@ -275,49 +275,54 @@ export default function SentimentPage() {
               />
             </motion.div>
 
-            {/* Metric rows with action links */}
+            {/* Metric rows + warning (left 3/5) + fix actions (right 2/5) */}
             <motion.div {...reveal}>
-              <SentimentMetricRows results={results} history={filteredHistory} />
-            </motion.div>
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                <div className="lg:col-span-3 flex flex-col gap-4">
+                  <SentimentMetricRows results={results} history={filteredHistory} />
 
-            {/* Warning callout — only renders if a single engine is bleeding sentiment */}
-            {warning && (
-              <motion.div {...reveal}>
-                <div
-                  className="rounded-[var(--radius-lg)] border p-4 flex items-start gap-3"
-                  style={{
-                    background: "rgba(181,70,49,0.04)",
-                    borderColor: "rgba(181,70,49,0.25)",
-                  }}
-                >
-                  <div
-                    className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ background: "rgba(181,70,49,0.12)" }}
-                  >
-                    <AlertTriangle className="h-4 w-4" style={{ color: SURVEN_SEMANTIC.bad }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className="text-sm font-semibold mb-1"
-                      style={{ color: "var(--color-fg)" }}
+                  {warning && (
+                    <div
+                      className="rounded-[var(--radius-lg)] border p-4 flex items-start gap-3"
+                      style={{
+                        background: "rgba(181,70,49,0.04)",
+                        borderColor: "rgba(181,70,49,0.25)",
+                      }}
                     >
-                      {MODEL_LABELS[warning.engine]} is showing {warning.negPct}% negative sentiment
-                    </p>
-                    <p className="text-xs text-[var(--color-fg-secondary)] leading-snug">
-                      {warning.negCount} of {warning.total} mentions on {MODEL_LABELS[warning.engine]} use critical or dismissive language. This is the highest-leverage engine to fix — every prompt hitting this engine inherits the negative framing.
-                    </p>
-                  </div>
-                  <Link
-                    href="/audit"
-                    className="shrink-0 inline-flex items-center gap-1 px-3 py-2 rounded-[var(--radius-md)] text-xs font-semibold text-white transition-opacity hover:opacity-90 self-center"
-                    style={{ background: SURVEN_SEMANTIC.bad }}
-                  >
-                    <span>Fix with audit</span>
-                    <ArrowRight className="h-3 w-3" />
-                  </Link>
+                      <div
+                        className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ background: "rgba(181,70,49,0.12)" }}
+                      >
+                        <AlertTriangle className="h-4 w-4" style={{ color: SURVEN_SEMANTIC.bad }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className="text-sm font-semibold mb-1"
+                          style={{ color: "var(--color-fg)" }}
+                        >
+                          {MODEL_LABELS[warning.engine]} is showing {warning.negPct}% negative sentiment
+                        </p>
+                        <p className="text-xs text-[var(--color-fg-secondary)] leading-snug">
+                          {warning.negCount} of {warning.total} mentions on {MODEL_LABELS[warning.engine]} use critical or dismissive language. This is the highest-leverage engine to fix — every prompt hitting this engine inherits the negative framing.
+                        </p>
+                      </div>
+                      <Link
+                        href="/audit"
+                        className="shrink-0 inline-flex items-center gap-1 px-3 py-2 rounded-[var(--radius-md)] text-xs font-semibold text-white transition-opacity hover:opacity-90 self-center"
+                        style={{ background: SURVEN_SEMANTIC.bad }}
+                      >
+                        <span>Fix with audit</span>
+                        <ArrowRight className="h-3 w-3" />
+                      </Link>
+                    </div>
+                  )}
                 </div>
-              </motion.div>
-            )}
+
+                <div className="lg:col-span-2">
+                  <SentimentFixActions results={results} />
+                </div>
+              </div>
+            </motion.div>
 
             {/* Sentiment by AI engine — restyled compact rows */}
             <motion.div {...reveal}>
