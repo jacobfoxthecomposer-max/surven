@@ -2,6 +2,7 @@
 
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
+import { ChartExplainer } from "@/components/atoms/ChartExplainer";
 import { Building2, Swords, Compass, Users, Info } from "lucide-react";
 import type { EntityGridData } from "./types";
 
