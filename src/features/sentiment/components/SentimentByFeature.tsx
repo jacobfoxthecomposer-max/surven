@@ -94,7 +94,7 @@ export function SentimentByFeature({ results, businessName, competitors }: Props
       {/* Sentiment by Feature */}
       <Card className="overflow-x-auto">
         <div className="flex items-center gap-1.5 mb-1">
-          <h3 className="text-sm font-semibold text-[var(--color-fg)]">Sentiment by Prompt</h3>
+          <h3 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, color: "var(--color-fg)" }}>Sentiment by Prompt</h3>
           <HoverHint hint="For each customer question, the percentage of AI responses that mention your brand positively. Color scale runs red (0–19%) → green (80–100%).">
             <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
           </HoverHint>
