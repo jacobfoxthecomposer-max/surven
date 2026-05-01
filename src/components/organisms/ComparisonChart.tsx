@@ -51,6 +51,15 @@ export function ComparisonChart({
     <div aria-label="Competitor comparison chart" role="img">
       <ResponsiveContainer width="100%" height={280}>
         <BarChart data={data} layout="vertical" margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
+          <defs>
+            <filter id="yourBarGlow">
+              <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+              <feMerge>
+                <feMergeNode in="coloredBlur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
           <CartesianGrid
             strokeDasharray="3 3"
             stroke={COLORS.surfaceAlt}
@@ -86,6 +95,7 @@ export function ComparisonChart({
               <Cell
                 key={entry.name}
                 fill={entry.isYou ? COLORS.primary : BAR_COLORS[(idx) % BAR_COLORS.length]}
+                filter={entry.isYou ? "url(#yourBarGlow)" : undefined}
               />
             ))}
           </Bar>
