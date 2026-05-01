@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { Info, BarChart3 } from "lucide-react";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
+import { ChartExplainer } from "@/components/atoms/ChartExplainer";
 import { ComparisonChart } from "@/components/organisms/ComparisonChart";
 import type { ScanResult, CompetitorScore } from "@/types/database";
 
