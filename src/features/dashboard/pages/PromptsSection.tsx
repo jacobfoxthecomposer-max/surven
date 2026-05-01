@@ -2803,6 +2803,28 @@ function CitationSourcesCard({ items }: { items: CitationSource[] }) {
         })}
       </div>
 
+      <ChartExplainer
+        blocks={[
+          {
+            label: "Rows",
+            body: "Each row is a category of source AI engines pulled from when mentioning you — your own site, Wikipedia, Reddit, industry blogs, news, and other.",
+          },
+          {
+            label: "Bar length",
+            body: "Share of all citations from that source. Bars are scaled to the leading source so the top one fills the row.",
+          },
+          {
+            label: "Numbers on the right",
+            body: "First number is the percentage; second is the raw citation count. So '42% · 18' means 18 citations, which is 42% of the total.",
+          },
+          {
+            label: "Colors",
+            body: "Visual differentiation between source types only. Sage marks 'Your site' as the anchor — other colors don't indicate good or bad.",
+          },
+        ]}
+        tip="Your own site should lead. If Wikipedia, Reddit, or industry blogs lead, you have a citation-source authority gap."
+      />
+
       <div className="mt-4 pt-3 border-t border-[var(--color-border)]">
         <CtaLink
           icon={Link2}
