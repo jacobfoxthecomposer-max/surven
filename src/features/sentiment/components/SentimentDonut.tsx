@@ -5,12 +5,14 @@ import { Info } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
+import { ChartExplainer } from "@/components/atoms/ChartExplainer";
+import { SURVEN_SEMANTIC } from "@/utils/brandColors";
 import type { ScanResult } from "@/types/database";
 
 const CONFIG = {
-  positive: { label: "Positive", color: "#96A283" },
-  neutral:  { label: "Neutral",  color: "#C8C2B4" },
-  negative: { label: "Negative", color: "#B54631" },
+  positive: { label: "Positive", color: SURVEN_SEMANTIC.goodAlt },
+  neutral:  { label: "Neutral",  color: SURVEN_SEMANTIC.neutral },
+  negative: { label: "Negative", color: SURVEN_SEMANTIC.bad },
 } as const;
 
 interface Props {
