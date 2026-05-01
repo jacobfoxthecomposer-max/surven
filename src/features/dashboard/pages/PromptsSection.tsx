@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useId, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import {
   Sparkles,
   ListChecks,
@@ -61,6 +62,25 @@ const TOK = {
   greenBorderLeft: COLORS.primary,
   iconTileBg: "rgba(150,162,131,0.16)",
   primarySoftBg: "rgba(150,162,131,0.12)",
+} as const;
+
+// ─── MOTION ────────────────────────────────────────────────────────────────
+// Canonical reveal pattern (matches sentiment / dashboard / audit pages).
+// Animate ONLY transform + opacity + filter — never width/height/top/left.
+
+const EASE = [0.16, 1, 0.3, 1] as const;
+
+const reveal = {
+  initial: { opacity: 0, y: 14 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: "-60px" },
+  transition: { duration: 0.45, ease: EASE },
+} as const;
+
+const fadeUp = {
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.45, ease: EASE },
 } as const;
 
 // Subtle accent palettes for stat cards — used to differentiate sibling cards
@@ -982,7 +1002,9 @@ function RangePills({ value, onChange }: { value: Range; onChange: (r: Range) =>
           const active = r === value;
           return (
             <HoverHint key={r} hint={RANGE_HINTS[r]}>
-              <button
+              <motion.button
+                whileTap={{ scale: 0.94 }}
+                transition={{ duration: 0.15, ease: EASE }}
                 onClick={() => onChange(r)}
                 className={
                   "px-3.5 py-2 font-medium rounded-[var(--radius-sm)] transition-colors " +
@@ -993,14 +1015,16 @@ function RangePills({ value, onChange }: { value: Range; onChange: (r: Range) =>
                 style={{ fontSize: 14 }}
               >
                 {r}
-              </button>
+              </motion.button>
             </HoverHint>
           );
         })}
       </div>
 
       <HoverHint hint="Pick your own start and end dates.">
-        <button
+        <motion.button
+          whileTap={{ scale: 0.94 }}
+          transition={{ duration: 0.15, ease: EASE }}
           onClick={() => onChange("custom")}
           className={
             "inline-flex items-center gap-1.5 px-3.5 py-2 font-medium rounded-[var(--radius-md)] border transition-colors " +
@@ -1012,7 +1036,7 @@ function RangePills({ value, onChange }: { value: Range; onChange: (r: Range) =>
         >
           <Calendar className="h-4 w-4" />
           Custom
-        </button>
+        </motion.button>
       </HoverHint>
     </div>
   );
@@ -1036,7 +1060,10 @@ function EngineChips({
         const active = enabled.has(e.id);
         return (
           <HoverHint key={e.id} hint={`${active ? "Hide" : "Show"} ${e.label} data on this page.`}>
-            <button
+            <motion.button
+              whileTap={{ scale: 0.93 }}
+              whileHover={{ y: -1 }}
+              transition={{ duration: 0.15, ease: EASE }}
               onClick={() => onToggle(e.id)}
               className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-[var(--radius-full)] border transition-all"
               style={{
@@ -1049,7 +1076,7 @@ function EngineChips({
             >
               <EngineIcon id={e.id} size={14} />
               {e.label}
-            </button>
+            </motion.button>
           </HoverHint>
         );
       })}
@@ -1181,7 +1208,9 @@ function StatCard({
   const featuredBorder = "rgba(150,162,131,0.55)";
 
   return (
-    <div
+    <motion.div
+      whileHover={{ y: -2 }}
+      transition={{ duration: 0.2, ease: EASE }}
       className={`rounded-[var(--radius-lg)] border ${sizes.padding} flex flex-col h-full`}
       style={{
         backgroundColor: featured ? featuredBg : "var(--color-surface)",
@@ -1428,7 +1457,7 @@ function StatCard({
           />
         </a>
       )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -1468,7 +1497,13 @@ function InfoTooltip({ hint }: { hint: string }) {
 
 function PromptsLedger({ rows }: { rows: LedgerRowSpec[] }) {
   return (
-    <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col h-full">
+    <motion.div
+      initial="initial"
+      whileInView="whileInView"
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ staggerChildren: 0.06, delayChildren: 0.05 }}
+      className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col h-full"
+    >
       {rows.map((row, i) => {
         const deltaType =
           row.delta.direction === "up"
@@ -1481,8 +1516,13 @@ function PromptsLedger({ rows }: { rows: LedgerRowSpec[] }) {
             ? row.delta.customValue
             : `${Math.abs(row.delta.percent).toFixed(1)}%`;
         return (
-          <div
+          <motion.div
             key={row.label}
+            variants={{
+              initial: { opacity: 0 },
+              whileInView: { opacity: 1 },
+            }}
+            transition={{ duration: 0.4, ease: EASE }}
             className={
               "grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-5 flex-1 " +
               (i > 0 ? "border-t border-[var(--color-border)]" : "")
@@ -1552,10 +1592,10 @@ function PromptsLedger({ rows }: { rows: LedgerRowSpec[] }) {
               {row.link.label}
               <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
             </a>
-          </div>
+          </motion.div>
         );
       })}
-    </div>
+    </motion.div>
   );
 }
 
@@ -2002,8 +2042,10 @@ function PromptsTable({
         </div>
         <div className="justify-self-center inline-flex rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] p-1 gap-1">
           {(["all", "branded", "unbranded"] as PromptsTab[]).map((t) => (
-            <button
+            <motion.button
               key={t}
+              whileTap={{ scale: 0.94 }}
+              transition={{ duration: 0.15, ease: EASE }}
               onClick={() => onTabChange(t)}
               className={
                 "px-5 py-2 font-medium rounded-[var(--radius-md)] transition-colors capitalize " +
@@ -2014,13 +2056,17 @@ function PromptsTable({
               style={{ fontSize: 19, fontFamily: "var(--font-sans)" }}
             >
               {t}
-            </button>
+            </motion.button>
           ))}
         </div>
         <div className="justify-self-end">
           {!isDefaultSort && (
-            <button
+            <motion.button
               type="button"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.2, ease: EASE }}
               onClick={handleResetSort}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] hover:bg-[var(--color-surface-alt)] transition-all"
               style={{
@@ -2032,7 +2078,7 @@ function PromptsTable({
             >
               <RotateCcw className="h-3.5 w-3.5" />
               Reset sort
-            </button>
+            </motion.button>
           )}
         </div>
       </div>
@@ -2167,7 +2213,7 @@ function PromptsTable({
             </tr>
           </thead>
           <tbody>
-            {filtered.map((p) => {
+            {filtered.map((p, idx) => {
               const hits = Object.values(p.engineHits).filter(Boolean).length;
               const totalEngines = Object.keys(p.engineHits).length;
               const coveragePct = Math.round((hits / totalEngines) * 100);
@@ -2178,7 +2224,14 @@ function PromptsTable({
 
               return (
                 <Fragment key={p.id}>
-                  <tr
+                  <motion.tr
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{
+                      duration: 0.3,
+                      ease: EASE,
+                      delay: Math.min(idx * 0.02, 0.25),
+                    }}
                     onClick={() => toggleRow(p.id)}
                     className="cursor-pointer hover:bg-[var(--color-surface-alt)]/40 transition-colors"
                     style={{ borderBottom: rowBorder }}
@@ -2306,9 +2359,14 @@ function PromptsTable({
                         </span>
                       </div>
                     </td>
-                  </tr>
+                  </motion.tr>
                   {isOpen && (
-                    <tr style={{ borderBottom: rowBorder }}>
+                    <motion.tr
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.25, ease: EASE }}
+                      style={{ borderBottom: rowBorder }}
+                    >
                       <td
                         colSpan={7}
                         className="px-4 py-5"
@@ -2320,13 +2378,24 @@ function PromptsTable({
                         >
                           What AI said
                         </p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+                        <motion.div
+                          initial="initial"
+                          animate="animate"
+                          transition={{ staggerChildren: 0.04, delayChildren: 0.05 }}
+                          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3"
+                        >
                           {ENGINES.map((e) => {
                             const r = p.responses.find((x) => x.engine === e.id);
                             const cited = p.engineHits[e.id];
                             return (
-                              <div
+                              <motion.div
                                 key={e.id}
+                                variants={{
+                                  initial: { opacity: 0 },
+                                  animate: { opacity: 1 },
+                                }}
+                                transition={{ duration: 0.3, ease: EASE }}
+                                whileHover={{ y: -2 }}
                                 className="rounded-md border bg-[var(--color-surface)] p-3 flex flex-col"
                                 style={{
                                   borderColor: cited
@@ -2381,12 +2450,12 @@ function PromptsTable({
                                     <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
                                   </a>
                                 )}
-                              </div>
+                              </motion.div>
                             );
                           })}
-                        </div>
+                        </motion.div>
                       </td>
-                    </tr>
+                    </motion.tr>
                   )}
                 </Fragment>
               );
@@ -2951,12 +3020,24 @@ function InsightCard({ variant, tag, title, summary, items }: InsightCardProps) 
       </div>
 
       {/* Sub-cards */}
-      <div className="flex-1 p-4 space-y-3">
+      <motion.div
+        initial="initial"
+        whileInView="whileInView"
+        viewport={{ once: true, margin: "-60px" }}
+        transition={{ staggerChildren: 0.07, delayChildren: 0.08 }}
+        className="flex-1 p-4 space-y-3"
+      >
         {items.map((item, idx) => {
           const ItemIcon = INSIGHT_ICON[item.iconKey];
           return (
-            <div
+            <motion.div
               key={idx}
+              variants={{
+                initial: { opacity: 0 },
+                whileInView: { opacity: 1 },
+              }}
+              transition={{ duration: 0.4, ease: EASE }}
+              whileHover={{ y: -2 }}
               className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 flex items-start gap-3 hover:bg-[var(--color-surface-alt)]/40 transition-colors"
             >
               <div
@@ -2993,10 +3074,10 @@ function InsightCard({ variant, tag, title, summary, items }: InsightCardProps) 
                   <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                 </a>
               </div>
-            </div>
+            </motion.div>
           );
         })}
-      </div>
+      </motion.div>
     </section>
   );
 }
@@ -3033,7 +3114,10 @@ export function PromptsSection() {
   return (
     <div className="space-y-5">
       {/* Hero — title + description on left, NextScanCard on right */}
-      <div className="flex items-start justify-between gap-6">
+      <motion.div
+        {...fadeUp}
+        className="flex items-start justify-between gap-6"
+      >
         <div className="space-y-3 min-w-0 flex-1">
           <HeroTitle data={data} />
           <HeroDescription />
@@ -3048,40 +3132,53 @@ export function PromptsSection() {
         <div className="shrink-0 mt-1">
           <NextScanCard data={data} />
         </div>
-      </div>
+      </motion.div>
 
       {/* Filter row */}
-      <div className="flex flex-wrap items-center gap-3">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, delay: 0.1, ease: EASE }}
+        className="flex flex-wrap items-center gap-3"
+      >
         <RangePills value={range} onChange={setRange} />
         <EngineChips enabled={enabledEngines} onToggle={toggleEngine} />
-      </div>
+      </motion.div>
 
       {/* Divider */}
       <div className="border-t border-[var(--color-border)]" />
 
       {/* Stat strip */}
-      <StatStrip data={data} />
+      <motion.div {...reveal}>
+        <StatStrip data={data} />
+      </motion.div>
 
       {/* Conditional branded callout */}
-      <BrandedCallout data={data} onSeeBranded={showBrandedPrompts} />
+      <motion.div {...reveal}>
+        <BrandedCallout data={data} onSeeBranded={showBrandedPrompts} />
+      </motion.div>
 
       {/* Chunk 2 — Prompts table + Coverage by intent + Citation/Sentiment */}
-      <PromptsTable
-        prompts={data.prompts}
-        summary={data.promptsTableSummary}
-        tab={activeTab}
-        onTabChange={setActiveTab}
-      />
+      <motion.div {...reveal}>
+        <PromptsTable
+          prompts={data.prompts}
+          summary={data.promptsTableSummary}
+          tab={activeTab}
+          onTabChange={setActiveTab}
+        />
+      </motion.div>
 
-      <CoverageDonut items={data.intentCoverage} />
+      <motion.div {...reveal}>
+        <CoverageDonut items={data.intentCoverage} />
+      </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <motion.div {...reveal} className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <CitationSourcesCard items={data.citationSources} />
         <SentimentByTypeCard items={data.sentimentByType} />
-      </div>
+      </motion.div>
 
       {/* Chunk 3 — Insight cards: wins + concerns */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <motion.div {...reveal} className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <InsightCard
           variant="wins"
           tag="What's working"
@@ -3096,10 +3193,11 @@ export function PromptsSection() {
           summary="Highest-leverage fixes — these are where coverage is bleeding."
           items={data.concerns}
         />
-      </div>
+      </motion.div>
 
       {/* Final page-level CTA — directs to optimization */}
-      <div
+      <motion.div
+        {...reveal}
         className="rounded-[var(--radius-lg)] p-5"
         style={{
           borderLeft: `5px solid ${COLORS.primary}`,
@@ -3133,7 +3231,7 @@ export function PromptsSection() {
             className="shrink-0"
           />
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
