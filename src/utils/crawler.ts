@@ -8,6 +8,7 @@ const CONCURRENT_REQUESTS = 3;
 
 export interface CrawlResult {
   pages: CrawledPage[];
+  pageLinks: Record<string, string[]>;
   hitLimit: boolean;
   durationMs: number;
 }
@@ -30,10 +31,16 @@ export async function crawlWebsite(
     const { page: homepage, links: homepageLinks } = await fetchAndParsePage(siteUrl);
 
     if (homepage.statusCode === 0) {
-      return { pages: [homepage], hitLimit: false, durationMs: Date.now() - startTime };
+      return {
+        pages: [homepage],
+        pageLinks: { [homepage.url]: homepageLinks },
+        hitLimit: false,
+        durationMs: Date.now() - startTime,
+      };
     }
 
     const pages: CrawledPage[] = [homepage];
+    const pageLinks: Record<string, string[]> = { [homepage.url]: homepageLinks };
     const visited = new Set<string>([normalizeUrl(siteUrl)]);
 
     const toVisit = homepageLinks
@@ -55,12 +62,14 @@ export async function crawlWebsite(
       for (const r of results) {
         if (r.status === "fulfilled" && pages.length < maxPages) {
           pages.push(r.value.page);
+          pageLinks[r.value.page.url] = r.value.links;
         }
       }
     }
 
     return {
       pages,
+      pageLinks,
       hitLimit: pages.length >= maxPages,
       durationMs: Date.now() - startTime,
     };
@@ -70,6 +79,7 @@ export async function crawlWebsite(
 }
 
 async function fetchAndParsePage(url: string): Promise<PageFetchResult> {
+  const fetchStart = Date.now();
   try {
     const res = await fetch(url, {
       headers: {
@@ -80,13 +90,15 @@ async function fetchAndParsePage(url: string): Promise<PageFetchResult> {
       redirect: "follow",
     });
 
+    const responseTimeMs = Date.now() - fetchStart;
+
     if (!res.ok) {
-      return { page: emptyPage(url, res.status), links: [] };
+      return { page: { ...emptyPage(url, res.status), responseTimeMs }, links: [] };
     }
 
     const contentType = res.headers.get("content-type") ?? "";
     if (!contentType.includes("text/html")) {
-      return { page: emptyPage(url, res.status), links: [] };
+      return { page: { ...emptyPage(url, res.status), responseTimeMs }, links: [] };
     }
 
     const lastModifiedHeader = res.headers.get("Last-Modified");
@@ -138,6 +150,37 @@ async function fetchAndParsePage(url: string): Promise<PageFetchResult> {
       if (!isNaN(d.getTime())) metaDate = d;
     }
 
+    // Crawlability extensions — extract before stripping HTML
+    const canonical =
+      html.match(/<link\s+rel=["']canonical["'][^>]*\shref=["']([^"']+)["']/i)?.[1] ??
+      html.match(/<link\s+href=["']([^"']+)["'][^>]*\srel=["']canonical["']/i)?.[1];
+
+    const metaRobots =
+      html.match(/<meta\s+name=["']robots["'][^>]*\scontent=["']([^"']+)["']/i)?.[1] ??
+      html.match(/<meta\s+content=["']([^"']+)["'][^>]*\sname=["']robots["']/i)?.[1];
+
+    const hasViewportMeta = /<meta\s+name=["']viewport["']/i.test(html);
+
+    // Image alt text stats
+    const imgMatches = [...html.matchAll(/<img\b[^>]*>/gi)];
+    let imagesMissingAlt = 0;
+    for (const m of imgMatches) {
+      const tag = m[0];
+      const altMatch = tag.match(/\salt=["']([^"']*)["']/i);
+      if (!altMatch || altMatch[1].trim() === "") imagesMissingAlt++;
+    }
+
+    // Open Graph tags
+    const ogTitle =
+      html.match(/<meta\s+property=["']og:title["'][^>]*\scontent=["']([^"']+)["']/i)?.[1] ??
+      html.match(/<meta\s+content=["']([^"']+)["'][^>]*\sproperty=["']og:title["']/i)?.[1];
+    const ogDescription =
+      html.match(/<meta\s+property=["']og:description["'][^>]*\scontent=["']([^"']+)["']/i)?.[1] ??
+      html.match(/<meta\s+content=["']([^"']+)["'][^>]*\sproperty=["']og:description["']/i)?.[1];
+    const ogImage =
+      html.match(/<meta\s+property=["']og:image["'][^>]*\scontent=["']([^"']+)["']/i)?.[1] ??
+      html.match(/<meta\s+content=["']([^"']+)["'][^>]*\sproperty=["']og:image["']/i)?.[1];
+
     const content = html
       .replace(/<script[\s\S]*?<\/script>/gi, "")
       .replace(/<style[\s\S]*?<\/style>/gi, "")
@@ -160,11 +203,20 @@ async function fetchAndParsePage(url: string): Promise<PageFetchResult> {
         schemas,
         lastModified: headerDate ?? metaDate,
         statusCode: res.status,
+        canonical,
+        metaRobots,
+        imageStats: { total: imgMatches.length, missingAlt: imagesMissingAlt },
+        hasViewportMeta,
+        ogTags: { title: ogTitle, description: ogDescription, image: ogImage },
+        responseTimeMs,
       },
       links,
     };
   } catch {
-    return { page: emptyPage(url, 0), links: [] };
+    return {
+      page: { ...emptyPage(url, 0), responseTimeMs: Date.now() - fetchStart },
+      links: [],
+    };
   }
 }
 

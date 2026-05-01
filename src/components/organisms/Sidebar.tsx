@@ -65,8 +65,8 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
   {
     title: "Optimization",
     items: [
-      { label: "Content Audit", href: "/audit", icon: BarChart3 },
-      { label: "Crawlability Audit", href: "/dashboard", icon: Zap },
+      { label: "Website Audit", href: "/audit", icon: BarChart3 },
+      { label: "Crawlability Audit", href: "/crawlability-audit", icon: Zap },
       { label: "Alerts", href: "/dashboard", icon: AlertCircle },
     ],
   },

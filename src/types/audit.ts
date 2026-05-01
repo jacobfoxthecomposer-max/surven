@@ -48,4 +48,12 @@ export interface CrawledPage {
   schemas: Record<string, unknown>[];
   lastModified?: Date;
   statusCode: number;
+
+  // Crawlability extensions (optional, backwards compatible with existing audit rules)
+  canonical?: string;
+  metaRobots?: string;
+  imageStats?: { total: number; missingAlt: number };
+  hasViewportMeta?: boolean;
+  ogTags?: { title?: string; description?: string; image?: string };
+  responseTimeMs?: number;
 }
