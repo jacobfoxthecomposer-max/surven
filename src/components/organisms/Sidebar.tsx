@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -22,6 +22,7 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useUserProfile } from "@/features/auth/hooks/useUserProfile";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
 import { useSidebarContext } from "@/features/sidebar/context/SidebarContext";
+import { supabase } from "@/services/supabase";
 import { cn } from "@/utils/cn";
 
 interface SidebarSection {
@@ -115,7 +116,7 @@ export function Sidebar() {
       </div>
 
       {/* Main sidebar content */}
-      <nav className="flex-1 px-2 py-3 space-y-4 overflow-hidden">
+      <nav className="flex-1 px-2 py-3 space-y-4 overflow-y-auto">
         {SIDEBAR_SECTIONS.map((section) => (
           <div key={section.title} className="space-y-2">
             {isExpanded && (
@@ -234,18 +235,88 @@ function ProfileCard({
   isExpanded: boolean;
 }) {
   const [showUploadMenu, setShowUploadMenu] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setAvatarUrl(user?.user_metadata?.avatar_url ?? null);
+  }, [user]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+    setShowUploadMenu(false);
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${user.id}/avatar.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+      const url = `${data.publicUrl}?t=${Date.now()}`;
+      await supabase.auth.updateUser({ data: { avatar_url: url } });
+      setAvatarUrl(url);
+    } catch (err) {
+      console.error("Avatar upload failed:", err);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemove = async () => {
+    setShowUploadMenu(false);
+    await supabase.auth.updateUser({ data: { avatar_url: null } });
+    setAvatarUrl(null);
+  };
+
+  const initials = user?.email?.[0]?.toUpperCase() || "U";
+
+  const AvatarCircle = ({ size = "h-10 w-10" }: { size?: string }) => (
+    <div className={`${size} rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm`}>
+      {avatarUrl ? (
+        <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+      ) : uploading ? (
+        <div className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+      ) : (
+        initials
+      )}
+    </div>
+  );
 
   if (!isExpanded) {
     return (
       <div className="relative group">
-        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm mx-auto cursor-pointer relative">
-          {user?.email?.[0]?.toUpperCase() || "U"}
+        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+        <div className="relative mx-auto w-fit">
+          <AvatarCircle />
           <button
             onClick={() => setShowUploadMenu(!showUploadMenu)}
             className="absolute -bottom-1 -right-1 h-5 w-5 bg-[var(--color-fg-muted)] rounded-full flex items-center justify-center text-[var(--color-bg)] hover:bg-[var(--color-fg)] transition-colors"
           >
             <Upload className="h-3 w-3" />
           </button>
+          {showUploadMenu && (
+            <div className="absolute bottom-8 left-full ml-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg shadow-lg p-2 w-32 z-50">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full text-left px-3 py-2 text-xs text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] hover:bg-[var(--color-bg)] rounded transition-colors"
+              >
+                Upload Photo
+              </button>
+              {avatarUrl && (
+                <button
+                  onClick={handleRemove}
+                  className="w-full text-left px-3 py-2 text-xs text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] hover:bg-[var(--color-bg)] rounded transition-colors"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          )}
         </div>
         <div className="absolute left-full ml-2 top-0 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs text-[var(--color-fg)] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 space-y-0.5">
           <div className="font-semibold">{business?.name || "Business"}</div>
@@ -257,12 +328,11 @@ function ProfileCard({
 
   return (
     <div className="bg-[var(--color-surface)] rounded-lg p-3 space-y-3">
+      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
       {/* Avatar + Upload */}
       <div className="flex items-center justify-between">
         <div className="relative">
-          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
-            {user?.email?.[0]?.toUpperCase() || "U"}
-          </div>
+          <AvatarCircle />
           <button
             onClick={() => setShowUploadMenu(!showUploadMenu)}
             className="absolute -bottom-1 -right-1 h-5 w-5 bg-[var(--color-fg-muted)] rounded-full flex items-center justify-center text-[var(--color-bg)] hover:bg-[var(--color-fg)] transition-colors"
@@ -271,12 +341,20 @@ function ProfileCard({
           </button>
           {showUploadMenu && (
             <div className="absolute bottom-12 left-0 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg shadow-lg p-2 w-32 z-50">
-              <button className="w-full text-left px-3 py-2 text-xs text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] hover:bg-[var(--color-bg)] rounded transition-colors">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full text-left px-3 py-2 text-xs text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] hover:bg-[var(--color-bg)] rounded transition-colors"
+              >
                 Upload Photo
               </button>
-              <button className="w-full text-left px-3 py-2 text-xs text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] hover:bg-[var(--color-bg)] rounded transition-colors">
-                Remove
-              </button>
+              {avatarUrl && (
+                <button
+                  onClick={handleRemove}
+                  className="w-full text-left px-3 py-2 text-xs text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] hover:bg-[var(--color-bg)] rounded transition-colors"
+                >
+                  Remove
+                </button>
+              )}
             </div>
           )}
         </div>
