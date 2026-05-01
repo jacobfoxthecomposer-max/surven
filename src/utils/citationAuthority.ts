@@ -145,13 +145,17 @@ export const CATEGORY_LABEL: Record<SourceCategory, string> = {
   other: "Other",
 };
 
+// Source categories are buckets (categorical encoding).
+// "Your site" anchors at sage so it's the visual anchor; other categories
+// follow the SURVEN_CATEGORICAL palette: rust / blue / gold / purple / teal.
+// "Other" stays neutral gray — by definition it's the muted catch-all bucket.
 export const CATEGORY_COLOR: Record<SourceCategory, string> = {
-  directory: "#96A283",
-  social: "#6BA3F5",
-  news: "#C97B45",
-  wiki: "#B8A030",
-  industry: "#A07878",
   your_site: "#7D8E6C",
+  directory: "#B54631",
+  social: "#5B7BAB",
+  news: "#C9A95B",
+  wiki: "#8E7AAD",
+  industry: "#6FA89A",
   other: "#A09890",
 };
 
