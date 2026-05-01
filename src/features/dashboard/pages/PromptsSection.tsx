@@ -2404,6 +2404,28 @@ function PromptsTable({
           </tbody>
         </table>
       </div>
+
+      <ChartExplainer
+        blocks={[
+          {
+            label: "Rows",
+            body: "Each row is one prompt your business is being tracked against. Click the chevron to expand and see per-engine details.",
+          },
+          {
+            label: "Columns",
+            body: "Prompt + intent tag · monthly search volume · avg. position when cited · citation rate (sage = excellent, rust = poor) · sentiment dot · per-engine status.",
+          },
+          {
+            label: "Citation rate",
+            body: "Share of AI responses to that prompt that cite you. Above 60% is healthy; below 30% means the prompt is a gap to close.",
+          },
+          {
+            label: "Engine dots",
+            body: "Filled = engine cited you for that prompt. Empty = engine answered but didn't mention you. Use the engine chips at the top to filter.",
+          },
+        ]}
+        tip="Click any column header to sort. The expand button reveals which exact engines cited you and which didn't, with the response excerpt."
+      />
     </section>
   );
 }
