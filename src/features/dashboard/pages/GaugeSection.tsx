@@ -1,11 +1,13 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Radar } from "lucide-react";
+import { Radar, Info } from "lucide-react";
 import { VisibilityGauge } from "@/components/organisms/VisibilityGauge";
 import { Button } from "@/components/atoms/Button";
 import { Badge } from "@/components/atoms/Badge";
 import { Skeleton } from "@/components/atoms/Skeleton";
+import { HoverHint } from "@/components/atoms/HoverHint";
+import { SURVEN_SEMANTIC } from "@/utils/brandColors";
 
 interface GaugeSectionProps {
   businessName: string;
@@ -16,6 +18,18 @@ interface GaugeSectionProps {
   scanning: boolean;
   isLoading: boolean;
   onRunScan: () => void;
+}
+
+function visibilityStatus(score: number, hasScan: boolean): {
+  word: string;
+  color: string;
+} {
+  if (!hasScan) {
+    return { word: "not yet measured", color: SURVEN_SEMANTIC.neutral };
+  }
+  if (score >= 50) return { word: "strong", color: SURVEN_SEMANTIC.good };
+  if (score >= 25) return { word: "moderate", color: SURVEN_SEMANTIC.mid };
+  return { word: "thin", color: SURVEN_SEMANTIC.bad };
 }
 
 export function GaugeSection({
@@ -41,6 +55,8 @@ export function GaugeSection({
     );
   }
 
+  const { word, color } = visibilityStatus(score, !!lastScanDate);
+
   return (
     <div className="flex flex-col sm:flex-row items-center gap-8">
       {/* Gauge with scanning pulse ring */}
@@ -64,15 +80,45 @@ export function GaugeSection({
         <VisibilityGauge score={score} />
       </div>
 
-      <div className="flex-1 text-center sm:text-left space-y-3">
+      <div className="flex-1 text-center sm:text-left space-y-3 min-w-0">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">{businessName}</h1>
-          <div className="flex flex-wrap gap-1.5 mt-1.5">
+          <h1
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(28px, 3.5vw, 44px)",
+              fontWeight: 600,
+              lineHeight: 1.15,
+              letterSpacing: "-0.01em",
+              color: "var(--color-fg)",
+            }}
+          >
+            {businessName}
+          </h1>
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 mt-1.5">
             <Badge variant="info">{industry}</Badge>
-            {scanType === "automated" && (
-              <Badge variant="neutral">Auto</Badge>
-            )}
+            {scanType === "automated" && <Badge variant="neutral">Auto</Badge>}
           </div>
+        </div>
+
+        <div className="flex items-center justify-center sm:justify-start gap-1.5">
+          <p
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(18px, 2vw, 24px)",
+              fontWeight: 500,
+              lineHeight: 1.3,
+              color: "var(--color-fg-secondary)",
+            }}
+          >
+            Your AI visibility is{" "}
+            <span style={{ color, fontStyle: "italic" }}>{word}</span>.
+          </p>
+          <HoverHint
+            hint="Visibility score is the share of AI prompts (across ChatGPT, Claude, Gemini, Google AI) that mention your business. 50%+ is strong, 25–50% is moderate, under 25% is thin."
+            placement="top"
+          >
+            <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+          </HoverHint>
         </div>
 
         {lastScanDate && (

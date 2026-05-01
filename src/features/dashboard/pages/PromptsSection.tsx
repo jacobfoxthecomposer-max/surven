@@ -35,6 +35,7 @@ import { HoverHint } from "@/components/atoms/HoverHint";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { SectionHeading } from "@/components/atoms/SectionHeading";
 import { NextScanCard } from "@/components/atoms/NextScanCard";
+import { ChartExplainer } from "@/components/atoms/ChartExplainer";
 import { COLORS } from "@/utils/constants";
 
 /* ============================================================================
@@ -3133,6 +3134,28 @@ function PromptsTable({
           </div>
         </div>
       </div>
+
+      <ChartExplainer
+        blocks={[
+          {
+            label: "Rows",
+            body: "Each row is one prompt your business is being tracked against. Click the chevron to expand and see per-engine details.",
+          },
+          {
+            label: "Columns",
+            body: "Prompt + intent tag · monthly search volume · avg. position when cited · citation rate (sage = excellent, rust = poor) · sentiment dot · per-engine status.",
+          },
+          {
+            label: "Citation rate",
+            body: "Share of AI responses to that prompt that cite you. Above 60% is healthy; below 30% means the prompt is a gap to close.",
+          },
+          {
+            label: "Engine dots",
+            body: "Filled = engine cited you for that prompt. Empty = engine answered but didn't mention you. Use the engine chips at the top to filter.",
+          },
+        ]}
+        tip="Click any column header to sort. The expand button reveals which exact engines cited you and which didn't, with the response excerpt."
+      />
     </section>
   );
 }
@@ -3477,6 +3500,28 @@ function CoverageDonut({ items }: { items: IntentCoverage[] }) {
           })}
         </div>
       </div>
+
+      <ChartExplainer
+        blocks={[
+          {
+            label: "Slices",
+            body: "Each slice is one user-intent category — branded lookups, comparisons, transactional queries, etc.",
+          },
+          {
+            label: "Slice size",
+            body: "Proportional to how many prompts in your tracked set fall into that intent. Bigger slice = more prompts of that type.",
+          },
+          {
+            label: "Coverage % (right side)",
+            body: "Within that intent, the share of prompts where you're cited. Each row is its own independent score — they don't add up to 100%.",
+          },
+          {
+            label: "Colors",
+            body: "Visual differentiation between intent categories only. They don't indicate good or bad — sage isn't better than rust here.",
+          },
+        ]}
+        tip="Hover any slice to focus the donut and see that intent's coverage, average position, and sentiment in the center."
+      />
 
       <div className="mt-4 pt-3 border-t border-[var(--color-border)]">
         <CtaLink
@@ -4174,6 +4219,28 @@ function CitationSourcesCard({ items }: { items: CitationSource[] }) {
         })}
       </div>
 
+      <ChartExplainer
+        blocks={[
+          {
+            label: "Rows",
+            body: "Each row is a category of source AI engines pulled from when mentioning you — your own site, Wikipedia, Reddit, industry blogs, news, and other.",
+          },
+          {
+            label: "Bar length",
+            body: "Share of all citations from that source. Bars are scaled to the leading source so the top one fills the row.",
+          },
+          {
+            label: "Numbers on the right",
+            body: "First number is the percentage; second is the raw citation count. So '42% · 18' means 18 citations, which is 42% of the total.",
+          },
+          {
+            label: "Colors",
+            body: "Visual differentiation between source types only. Sage marks 'Your site' as the anchor — other colors don't indicate good or bad.",
+          },
+        ]}
+        tip="Your own site should lead. If Wikipedia, Reddit, or industry blogs lead, you have a citation-source authority gap."
+      />
+
       <div className="mt-4 pt-3 border-t border-[var(--color-border)]">
         <CtaLink
           icon={Link2}
@@ -4281,6 +4348,28 @@ function SentimentByTypeCard({ items }: { items: SentimentByType[] }) {
           </div>
         ))}
       </div>
+
+      <ChartExplainer
+        blocks={[
+          {
+            label: "Rows",
+            body: "Each row is one prompt-intent type — branded, comparison, transactional, etc. Sorted by positive sentiment (best at top).",
+          },
+          {
+            label: "Bar segments",
+            body: "Each bar is split into positive / neutral / negative shares, always summing to 100% per intent. Sage = positive, gray = neutral, rust = negative.",
+          },
+          {
+            label: "Mention count",
+            body: "Right-aligned number is total AI mentions across all engines for that intent. Low counts mean less reliable sentiment signal.",
+          },
+          {
+            label: "Colors",
+            body: "Semantic — sage means favorable, rust means critical. A rust-heavy bar means AI engines are describing you negatively for that intent.",
+          },
+        ]}
+        tip="Hover the row label for the exact positive/neutral/negative split."
+      />
 
       <div className="mt-4 pt-3 border-t border-[var(--color-border)]">
         <CtaLink

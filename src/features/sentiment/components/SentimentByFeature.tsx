@@ -5,6 +5,7 @@ import { Info } from "lucide-react";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { AIOverview } from "@/components/atoms/AIOverview";
+import { ChartExplainer } from "@/components/atoms/ChartExplainer";
 import type { ScanResult } from "@/types/database";
 
 interface Props {
@@ -155,6 +156,28 @@ export function SentimentByFeature({ results, businessName, competitors }: Props
             </div>
           ))}
         </div>
+
+        <ChartExplainer
+          blocks={[
+            {
+              label: "Rows",
+              body: "Each row is one prompt that was sent to AI engines during the scan.",
+            },
+            {
+              label: "Columns",
+              body: "Your business column shows positive sentiment %; competitor columns show plain mention counts (we don't compute sentiment for competitors).",
+            },
+            {
+              label: "Cell value",
+              body: "Your column: percentage of AI mentions that were positive (e.g., 80% means 4 of 5 mentions used favorable language). Em dash means no mentions.",
+            },
+            {
+              label: "Colors",
+              body: "Five-step thermal scale — rust = critical (0–19%), orange = mostly negative, mustard = mixed (40–59%), sage = mostly positive, dark green = excellent (80%+).",
+            },
+          ]}
+          tip="Hover any cell for the full prompt text."
+        />
       </Card>
 
       {/* Mentions by Feature */}
@@ -222,6 +245,27 @@ export function SentimentByFeature({ results, businessName, competitors }: Props
             </div>
           ))}
         </div>
+
+        <ChartExplainer
+          blocks={[
+            {
+              label: "Rows",
+              body: "Same prompts as the Sentiment table on the left, in the same order. Easy to scan side-by-side.",
+            },
+            {
+              label: "Cell value",
+              body: "Number of AI engines (out of 4) that mentioned the entity for that prompt. Em dash means no engine mentioned them.",
+            },
+            {
+              label: "Colors",
+              body: "Blue density scale — lighter blue means few engines mentioned the entity, darker blue means many. Blue here is a count gradient, it doesn't indicate good or bad.",
+            },
+            {
+              label: "Why two tables",
+              body: "Sentiment table tells you what AI engines said about you. Mentions table tells you how often they said anything at all — competitors with high mentions but no sentiment data are appearing more than you.",
+            },
+          ]}
+        />
       </Card>
       </div>
     </div>

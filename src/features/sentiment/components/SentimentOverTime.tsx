@@ -9,7 +9,9 @@ import {
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { AIOverview } from "@/components/atoms/AIOverview";
+import { ChartExplainer } from "@/components/atoms/ChartExplainer";
 import { Spinner } from "@/components/atoms/Spinner";
+import { SURVEN_SEMANTIC } from "@/utils/brandColors";
 import type { SentimentDataPoint } from "@/features/sentiment/hooks/useSentimentHistory";
 
 interface Props {
@@ -23,9 +25,9 @@ function formatDate(iso: string) {
 }
 
 const LINES = [
-  { key: "Positive", color: "#96A283" },
-  { key: "Neutral",  color: "#C8C2B4" },
-  { key: "Negative", color: "#B54631" },
+  { key: "Positive", color: SURVEN_SEMANTIC.goodAlt },
+  { key: "Neutral",  color: SURVEN_SEMANTIC.neutral },
+  { key: "Negative", color: SURVEN_SEMANTIC.bad },
 ] as const;
 
 // Custom SVG end-of-line pill for the Positive line
@@ -166,6 +168,28 @@ export function SentimentOverTime({ data, isLoading }: Props) {
               </button>
             ))}
           </div>
+
+          <ChartExplainer
+            blocks={[
+              {
+                label: "X-axis",
+                body: "Each tick is one of your past scans, oldest on the left, most recent on the right.",
+              },
+              {
+                label: "Y-axis",
+                body: "The share of mentions in each tone for that scan, 0 to 100%. The three lines always add up to 100% per scan.",
+              },
+              {
+                label: "Line thickness",
+                body: "Positive is drawn thicker because it's the metric you're optimizing — neutral and negative are reference lines.",
+              },
+              {
+                label: "Colors",
+                body: "Sage = positive, gray = neutral, rust = negative. Sage trending up is the goal; rust trending up is a warning.",
+              },
+            ]}
+            tip="Hover a line in the legend to focus it; the others fade so you can read it cleanly."
+          />
         </>
       )}
     </Card>

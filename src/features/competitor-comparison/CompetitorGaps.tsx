@@ -124,20 +124,20 @@ export function CompetitorGaps({
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: i * 0.04 }}
-                  className="p-3 rounded-lg bg-red-500/5 border border-red-500/15"
+                  className="p-3 rounded-lg bg-[#B54631]/5 border border-[#B54631]/20"
                 >
                   <p className="text-xs font-medium text-[var(--color-fg)] mb-1 leading-snug">
                     "{gap.prompt}"
                   </p>
                   <div className="flex items-center justify-between mt-1.5">
-                    <span className="text-[10px] text-red-400 font-medium">
+                    <span className="text-[10px] text-[#8C3522] font-medium">
                       {gap.competitor} ranks here
                     </span>
                     <div className="flex gap-1 flex-wrap justify-end">
                       {gap.models.map((m) => (
                         <span
                           key={m}
-                          className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 font-medium"
+                          className="text-[9px] px-1.5 py-0.5 rounded bg-[#B54631]/10 text-[#8C3522] font-medium"
                         >
                           {m}
                         </span>
@@ -194,20 +194,20 @@ export function CompetitorGaps({
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: i * 0.04 }}
-                  className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/15"
+                  className="p-3 rounded-lg bg-[#96A283]/8 border border-[#96A283]/25"
                 >
                   <p className="text-xs font-medium text-[var(--color-fg)] mb-1 leading-snug">
                     "{adv.prompt}"
                   </p>
                   <div className="flex items-center justify-between mt-1.5">
-                    <span className="text-[10px] text-emerald-400 font-medium">
+                    <span className="text-[10px] text-[#566A47] font-medium">
                       You rank, {adv.competitor} doesn't
                     </span>
                     <div className="flex gap-1 flex-wrap justify-end">
                       {adv.models.map((m) => (
                         <span
                           key={m}
-                          className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-medium"
+                          className="text-[9px] px-1.5 py-0.5 rounded bg-[#96A283]/15 text-[#566A47] font-medium"
                         >
                           {m}
                         </span>

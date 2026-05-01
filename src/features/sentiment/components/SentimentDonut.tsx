@@ -5,12 +5,14 @@ import { Info } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
+import { ChartExplainer } from "@/components/atoms/ChartExplainer";
+import { SURVEN_SEMANTIC } from "@/utils/brandColors";
 import type { ScanResult } from "@/types/database";
 
 const CONFIG = {
-  positive: { label: "Positive", color: "#96A283" },
-  neutral:  { label: "Neutral",  color: "#C8C2B4" },
-  negative: { label: "Negative", color: "#B54631" },
+  positive: { label: "Positive", color: SURVEN_SEMANTIC.goodAlt },
+  neutral:  { label: "Neutral",  color: SURVEN_SEMANTIC.neutral },
+  negative: { label: "Negative", color: SURVEN_SEMANTIC.bad },
 } as const;
 
 interface Props {
@@ -164,6 +166,28 @@ export function SentimentDonut({ results }: Props) {
           )}
         </div>
       )}
+
+      <ChartExplainer
+        blocks={[
+          {
+            label: "Slices",
+            body: "Each slice is one sentiment category (positive, neutral, or negative) of how AI models describe your business.",
+          },
+          {
+            label: "Slice size",
+            body: "Bigger slice = more AI mentions in that tone. The center number shows the share for whichever tone leads.",
+          },
+          {
+            label: "Colors",
+            body: "Sage = positive, gray = neutral, rust = negative. These encode tone — sage means favorable, rust means critical.",
+          },
+          {
+            label: "Prompt highlights",
+            body: "Below the donut: the prompt with the highest positive rate, and (if different) the prompt with the lowest. Helps spot which queries drive favorable vs. critical AI responses.",
+          },
+        ]}
+        tip="Hover any slice for the exact share."
+      />
     </Card>
   );
 }

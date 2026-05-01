@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
+import { ChartExplainer } from "@/components/atoms/ChartExplainer";
 import { Info, PieChart as PieIcon } from "lucide-react";
 import {
   PieChart,
@@ -140,6 +141,28 @@ export function IntentDistribution({ intents }: IntentDistributionProps) {
             </p>
           </div>
         </div>
+
+        <ChartExplainer
+          blocks={[
+            {
+              label: "Intent type",
+              body: 'What job each prompt is doing. "Commercial" means someone deciding what to buy. "Validation" means someone checking if you\'re legit. "Operational" means someone asking how to use you. Each intent type matters at a different stage of a customer\'s decision.',
+            },
+            {
+              label: "Slice size",
+              body: "What share of all your researched prompts fall into that intent. Bigger slice = more prompts of that type. The center number is your total intent count.",
+            },
+            {
+              label: "What's healthy",
+              body: "A balanced mix usually beats a lopsided one. If you're 80% commercial and 0% validation, people asking 'is your brand legit' aren't seeing you — that's a blind spot, even if your buying-intent prompts look great.",
+            },
+            {
+              label: "Colors",
+              body: "Visual differentiation between intent types only. They don't indicate good or bad — sage isn't better than rust here.",
+            },
+          ]}
+          tip="Hover any slice to see its exact count and percentage."
+        />
       </div>
     </Card>
   );

@@ -7,6 +7,8 @@ import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { AIOverview } from "@/components/atoms/AIOverview";
+import { ChartExplainer } from "@/components/atoms/ChartExplainer";
+import { SURVEN_SEMANTIC } from "@/utils/brandColors";
 import type { ScanResult, ModelName } from "@/types/database";
 
 const MODELS: ModelName[] = ["chatgpt", "claude", "gemini", "google_ai"];
@@ -83,7 +85,7 @@ export function SentimentByPlatform({ results }: Props) {
               {row.neutral > 0 && (
                 <motion.div
                   className="h-full"
-                  style={{ width: `${row.neutral}%`, background: "#C8C2B4" }}
+                  style={{ width: `${row.neutral}%`, background: "#A09890" }}
                   initial={{ width: 0 }}
                   animate={{ width: `${row.neutral}%` }}
                   transition={{ duration: 0.7, delay: i * 0.1 + 0.05, ease: [0.16, 1, 0.3, 1] }}
@@ -111,9 +113,9 @@ export function SentimentByPlatform({ results }: Props) {
       {/* Legend */}
       <div className="flex items-center gap-5 mt-5 pt-4 border-t border-[var(--color-border)]">
         {[
-          { color: "#96A283", label: "Positive" },
-          { color: "#C8C2B4", label: "Neutral" },
-          { color: "#B54631", label: "Negative" },
+          { color: SURVEN_SEMANTIC.goodAlt, label: "Positive" },
+          { color: SURVEN_SEMANTIC.neutral, label: "Neutral" },
+          { color: SURVEN_SEMANTIC.bad,     label: "Negative" },
         ].map((l) => (
           <div key={l.label} className="flex items-center gap-1.5">
             <div className="h-2 w-2 rounded-full" style={{ background: l.color }} />
@@ -121,6 +123,27 @@ export function SentimentByPlatform({ results }: Props) {
           </div>
         ))}
       </div>
+
+      <ChartExplainer
+        blocks={[
+          {
+            label: "Rows",
+            body: "Each row is one AI engine (ChatGPT, Claude, Gemini, Google AI). Engines with no mentions are hidden.",
+          },
+          {
+            label: "Bar length",
+            body: "Each colored band is the share of that engine's mentions in that tone. The full bar always equals 100%.",
+          },
+          {
+            label: "Colors",
+            body: "Sage = positive, gray = neutral, rust = negative. Sage-heavy engines are your strongest; rust-heavy engines need attention.",
+          },
+          {
+            label: "Mention count",
+            body: "The right-aligned number shows how many AI responses included your business on that engine. Low counts mean less reliable signal.",
+          },
+        ]}
+      />
     </Card>
   );
 }

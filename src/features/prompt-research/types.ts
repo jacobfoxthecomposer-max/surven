@@ -49,7 +49,7 @@ export interface EntityGridData {
   audience: string[];
 }
 
-export interface KeywordResearchData {
+export interface PromptResearchData {
   entityGrid: EntityGridData;
   intents: Intent[];
 }

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { Info, BarChart3 } from "lucide-react";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
+import { ChartExplainer } from "@/components/atoms/ChartExplainer";
 import { ComparisonChart } from "@/components/organisms/ComparisonChart";
 import type { ScanResult, CompetitorScore } from "@/types/database";
 
@@ -60,6 +61,27 @@ export function ComparisonSection({
           businessName={businessName}
           businessScore={businessScore}
           competitors={competitorScores}
+        />
+
+        <ChartExplainer
+          blocks={[
+            {
+              label: "Bars",
+              body: "One bar per business — yours plus every competitor you've added. Bars are sorted highest to lowest visibility.",
+            },
+            {
+              label: "Bar length",
+              body: "Visibility score from 0 to 100 — the share of all prompts where the business was mentioned. Higher means AI engines surface them more often.",
+            },
+            {
+              label: "Colors",
+              body: "Sage = your business. Other bars use the categorical palette so each competitor reads as a separate bucket — those colors don't indicate good or bad.",
+            },
+            {
+              label: "Mention count",
+              body: "Score is built from mentioned-prompts ÷ total-prompts per business. A competitor with very few prompts in their column gives a less reliable score.",
+            },
+          ]}
         />
       </Card>
     </section>

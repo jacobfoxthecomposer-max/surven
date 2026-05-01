@@ -125,10 +125,14 @@ export const AUTHORITY_LABEL: Record<AuthorityTier, string> = {
   low: "Low",
 };
 
+// Authority is a semantic encoding (good / mid / bad), so use SURVEN_SEMANTIC.
+// Sage = high authority (Yelp, Google, BBB, major news) — what you want to be cited by.
+// Gold = medium authority (Facebook, Reddit, mid-tier directories) — neutral.
+// Rust = low authority (random small sites) — what's hurting your AI presence.
 export const AUTHORITY_COLOR: Record<AuthorityTier, string> = {
   high: "#7D8E6C",
-  medium: "#B8A030",
-  low: "#A09890",
+  medium: "#C9A95B",
+  low: "#B54631",
 };
 
 export const CATEGORY_LABEL: Record<SourceCategory, string> = {

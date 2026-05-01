@@ -13,12 +13,14 @@ import { AIOverview } from "@/components/atoms/AIOverview";
 import { NextScanCard } from "@/components/atoms/NextScanCard";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
-import { generateKeywordResearchData } from "@/features/keyword-research/mockData";
-import { EntityGrid } from "@/features/keyword-research/EntityGrid";
-import { TaxonomyCoverage } from "@/features/keyword-research/TaxonomyCoverage";
-import { IntentDistribution } from "@/features/keyword-research/IntentDistribution";
-import { IntentsTable } from "@/features/keyword-research/IntentsTable";
-import { TAXONOMY_LABEL } from "@/features/keyword-research/taxonomy";
+import { generatePromptResearchData } from "@/features/prompt-research/mockData";
+import { EntityGrid } from "@/features/prompt-research/EntityGrid";
+import { TaxonomyCoverage } from "@/features/prompt-research/TaxonomyCoverage";
+import { IntentDistribution } from "@/features/prompt-research/IntentDistribution";
+import { IntentsTable } from "@/features/prompt-research/IntentsTable";
+import { NextMoves } from "@/features/prompt-research/NextMoves";
+import { HowToRank } from "@/features/prompt-research/HowToRank";
+import { TAXONOMY_LABEL } from "@/features/prompt-research/taxonomy";
 import { AI_MODELS } from "@/utils/constants";
 
 type TimeRange = "14d" | "30d" | "90d" | "ytd" | "all";
@@ -38,7 +40,7 @@ const reveal = {
   transition: { duration: 0.55, ease },
 } as const;
 
-export default function KeywordResearchPage() {
+export default function PromptResearchPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { business, competitors, isLoading: bizLoading } = useBusiness();
@@ -64,7 +66,7 @@ export default function KeywordResearchPage() {
 
   const data = useMemo(() => {
     if (!business) return null;
-    return generateKeywordResearchData(
+    return generatePromptResearchData(
       business.id,
       business.name,
       business.industry,
@@ -185,15 +187,16 @@ export default function KeywordResearchPage() {
                 color: "var(--color-fg)",
               }}
             >
-              Your keyword landscape is{" "}
+              Your prompt landscape is{" "}
               <span style={{ color: landscapeColor, fontStyle: "italic" }}>
                 {landscapeWord}
               </span>
               .
             </h1>
             <p className="text-sm text-[var(--color-fg-muted)] mt-1.5 max-w-[760px]">
-              In GEO, a keyword is a question someone asks an AI. You "win" that
-              keyword when the AI mentions your brand in its answer.
+              In GEO (Generative Engine Optimization), a prompt is a question
+              someone asks an AI. You "win" that prompt when the AI mentions
+              your brand in its answer.
             </p>
           </div>
           <div className="shrink-0 mt-1">
@@ -282,7 +285,7 @@ export default function KeywordResearchPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1 mb-0.5">
                     <p className="text-xs text-[var(--color-fg-muted)]">Intents</p>
-                    <HoverHint hint="Distinct keyword intents we've researched for your brand. Each intent rolls up multiple paraphrased variants.">
+                    <HoverHint hint="How many distinct prompt intents we've researched for you. Each intent rolls up multiple paraphrasings of the same question. The more we research, the more options you have for what to track in Tracker.">
                       <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
                     </HoverHint>
                   </div>
@@ -311,7 +314,7 @@ export default function KeywordResearchPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1 mb-0.5">
                     <p className="text-xs text-[var(--color-fg-muted)]">Variants</p>
-                    <HoverHint hint="Total paraphrased variants across all intents. AI gives different answers depending on phrasing — variants give us a real signal instead of one shaky data point per intent.">
+                    <HoverHint hint="People phrase the same question 15 different ways, and AI gives different answers depending on the phrasing. We test multiple paraphrasings per intent so you get a real signal instead of one shaky data point. 5+ variants per intent is healthy.">
                       <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
                     </HoverHint>
                   </div>
@@ -356,7 +359,7 @@ export default function KeywordResearchPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1 mb-0.5">
                     <p className="text-xs text-[var(--color-fg-muted)]">Coverage</p>
-                    <HoverHint hint="Average % of variants where AI mentions your brand, across all intents. Higher = stronger AI presence.">
+                    <HoverHint hint="How often AI engines mention your brand across every prompt variant we test. Above 60% is strong AI presence. 30–60% is mid-pack — most phrasings surface you, but you have gaps. Below 30% means most paraphrasings don't pick you up.">
                       <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
                     </HoverHint>
                   </div>
@@ -390,6 +393,18 @@ export default function KeywordResearchPage() {
               </motion.div>
             )}
 
+            {/* Next moves — prescriptive top section */}
+            <motion.div {...reveal}>
+              <NextMoves
+                intents={data.intents}
+                weakestTaxonomy={insights.weakest?.tax ?? null}
+                weakestCoverage={
+                  insights.weakest ? Math.round(insights.weakest.cov) : 0
+                }
+                competitorName={data.entityGrid.competitors[0] ?? null}
+              />
+            </motion.div>
+
             {/* Entity grid */}
             <motion.div {...reveal}>
               <EntityGrid data={data.entityGrid} />
@@ -402,11 +417,16 @@ export default function KeywordResearchPage() {
             </motion.div>
 
             {/* Intents table */}
-            <motion.div {...reveal}>
+            <motion.div {...reveal} id="intents-table" className="scroll-mt-6">
               <IntentsTable
                 intents={data.intents}
                 onSendToTracker={handleSendToTracker}
               />
+            </motion.div>
+
+            {/* How to rank — playbook bottom section */}
+            <motion.div {...reveal}>
+              <HowToRank />
             </motion.div>
           </>
         )}

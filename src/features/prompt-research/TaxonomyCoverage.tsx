@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
+import { ChartExplainer } from "@/components/atoms/ChartExplainer";
 import { Info, Layers } from "lucide-react";
 import {
   BarChart,
@@ -18,7 +19,62 @@ import {
   TAXONOMY_LABEL,
   TAXONOMY_COLOR,
   TAXONOMY_ORDER,
+  TAXONOMY_DESCRIPTION,
 } from "./taxonomy";
+
+const LABEL_TO_DESCRIPTION: Record<string, string> = (() => {
+  const m: Record<string, string> = {};
+  for (const cat of TAXONOMY_ORDER) {
+    m[TAXONOMY_LABEL[cat]] = TAXONOMY_DESCRIPTION[cat];
+  }
+  return m;
+})();
+
+interface TickProps {
+  x?: number;
+  y?: number;
+  payload?: { value: string };
+}
+
+const LABEL_W = 165;
+const LABEL_H = 24;
+
+function CategoryTick({ x = 0, y = 0, payload }: TickProps) {
+  const label = payload?.value ?? "";
+  const description = LABEL_TO_DESCRIPTION[label] ?? "";
+  return (
+    <foreignObject
+      x={x - LABEL_W - 4}
+      y={y - LABEL_H / 2}
+      width={LABEL_W}
+      height={LABEL_H}
+    >
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-end",
+        }}
+      >
+        <HoverHint hint={description} placement="top">
+          <span
+            style={{
+              fontSize: 11,
+              color: "var(--color-fg-secondary)",
+              cursor: "help",
+              lineHeight: 1.2,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {label}
+          </span>
+        </HoverHint>
+      </div>
+    </foreignObject>
+  );
+}
 
 interface TaxonomyCoverageProps {
   intents: Intent[];
@@ -91,7 +147,8 @@ export function TaxonomyCoverage({ intents }: TaxonomyCoverageProps) {
                 type="category"
                 dataKey="label"
                 width={170}
-                tick={{ fontSize: 11, fill: "var(--color-fg-secondary)" }}
+                interval={0}
+                tick={<CategoryTick />}
               />
               <Tooltip
                 cursor={{ fill: "rgba(150,162,131,0.08)" }}
@@ -116,6 +173,28 @@ export function TaxonomyCoverage({ intents }: TaxonomyCoverageProps) {
             </BarChart>
           </ResponsiveContainer>
         </div>
+
+        <ChartExplainer
+          blocks={[
+            {
+              label: "Intent",
+              body: 'A researched prompt someone might ask AI. Each intent rolls up 5–11 paraphrased variants — three different ways of asking "best plumber in Denver" all live under one intent.',
+            },
+            {
+              label: "Coverage %",
+              body: "The percent of variants where AI mentions your brand in its answer. 100% means every phrasing surfaces you. Higher is better.",
+            },
+            {
+              label: "Bar length",
+              body: "Average coverage across every intent in that category. Under 30% is a gap to attack. Over 60% is an area of strength.",
+            },
+            {
+              label: "Colors",
+              body: "Visual differentiation between prompt types only. They don't indicate good or bad — sage isn't better than rust here.",
+            },
+          ]}
+          tip="Hover any prompt-type label on the left to see what it means."
+        />
       </div>
     </Card>
   );
