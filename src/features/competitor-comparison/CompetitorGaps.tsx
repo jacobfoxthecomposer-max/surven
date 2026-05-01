@@ -4,7 +4,10 @@ import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
-import { AlertTriangle, CheckCircle, Info } from "lucide-react";
+import { ChartExplainer } from "@/components/atoms/ChartExplainer";
+import { AlertTriangle, ArrowRight, CheckCircle, Info } from "lucide-react";
+import Link from "next/link";
+import { SURVEN_SEMANTIC } from "@/utils/brandColors";
 import type { ScanResult } from "@/types/database";
 
 interface GapItem {
@@ -37,7 +40,7 @@ export function CompetitorGaps({
   businessName,
   competitors,
 }: CompetitorGapsProps) {
-  const { gaps, advantages, gapInsight } = useMemo(() => {
+  const { gaps, advantages } = useMemo(() => {
     const gapMap = new Map<string, GapItem>();
     const advantageMap = new Map<string, AdvantageItem>();
 
@@ -47,20 +50,20 @@ export function CompetitorGaps({
       for (const competitor of competitors) {
         const competitorMentioned = r.competitor_mentions[competitor] === true;
         const clientMentioned = r.business_mentioned;
-
         const key = `${competitor}||${r.prompt_text}`;
+        const modelLabel = MODEL_LABELS[r.model_name] ?? r.model_name;
 
         if (competitorMentioned && !clientMentioned) {
           const existing = gapMap.get(key);
           if (existing) {
-            if (!existing.models.includes(MODEL_LABELS[r.model_name] ?? r.model_name)) {
-              existing.models.push(MODEL_LABELS[r.model_name] ?? r.model_name);
+            if (!existing.models.includes(modelLabel)) {
+              existing.models.push(modelLabel);
             }
           } else {
             gapMap.set(key, {
               prompt: r.prompt_text,
               competitor,
-              models: [MODEL_LABELS[r.model_name] ?? r.model_name],
+              models: [modelLabel],
             });
           }
         }
@@ -68,28 +71,23 @@ export function CompetitorGaps({
         if (clientMentioned && !competitorMentioned) {
           const existing = advantageMap.get(key);
           if (existing) {
-            if (!existing.models.includes(MODEL_LABELS[r.model_name] ?? r.model_name)) {
-              existing.models.push(MODEL_LABELS[r.model_name] ?? r.model_name);
+            if (!existing.models.includes(modelLabel)) {
+              existing.models.push(modelLabel);
             }
           } else {
             advantageMap.set(key, {
               prompt: r.prompt_text,
               competitor,
-              models: [MODEL_LABELS[r.model_name] ?? r.model_name],
+              models: [modelLabel],
             });
           }
         }
       }
     }
 
-    const gapsList = Array.from(gapMap.values()).slice(0, 10);
-    const uniqueCompetitors = [...new Set(gapsList.map((g) => g.competitor))];
-    const allGapModels = [...new Set(gapsList.flatMap((g) => g.models))];
-
     return {
-      gaps: gapsList,
-      advantages: Array.from(advantageMap.values()).slice(0, 10),
-      gapInsight: { uniqueCompetitors, allGapModels },
+      gaps: Array.from(gapMap.values()).slice(0, 8),
+      advantages: Array.from(advantageMap.values()).slice(0, 8),
     };
   }, [results, competitors]);
 
@@ -102,122 +100,213 @@ export function CompetitorGaps({
         <Card className="overflow-hidden">
           <div
             className="-mx-5 -mt-5 px-5 py-4 mb-5"
-            style={{ background: "linear-gradient(135deg, rgba(181,70,49,0.10), rgba(181,70,49,0.02))" }}
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(181,70,49,0.10), rgba(181,70,49,0.02))",
+            }}
           >
-            <div className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-lg bg-[#8C3522]/20 flex items-center justify-center">
-                <AlertTriangle className="h-4 w-4 text-[#8C3522]" />
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <div
+                  className="h-7 w-7 rounded-lg flex items-center justify-center"
+                  style={{ backgroundColor: `${SURVEN_SEMANTIC.bad}20` }}
+                >
+                  <AlertTriangle
+                    className="h-4 w-4"
+                    style={{ color: SURVEN_SEMANTIC.bad }}
+                  />
+                </div>
+                <h3 className="text-sm font-semibold text-[var(--color-fg)]">
+                  Gaps ({gaps.length})
+                </h3>
+                <HoverHint hint="Prompts where a competitor appears in the AI response and you don't. Closing these is the highest-leverage Optimizer work.">
+                  <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+                </HoverHint>
               </div>
-              <h3 className="text-sm font-semibold text-[var(--color-fg)]">Gaps ({gaps.length})</h3>
-              <HoverHint hint="Prompts where competitors appear but you don't. Focus here to improve.">
-                <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
-              </HoverHint>
+              <Link
+                href="/audit"
+                className="inline-flex items-center gap-1 text-xs font-semibold transition-opacity hover:opacity-70"
+                style={{ color: SURVEN_SEMANTIC.bad }}
+              >
+                Run GEO audit <ArrowRight className="h-3 w-3" />
+              </Link>
             </div>
           </div>
+
           {gaps.length === 0 ? (
-            <p className="text-sm text-[var(--color-fg-muted)]">No gaps found — you're keeping up.</p>
+            <p className="text-sm text-[var(--color-fg-muted)]">
+              No gaps found — you&apos;re keeping up with every competitor on
+              every prompt.
+            </p>
           ) : (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2.5">
               {gaps.map((gap, i) => (
                 <motion.div
                   key={`${gap.competitor}-${i}`}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: i * 0.04 }}
-                  className="p-3 rounded-lg bg-[#B54631]/5 border border-[#B54631]/20"
+                  className="p-3 rounded-lg border"
+                  style={{
+                    backgroundColor: `${SURVEN_SEMANTIC.bad}08`,
+                    borderColor: `${SURVEN_SEMANTIC.bad}30`,
+                  }}
                 >
-                  <p className="text-xs font-medium text-[var(--color-fg)] mb-1 leading-snug">
-                    "{gap.prompt}"
+                  <p className="text-xs font-medium text-[var(--color-fg)] mb-1.5 leading-snug">
+                    &ldquo;{gap.prompt}&rdquo;
                   </p>
-                  <div className="flex items-center justify-between mt-1.5">
-                    <span className="text-[10px] text-[#8C3522] font-medium">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span
+                      className="text-[10px] font-medium"
+                      style={{ color: SURVEN_SEMANTIC.bad }}
+                    >
                       {gap.competitor} ranks here
                     </span>
-                    <div className="flex gap-1 flex-wrap justify-end">
-                      {gap.models.map((m) => (
-                        <span
-                          key={m}
-                          className="text-[9px] px-1.5 py-0.5 rounded bg-[#B54631]/10 text-[#8C3522] font-medium"
-                        >
-                          {m}
-                        </span>
-                      ))}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <div className="flex gap-1 flex-wrap">
+                        {gap.models.map((m) => (
+                          <span
+                            key={m}
+                            className="text-[9px] px-1.5 py-0.5 rounded font-medium"
+                            style={{
+                              backgroundColor: `${SURVEN_SEMANTIC.bad}15`,
+                              color: SURVEN_SEMANTIC.bad,
+                            }}
+                          >
+                            {m}
+                          </span>
+                        ))}
+                      </div>
+                      <Link
+                        href="/prompts"
+                        className="inline-flex items-center gap-0.5 text-[10px] font-semibold ml-1 transition-opacity hover:opacity-70"
+                        style={{ color: SURVEN_SEMANTIC.bad }}
+                      >
+                        Prompts <ArrowRight className="h-2.5 w-2.5" />
+                      </Link>
                     </div>
                   </div>
                 </motion.div>
               ))}
-
-              {/* Action insight — fills remaining space */}
-              <div className="mt-auto pt-3 border-t border-[var(--color-border)]">
-                <p className="text-[11px] font-medium text-[var(--color-fg-muted)] uppercase tracking-wide mb-1.5">How to close {gaps.length === 1 ? "this gap" : "these gaps"}</p>
-                <p className="text-xs text-[var(--color-fg-secondary)] leading-relaxed">
-                  Publish content that directly answers {gaps.length === 1 ? "this prompt" : `these ${gaps.length} prompts`}.
-                  {gapInsight.uniqueCompetitors.length > 0 && (
-                    <> {gapInsight.uniqueCompetitors.join(", ")} {gapInsight.uniqueCompetitors.length === 1 ? "appears" : "appear"} on {gapInsight.allGapModels.length} AI {gapInsight.allGapModels.length === 1 ? "platform" : "platforms"} for {gaps.length === 1 ? "this query" : "these queries"}.</>
-                  )}
-                </p>
-                {gapInsight.allGapModels.length > 0 && (
-                  <div className="flex gap-1.5 flex-wrap mt-2">
-                    {gapInsight.allGapModels.map((m) => (
-                      <span key={m} className="text-[10px] px-2 py-0.5 rounded-full bg-[#B54631]/10 text-[#8C3522] font-medium">{m}</span>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
           )}
+
+          <ChartExplainer
+            blocks={[
+              {
+                label: "Each row",
+                body: "One prompt where a competitor was mentioned by an AI engine and you weren't. Up to 8 most-impactful gaps shown.",
+              },
+              {
+                label: "Engine pills",
+                body: "Which AI engines (ChatGPT, Claude, Gemini, Google AI) the competitor was named on for that prompt. More pills = wider gap.",
+              },
+            ]}
+            tip="Click 'Prompts' on any row to see the full response and the surrounding context."
+          />
         </Card>
 
         {/* Advantages */}
         <Card className="overflow-hidden">
           <div
             className="-mx-5 -mt-5 px-5 py-4 mb-5"
-            style={{ background: "linear-gradient(135deg, rgba(150,162,131,0.18), rgba(150,162,131,0.04))" }}
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(150,162,131,0.18), rgba(150,162,131,0.04))",
+            }}
           >
-            <div className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-lg bg-[#96A283]/20 flex items-center justify-center">
-                <CheckCircle className="h-4 w-4 text-[#566A47]" />
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <div
+                  className="h-7 w-7 rounded-lg flex items-center justify-center"
+                  style={{ backgroundColor: `${SURVEN_SEMANTIC.goodAlt}33` }}
+                >
+                  <CheckCircle
+                    className="h-4 w-4"
+                    style={{ color: "#566A47" }}
+                  />
+                </div>
+                <h3 className="text-sm font-semibold text-[var(--color-fg)]">
+                  Advantages ({advantages.length})
+                </h3>
+                <HoverHint hint="Prompts where you appear in the AI response but the named competitor doesn't. Defend and amplify these positions.">
+                  <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+                </HoverHint>
               </div>
-              <h3 className="text-sm font-semibold text-[var(--color-fg)]">Advantages ({advantages.length})</h3>
-              <HoverHint hint="Prompts where you appear but competitors don't. Keep building on these strengths.">
-                <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
-              </HoverHint>
+              <Link
+                href="/citation-insights"
+                className="inline-flex items-center gap-1 text-xs font-semibold transition-opacity hover:opacity-70"
+                style={{ color: SURVEN_SEMANTIC.good }}
+              >
+                Citation Insights <ArrowRight className="h-3 w-3" />
+              </Link>
             </div>
           </div>
+
           {advantages.length === 0 ? (
-            <p className="text-sm text-[var(--color-fg-muted)]">No advantages yet — keep building visibility.</p>
+            <p className="text-sm text-[var(--color-fg-muted)]">
+              No clear advantages yet — keep building visibility on category
+              prompts.
+            </p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {advantages.map((adv, i) => (
                 <motion.div
                   key={`${adv.competitor}-${i}`}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: i * 0.04 }}
-                  className="p-3 rounded-lg bg-[#96A283]/8 border border-[#96A283]/25"
+                  className="p-3 rounded-lg border"
+                  style={{
+                    backgroundColor: `${SURVEN_SEMANTIC.goodAlt}14`,
+                    borderColor: `${SURVEN_SEMANTIC.goodAlt}40`,
+                  }}
                 >
-                  <p className="text-xs font-medium text-[var(--color-fg)] mb-1 leading-snug">
-                    "{adv.prompt}"
+                  <p className="text-xs font-medium text-[var(--color-fg)] mb-1.5 leading-snug">
+                    &ldquo;{adv.prompt}&rdquo;
                   </p>
-                  <div className="flex items-center justify-between mt-1.5">
-                    <span className="text-[10px] text-[#566A47] font-medium">
-                      You rank, {adv.competitor} doesn't
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span
+                      className="text-[10px] font-medium"
+                      style={{ color: "#566A47" }}
+                    >
+                      You rank, {adv.competitor} doesn&apos;t
                     </span>
-                    <div className="flex gap-1 flex-wrap justify-end">
-                      {adv.models.map((m) => (
-                        <span
-                          key={m}
-                          className="text-[9px] px-1.5 py-0.5 rounded bg-[#96A283]/15 text-[#566A47] font-medium"
-                        >
-                          {m}
-                        </span>
-                      ))}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <div className="flex gap-1 flex-wrap">
+                        {adv.models.map((m) => (
+                          <span
+                            key={m}
+                            className="text-[9px] px-1.5 py-0.5 rounded font-medium"
+                            style={{
+                              backgroundColor: `${SURVEN_SEMANTIC.goodAlt}25`,
+                              color: "#566A47",
+                            }}
+                          >
+                            {m}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </motion.div>
               ))}
             </div>
           )}
+
+          <ChartExplainer
+            blocks={[
+              {
+                label: "Each row",
+                body: "One prompt where you were mentioned by an AI engine and the named competitor wasn't. Up to 8 strongest advantages shown.",
+              },
+              {
+                label: "Engine pills",
+                body: "Which AI engines surfaced you over that competitor for the prompt. More pills = stronger lead to defend.",
+              },
+            ]}
+            tip="Use 'Citation Insights' to see which sources are powering these wins so you can double down."
+          />
         </Card>
       </div>
     </section>

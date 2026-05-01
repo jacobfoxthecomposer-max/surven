@@ -2,11 +2,13 @@
 
 import { useMemo } from "react";
 import { motion } from "framer-motion";
-import { Info, Zap } from "lucide-react";
+import { Info, Zap, ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { ChartExplainer } from "@/components/atoms/ChartExplainer";
+import { SURVEN_SEMANTIC } from "@/utils/brandColors";
 import type { ScanResult, ModelName } from "@/types/database";
 
 const MODELS: { id: ModelName; label: string }[] = [
@@ -107,14 +109,25 @@ export function CompetitorHeatmap({
           className="-mx-5 -mt-5 px-5 py-4 mb-5"
           style={{ background: "linear-gradient(135deg, rgba(150,162,131,0.18), rgba(150,162,131,0.04))" }}
         >
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-[#96A283]/20 flex items-center justify-center">
-              <Zap className="h-4 w-4 text-[#566A47]" />
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div
+                className="h-7 w-7 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: `${SURVEN_SEMANTIC.goodAlt}33` }}
+              >
+                <Zap className="h-4 w-4" style={{ color: "#566A47" }} />
+              </div>
+              <h3 className="text-sm font-semibold text-[var(--color-fg)]">AI Platform Visibility Heatmap</h3>
+              <HoverHint hint="Each cell is a visibility score for one entity on one AI engine. Darker sage means higher mention rate.">
+                <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+              </HoverHint>
             </div>
-            <h3 className="text-sm font-semibold text-[var(--color-fg)]">AI Platform Visibility Heatmap</h3>
-            <HoverHint hint="Visibility score per AI platform. Darker shades indicate higher presence and mentions.">
-              <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
-            </HoverHint>
+            <Link
+              href="/ai-visibility-tracker"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors"
+            >
+              Visibility tracker <ArrowRight className="h-3 w-3" />
+            </Link>
           </div>
         </div>
         <table className="w-full min-w-[520px] border-collapse">

@@ -5,7 +5,9 @@ import { motion } from "framer-motion";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { ChartExplainer } from "@/components/atoms/ChartExplainer";
-import { ExternalLink, Info, Link } from "lucide-react";
+import { ArrowRight, ExternalLink, Info, Link as LinkIcon } from "lucide-react";
+import Link from "next/link";
+import { SURVEN_SEMANTIC, SURVEN_CATEGORICAL } from "@/utils/brandColors";
 import type { ScanResult } from "@/types/database";
 
 interface DomainStat {
@@ -56,11 +58,13 @@ function getDomainsForEntity(
     .slice(0, 6);
 }
 
+// Engine identity is categorical — each engine maps to a stable categorical
+// slot so the same dot color always means the same AI engine across the page.
 const MODEL_COLORS: Record<string, string> = {
-  chatgpt: "#5BAF92",
-  claude: "#D4943A",
-  gemini: "#6BA3F5",
-  google_ai: "#5CBF74",
+  chatgpt: SURVEN_CATEGORICAL[2], // blue
+  claude: SURVEN_CATEGORICAL[3], // gold
+  gemini: SURVEN_CATEGORICAL[4], // purple
+  google_ai: SURVEN_CATEGORICAL[5], // teal
 };
 
 export function CompetitorCitedDomains({
@@ -90,14 +94,28 @@ export function CompetitorCitedDomains({
           className="-mx-5 -mt-5 px-5 py-4 mb-5"
           style={{ background: "linear-gradient(135deg, rgba(150,162,131,0.18), rgba(150,162,131,0.04))" }}
         >
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-[#96A283]/20 flex items-center justify-center">
-              <Link className="h-4 w-4 text-[#566A47]" />
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div
+                className="h-7 w-7 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: `${SURVEN_SEMANTIC.goodAlt}33` }}
+              >
+                <LinkIcon className="h-4 w-4" style={{ color: "#566A47" }} />
+              </div>
+              <h3 className="text-sm font-semibold text-[var(--color-fg)]">
+                Top Cited Domains
+              </h3>
+              <HoverHint hint="Domains AI engines cite when mentioning each business. Use it to spot authority sources competitors use that you don't.">
+                <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+              </HoverHint>
             </div>
-            <h3 className="text-sm font-semibold text-[var(--color-fg)]">Top Cited Domains</h3>
-            <HoverHint hint="Domains that AI models cite in responses mentioning each business. See what authority sources your competitors are using.">
-              <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
-            </HoverHint>
+            <Link
+              href="/citation-insights"
+              className="inline-flex items-center gap-1 text-xs font-semibold transition-opacity hover:opacity-70"
+              style={{ color: SURVEN_SEMANTIC.good }}
+            >
+              Citation Insights <ArrowRight className="h-3 w-3" />
+            </Link>
           </div>
         </div>
 
