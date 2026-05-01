@@ -140,6 +140,28 @@ export function AuthorityBreakdown({ results }: AuthorityBreakdownProps) {
           </div>
         </div>
       </div>
+
+      <ChartExplainer
+        blocks={[
+          {
+            label: "Slices",
+            body: "Each slice is one authority tier — high (Yelp, Google, BBB, Wikipedia, major news), medium (Facebook, Reddit, mid-tier directories), or low (everything else).",
+          },
+          {
+            label: "Slice size",
+            body: "Number of unique cited domains in that tier. We dedupe — a domain cited 10 times still counts once.",
+          },
+          {
+            label: "Right-hand list",
+            body: "Same data as the donut in row form — domain count and percentage share per tier.",
+          },
+          {
+            label: "Colors",
+            body: "Semantic — sage = high authority (good), gold = medium (watch), rust = low (concerning). The card header switches sage/rust based on whether your high-authority share is above or below 60%.",
+          },
+        ]}
+        tip="60%+ high-authority share is the bar. Below 30% means most of your citations come from sources AI engines don't trust much."
+      />
     </Card>
   );
 }
