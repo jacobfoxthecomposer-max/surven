@@ -27,9 +27,20 @@ export default function SettingsPage() {
       <div className="space-y-8">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold">Settings</h1>
-          <p className="mt-2 text-[var(--color-fg-secondary)]">
-            Manage your account and business information
+          <h1
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(28px, 3.5vw, 44px)",
+              fontWeight: 600,
+              lineHeight: 1.15,
+              letterSpacing: "-0.01em",
+              color: "var(--color-fg)",
+            }}
+          >
+            Settings
+          </h1>
+          <p className="mt-1.5 text-sm text-[var(--color-fg-muted)]">
+            Manage your account, business profile, prompts, and API keys.
           </p>
         </div>
 
