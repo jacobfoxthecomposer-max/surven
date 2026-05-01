@@ -1,0 +1,423 @@
+"use client";
+
+import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { Calendar, Info, Link2, Database, ShieldCheck } from "lucide-react";
+import { DashboardLayout } from "@/components/layouts/DashboardLayout";
+import { Spinner } from "@/components/atoms/Spinner";
+import { Card } from "@/components/atoms/Card";
+import { EngineIcon } from "@/components/atoms/EngineIcon";
+import { HoverHint } from "@/components/atoms/HoverHint";
+import { AIOverview } from "@/components/atoms/AIOverview";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useBusiness } from "@/features/business/hooks/useBusiness";
+import { useScan } from "@/features/dashboard/hooks/useScan";
+import { CitationGapSection } from "@/features/dashboard/pages/CitationGapSection";
+import { AuthorityBreakdown } from "@/features/citation-insights/AuthorityBreakdown";
+import { SourceCategoryBreakdown } from "@/features/citation-insights/SourceCategoryBreakdown";
+import { CitationsByEngine } from "@/features/citation-insights/CitationsByEngine";
+import { CitedDomainsTable } from "@/features/citation-insights/CitedDomainsTable";
+import { AI_MODELS } from "@/utils/constants";
+import { getAuthority } from "@/utils/citationAuthority";
+
+type TimeRange = "14d" | "30d" | "90d" | "ytd" | "all";
+const TIME_RANGES: { key: TimeRange; label: string }[] = [
+  { key: "14d", label: "14d" },
+  { key: "30d", label: "30d" },
+  { key: "90d", label: "90d" },
+  { key: "ytd", label: "YTD" },
+  { key: "all", label: "All" },
+];
+
+const ease = [0.16, 1, 0.3, 1] as const;
+const reveal = {
+  initial: { opacity: 0, y: 20, filter: "blur(4px)" },
+  whileInView: { opacity: 1, y: 0, filter: "blur(0px)" },
+  viewport: { once: true, margin: "-60px" },
+  transition: { duration: 0.55, ease },
+} as const;
+
+export default function CitationInsightsPage() {
+  const router = useRouter();
+
+  const [timeRange, setTimeRange] = useState<TimeRange>("all");
+  const [selectedModels, setSelectedModels] = useState<Set<string>>(
+    () => new Set(AI_MODELS.map((m) => m.id))
+  );
+
+  const { user, loading: authLoading } = useAuth();
+  const { business, competitors, isLoading: bizLoading } = useBusiness();
+  const { latestScan, isLoading: scanLoading } = useScan(business, competitors);
+
+  const toggleModel = (id: string) => {
+    setSelectedModels((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        if (next.size === 1) return prev;
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const allResults = latestScan?.results ?? [];
+  const results = useMemo(
+    () =>
+      selectedModels.size === AI_MODELS.length
+        ? allResults
+        : allResults.filter((r) => selectedModels.has(r.model_name)),
+    [allResults, selectedModels]
+  );
+
+  const insights = useMemo(() => {
+    if (results.length === 0) return null;
+
+    const totalResponses = results.length;
+    const responsesWithBusiness = results.filter((r) => r.business_mentioned).length;
+    const citationRate = totalResponses > 0
+      ? Math.round((responsesWithBusiness / totalResponses) * 100)
+      : 0;
+
+    const uniqueDomains = new Set<string>();
+    let totalCitations = 0;
+    const authorityCounts = { high: 0, medium: 0, low: 0 };
+    const domainFreq = new Map<string, number>();
+    for (const r of results) {
+      if (!r.citations) continue;
+      for (const d of r.citations) {
+        if (!uniqueDomains.has(d)) {
+          uniqueDomains.add(d);
+          authorityCounts[getAuthority(d)]++;
+        }
+        totalCitations++;
+        domainFreq.set(d, (domainFreq.get(d) ?? 0) + 1);
+      }
+    }
+
+    const totalUnique = uniqueDomains.size;
+    const highAuthorityPct =
+      totalUnique > 0 ? Math.round((authorityCounts.high / totalUnique) * 100) : 0;
+
+    const topDomain = Array.from(domainFreq.entries()).sort((a, b) => b[1] - a[1])[0];
+    const enginesWithCitations = new Set(
+      results.filter((r) => r.citations && r.citations.length > 0).map((r) => r.model_name)
+    );
+
+    return {
+      citationRate,
+      totalCitations,
+      uniqueDomains: totalUnique,
+      authorityCounts,
+      highAuthorityPct,
+      topDomain: topDomain ? { domain: topDomain[0], count: topDomain[1] } : null,
+      engineCount: enginesWithCitations.size,
+    };
+  }, [results]);
+
+  if (!user && !authLoading) {
+    router.push("/login");
+    return null;
+  }
+
+  if (authLoading || bizLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Spinner size="lg" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!business) {
+    router.push("/onboarding");
+    return null;
+  }
+
+  const profileWord = !insights
+    ? "unknown"
+    : insights.uniqueDomains >= 8 && insights.highAuthorityPct >= 50
+    ? "strong"
+    : insights.uniqueDomains >= 5
+    ? "diverse"
+    : insights.uniqueDomains >= 2
+    ? "concentrated"
+    : "thin";
+
+  const profileColor =
+    profileWord === "strong" || profileWord === "diverse"
+      ? "#7D8E6C"
+      : profileWord === "thin"
+      ? "#B54631"
+      : "#A09890";
+
+  const aiInsight = insights
+    ? insights.topDomain
+      ? `${insights.topDomain.domain} is your most-cited source — appearing in ${insights.topDomain.count} of ${insights.totalCitations} citations across ${insights.engineCount} ${insights.engineCount === 1 ? "engine" : "engines"}.`
+      : `AI engines aren't citing any sources for ${business.name} yet. Getting listed on high-authority directories is the fastest way to build citation presence.`
+    : null;
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-6 w-full">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease }}
+        >
+          <h1
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(32px, 4vw, 52px)",
+              fontWeight: 600,
+              lineHeight: 1.15,
+              letterSpacing: "-0.01em",
+              color: "var(--color-fg)",
+            }}
+          >
+            Your citation profile is{" "}
+            <span style={{ color: profileColor, fontStyle: "italic" }}>
+              {profileWord}
+            </span>
+            .
+          </h1>
+          <p className="text-sm text-[var(--color-fg-muted)] mt-1.5">
+            The sources AI models cite when answering questions about {business.name}.
+          </p>
+        </motion.div>
+
+        {/* Filter bar */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1, ease }}
+          className="flex flex-wrap items-center gap-2 pb-4 border-b border-[var(--color-border)]"
+        >
+          <div className="inline-flex rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-1 gap-1">
+            {TIME_RANGES.map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setTimeRange(key)}
+                className={
+                  "px-3.5 py-2 font-medium rounded-[var(--radius-sm)] transition-colors " +
+                  (timeRange === key
+                    ? "bg-[var(--color-primary)] text-white"
+                    : "text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-alt)]")
+                }
+                style={{ fontSize: 14 }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <button
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 font-medium rounded-[var(--radius-md)] border transition-colors bg-[var(--color-surface)] text-[var(--color-fg-secondary)] border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]"
+            style={{ fontSize: 14 }}
+            title="Custom date range (coming soon)"
+          >
+            <Calendar className="h-4 w-4" /> Custom
+          </button>
+
+          <div className="h-4 w-px bg-[var(--color-border)]" />
+
+          <span className="text-[var(--color-fg-muted)] mr-1" style={{ fontSize: 14 }}>
+            AI engines:
+          </span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {AI_MODELS.map((m) => {
+              const active = selectedModels.has(m.id);
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => toggleModel(m.id)}
+                  className={
+                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-full)] border font-medium transition-colors " +
+                    (active
+                      ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                      : "bg-transparent text-[var(--color-fg-muted)] border-[var(--color-border)] hover:border-[var(--color-border-hover)] hover:text-[var(--color-fg-secondary)]")
+                  }
+                  style={{ fontSize: 14 }}
+                >
+                  <EngineIcon id={m.id} size={13} />
+                  {m.name}
+                </button>
+              );
+            })}
+          </div>
+        </motion.div>
+
+        {/* Loading / empty / content */}
+        {scanLoading ? (
+          <div className="flex items-center justify-center min-h-[40vh]">
+            <Spinner size="lg" />
+          </div>
+        ) : allResults.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2, ease }}
+            className="text-center py-20"
+          >
+            <p className="text-lg text-[var(--color-fg-secondary)]">No scan data yet</p>
+            <p className="text-sm text-[var(--color-fg-muted)] mt-2">
+              Run a scan from the Dashboard to see citation insights.
+            </p>
+          </motion.div>
+        ) : (
+          <>
+            {/* KPI cards */}
+            {insights && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.15, ease }}
+                className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+              >
+                <Card className="flex items-center gap-4 p-5">
+                  <div className="h-10 w-10 rounded-xl bg-[#96A283]/10 flex items-center justify-center flex-shrink-0">
+                    <Link2 className="h-5 w-5 text-[#96A283]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <p className="text-xs text-[var(--color-fg-muted)]">Citation Rate</p>
+                      <HoverHint hint="Percentage of AI responses where your business is mentioned alongside a cited source.">
+                        <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+                      </HoverHint>
+                    </div>
+                    <p
+                      style={{
+                        fontFamily: "var(--font-display)",
+                        fontSize: 22,
+                        fontWeight: 600,
+                        lineHeight: 1.2,
+                        color: "var(--color-fg)",
+                      }}
+                    >
+                      {insights.citationRate}%
+                    </p>
+                    <p className="text-xs text-[var(--color-fg-muted)]">
+                      Mentioned in responses
+                    </p>
+                    <p className="text-[11px] text-[var(--color-fg-muted)] mt-0.5 opacity-70 leading-tight">
+                      {insights.totalCitations} total citations
+                    </p>
+                  </div>
+                </Card>
+
+                <Card className="flex items-center gap-4 p-5">
+                  <div className="h-10 w-10 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center flex-shrink-0">
+                    <Database className="h-5 w-5 text-[var(--color-primary)]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <p className="text-xs text-[var(--color-fg-muted)]">Unique Sources</p>
+                      <HoverHint hint="Number of distinct domains AI models cited about your business.">
+                        <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+                      </HoverHint>
+                    </div>
+                    <p
+                      style={{
+                        fontFamily: "var(--font-display)",
+                        fontSize: 22,
+                        fontWeight: 600,
+                        lineHeight: 1.2,
+                        color: "var(--color-fg)",
+                      }}
+                    >
+                      {insights.uniqueDomains}
+                    </p>
+                    <p className="text-xs text-[var(--color-fg-muted)]">Domains</p>
+                    <p className="text-[11px] text-[var(--color-fg-muted)] mt-0.5 opacity-70 leading-tight">
+                      Across {insights.engineCount}{" "}
+                      {insights.engineCount === 1 ? "engine" : "engines"}
+                    </p>
+                  </div>
+                </Card>
+
+                <Card className="flex items-center gap-4 p-5">
+                  <div
+                    className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                      insights.highAuthorityPct >= 60
+                        ? "bg-[#96A283]/10"
+                        : insights.highAuthorityPct < 30
+                        ? "bg-[#B54631]/10"
+                        : "bg-[var(--color-primary)]/10"
+                    }`}
+                  >
+                    <ShieldCheck
+                      className={`h-5 w-5 ${
+                        insights.highAuthorityPct >= 60
+                          ? "text-[#96A283]"
+                          : insights.highAuthorityPct < 30
+                          ? "text-[#B54631]"
+                          : "text-[var(--color-primary)]"
+                      }`}
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <p className="text-xs text-[var(--color-fg-muted)]">Authority Mix</p>
+                      <HoverHint hint="Share of your citations coming from high-authority sources like Yelp, Google, BBB, and major news.">
+                        <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+                      </HoverHint>
+                    </div>
+                    <p
+                      style={{
+                        fontFamily: "var(--font-display)",
+                        fontSize: 22,
+                        fontWeight: 600,
+                        lineHeight: 1.2,
+                        color: "var(--color-fg)",
+                      }}
+                    >
+                      {insights.highAuthorityPct}%
+                    </p>
+                    <p className="text-xs text-[var(--color-fg-muted)]">High authority</p>
+                    <p className="text-[11px] text-[var(--color-fg-muted)] mt-0.5 opacity-70 leading-tight">
+                      {insights.authorityCounts.high} high · {insights.authorityCounts.medium} med ·{" "}
+                      {insights.authorityCounts.low} low
+                    </p>
+                  </div>
+                </Card>
+              </motion.div>
+            )}
+
+            {/* AIOverview */}
+            {aiInsight && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.2, ease }}
+              >
+                <AIOverview text={aiInsight} size="md" />
+              </motion.div>
+            )}
+
+            {/* Sections */}
+            <motion.div {...reveal}>
+              <CitationGapSection results={results} businessName={business.name} />
+            </motion.div>
+
+            <motion.div {...reveal} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <AuthorityBreakdown results={results} />
+              <SourceCategoryBreakdown results={results} />
+            </motion.div>
+
+            <motion.div {...reveal}>
+              <CitationsByEngine results={results} />
+            </motion.div>
+
+            <motion.div {...reveal}>
+              <CitedDomainsTable results={results} />
+            </motion.div>
+          </>
+        )}
+      </div>
+    </DashboardLayout>
+  );
+}

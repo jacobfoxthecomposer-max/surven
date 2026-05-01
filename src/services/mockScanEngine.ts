@@ -103,6 +103,15 @@ const MOCK_CITATION_DOMAINS = [
   "houzz.com",
   "facebook.com",
   "nextdoor.com",
+  "wikipedia.org",
+  "linkedin.com",
+  "instagram.com",
+  "reddit.com",
+  "forbes.com",
+  "manta.com",
+  "expertise.com",
+  "foursquare.com",
+  "homeadvisor.com",
 ];
 
 function getMockCitations(seed: number, count: number): string[] {

@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@/services/supabaseServer";
 import { z } from "zod";
 import type { ModelName } from "@/types/database";
+import { KNOWN_DOMAINS_FOR_NAMED_EXTRACTION } from "@/utils/citationAuthority";
 
 const SCAN_LIMITS = { free: 3, plus: 5, premium: 20, admin: Infinity } as const;
 
@@ -264,12 +265,20 @@ function isMentioned(response: string, name: string): boolean {
 }
 
 function extractCitations(text: string): string[] {
-  const urlRegex = /https?:\/\/(?:www\.)?([a-zA-Z0-9-]+(?:\.[a-zA-Z]{2,})+)/g;
   const domains = new Set<string>();
+
+  const urlRegex = /https?:\/\/(?:www\.)?([a-zA-Z0-9-]+(?:\.[a-zA-Z]{2,})+)/g;
   let match;
   while ((match = urlRegex.exec(text)) !== null) {
     domains.add(match[1].toLowerCase());
   }
+
+  for (const { name, domain } of KNOWN_DOMAINS_FOR_NAMED_EXTRACTION) {
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const nameRegex = new RegExp(`\\b${escaped}\\b`, "i");
+    if (nameRegex.test(text)) domains.add(domain);
+  }
+
   return Array.from(domains);
 }
 
