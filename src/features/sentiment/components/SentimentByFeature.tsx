@@ -183,7 +183,7 @@ export function SentimentByFeature({ results, businessName, competitors }: Props
       {/* Mentions by Feature */}
       <Card className="overflow-x-auto">
         <div className="flex items-center gap-1.5 mb-1">
-          <h3 className="text-sm font-semibold text-[var(--color-fg)]">Mentions by Prompt</h3>
+          <h3 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, color: "var(--color-fg)" }}>Mentions by Prompt</h3>
           <HoverHint hint="How many AI models mentioned your brand (or each competitor) for each customer question. Darker blue = more models mentioned them.">
             <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
           </HoverHint>
