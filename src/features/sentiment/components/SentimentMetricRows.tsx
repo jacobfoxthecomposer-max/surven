@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRight, Info } from "lucide-react";
 import { Card } from "@/components/atoms/Card";
@@ -33,8 +33,8 @@ interface Row {
   valueColor: string;
   delta: number | null;
   href: string;
-  cta: string;
   icon?: ModelName;
+  detail: ReactNode;
 }
 
 function statusFromPositiveRate(pct: number): { word: string; color: string } {
@@ -51,15 +51,26 @@ function statusFromNegativeCount(count: number, total: number): { word: string; 
   return { word: "ELEVATED", color: SURVEN_SEMANTIC.bad };
 }
 
+function truncate(text: string, n: number): string {
+  return text.length > n ? text.slice(0, n).trim() + "…" : text;
+}
+
 export function SentimentMetricRows({ results, history }: Props) {
   const rows = useMemo<Row[]>(() => {
     const mentioned = results.filter((r) => r.business_mentioned && r.sentiment);
     const total = mentioned.length;
     if (total === 0) return [];
 
-    const positiveCount = mentioned.filter((r) => r.sentiment === "positive").length;
-    const negativeCount = mentioned.filter((r) => r.sentiment === "negative").length;
+    const positiveResults = mentioned.filter((r) => r.sentiment === "positive");
+    const neutralResults = mentioned.filter((r) => r.sentiment === "neutral");
+    const negativeResults = mentioned.filter((r) => r.sentiment === "negative");
+
+    const positiveCount = positiveResults.length;
+    const neutralCount = neutralResults.length;
+    const negativeCount = negativeResults.length;
     const positivePct = Math.round((positiveCount / total) * 100);
+    const neutralPct = Math.round((neutralCount / total) * 100);
+    const negativePct = Math.round((negativeCount / total) * 100);
 
     const positiveDelta = history.length >= 2
       ? history[history.length - 1].positivePct - history[history.length - 2].positivePct
@@ -75,7 +86,8 @@ export function SentimentMetricRows({ results, history }: Props) {
       const t = mm.length;
       if (t === 0) return null;
       const pos = mm.filter((r) => r.sentiment === "positive").length;
-      return { model: m, total: t, positivePct: Math.round((pos / t) * 100) };
+      const neg = mm.filter((r) => r.sentiment === "negative").length;
+      return { model: m, total: t, pos, neg, positivePct: Math.round((pos / t) * 100) };
     }).filter((x): x is NonNullable<typeof x> => x !== null);
 
     const sortedByPositive = [...perModel].sort((a, b) => b.positivePct - a.positivePct);
@@ -85,35 +97,70 @@ export function SentimentMetricRows({ results, history }: Props) {
     const positiveStatus = statusFromPositiveRate(positivePct);
     const negativeStatus = statusFromNegativeCount(negativeCount, total);
 
-    const out: Row[] = [
-      {
-        key: "positive",
-        label: "Positive sentiment rate",
-        hint: "Share of AI mentions that describe your brand favorably. 70%+ is healthy. Below 40% means most mentions are critical or lukewarm.",
-        status: positiveStatus.word,
-        statusColor: positiveStatus.color,
-        value: `${positivePct}%`,
-        valueColor: colorForValue(positivePct, SURVEN_THRESHOLDS.sentimentPositive),
-        delta: positiveDelta,
-        href: "/prompts",
-        cta: "View positive prompts",
-      },
-      {
-        key: "negative",
-        label: "Negative signals",
-        hint: "Mentions where AI used critical or dismissive language. Each one is a specific prompt + engine combination worth fixing.",
-        status: negativeStatus.word,
-        statusColor: negativeStatus.color,
-        value: negativeCount === 0 ? "0" : `${negativeCount}`,
-        valueColor: negativeCount === 0 ? SURVEN_SEMANTIC.good : SURVEN_SEMANTIC.bad,
-        delta: negativeDelta == null ? null : -negativeDelta, // invert: dropping negatives = good
-        href: "/audit",
-        cta: "Fix in audit",
-      },
-    ];
+    const out: Row[] = [];
 
+    // Row 1 — Positive sentiment rate. Detail: stacked breakdown bar + counts.
+    out.push({
+      key: "positive",
+      label: "Positive sentiment rate",
+      hint: "Share of AI mentions that describe your brand favorably. 70%+ is healthy. Below 40% means most mentions are critical or lukewarm.",
+      status: positiveStatus.word,
+      statusColor: positiveStatus.color,
+      value: `${positivePct}%`,
+      valueColor: colorForValue(positivePct, SURVEN_THRESHOLDS.sentimentPositive),
+      delta: positiveDelta,
+      href: "/prompts",
+      detail: (
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex-1 min-w-[120px] max-w-[220px]">
+            <div className="h-1.5 rounded-full overflow-hidden flex bg-[var(--color-surface-alt)]">
+              {positivePct > 0 && <div className="h-full" style={{ width: `${positivePct}%`, background: SURVEN_SEMANTIC.goodAlt }} />}
+              {neutralPct > 0 && <div className="h-full" style={{ width: `${neutralPct}%`, background: SURVEN_SEMANTIC.neutral }} />}
+              {negativePct > 0 && <div className="h-full" style={{ width: `${negativePct}%`, background: SURVEN_SEMANTIC.bad }} />}
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5 text-[11px] text-[var(--color-fg-muted)] whitespace-nowrap">
+            <span><span style={{ color: SURVEN_SEMANTIC.good, fontWeight: 600 }}>{positiveCount}</span> pos</span>
+            <span>{neutralCount} neu</span>
+            <span><span style={{ color: SURVEN_SEMANTIC.bad, fontWeight: 600 }}>{negativeCount}</span> neg</span>
+          </div>
+        </div>
+      ),
+    });
+
+    // Row 2 — Negative signals. Detail: actual negative prompts with engine icons.
+    out.push({
+      key: "negative",
+      label: "Negative signals",
+      hint: "Mentions where AI used critical or dismissive language. Each one is a specific prompt + engine combination worth fixing.",
+      status: negativeStatus.word,
+      statusColor: negativeStatus.color,
+      value: negativeCount === 0 ? "0" : `${negativeCount}`,
+      valueColor: negativeCount === 0 ? SURVEN_SEMANTIC.good : SURVEN_SEMANTIC.bad,
+      delta: negativeDelta == null ? null : -negativeDelta,
+      href: "/audit",
+      detail: negativeCount === 0 ? (
+        <span className="text-[11px] text-[var(--color-fg-muted)]">No negative mentions across any engine.</span>
+      ) : (
+        <div className="flex flex-col gap-1 min-w-0 max-w-[420px]">
+          {negativeResults.slice(0, 2).map((r, i) => (
+            <div key={i} className="flex items-center gap-1.5 text-[11px] min-w-0">
+              <EngineIcon id={r.model_name} size={11} />
+              <span className="text-[var(--color-fg-muted)] shrink-0">{MODEL_LABELS[r.model_name]}</span>
+              <span className="text-[var(--color-fg-secondary)] truncate">&ldquo;{truncate(r.prompt_text, 60)}&rdquo;</span>
+            </div>
+          ))}
+          {negativeResults.length > 2 && (
+            <span className="text-[10px] text-[var(--color-fg-muted)]">+{negativeResults.length - 2} more</span>
+          )}
+        </div>
+      ),
+    });
+
+    // Row 3 — Strongest engine. Detail: pos/neg breakdown + top positive prompt on that engine.
     if (best) {
       const bestStatus = statusFromPositiveRate(best.positivePct);
+      const topPositiveOnBest = positiveResults.find((r) => r.model_name === best.model);
       out.push({
         key: "best",
         label: "Strongest engine",
@@ -124,13 +171,32 @@ export function SentimentMetricRows({ results, history }: Props) {
         valueColor: bestStatus.color,
         delta: null,
         href: "/competitor-comparison",
-        cta: `${MODEL_LABELS[best.model]} breakdown`,
         icon: best.model,
+        detail: (
+          <div className="flex flex-col gap-0.5 min-w-0 max-w-[420px]">
+            <div className="flex items-center gap-2 text-[11px] text-[var(--color-fg-muted)] whitespace-nowrap">
+              <span><span style={{ color: SURVEN_SEMANTIC.good, fontWeight: 600 }}>{best.pos}</span> positive</span>
+              <span>·</span>
+              <span>{best.total} total mention{best.total !== 1 ? "s" : ""}</span>
+              <span>·</span>
+              <span><span style={{ color: SURVEN_SEMANTIC.bad, fontWeight: 600 }}>{best.neg}</span> negative</span>
+            </div>
+            {topPositiveOnBest && (
+              <span className="text-[11px] text-[var(--color-fg-secondary)] truncate">
+                Top: &ldquo;{truncate(topPositiveOnBest.prompt_text, 70)}&rdquo;
+              </span>
+            )}
+          </div>
+        ),
       });
     }
 
+    // Row 4 — Weakest engine. Detail: pos/neg breakdown + worst (negative or neutral) prompt on that engine.
     if (worst && worst.model !== best?.model) {
       const worstStatus = statusFromPositiveRate(worst.positivePct);
+      const worstPromptOnEngine =
+        negativeResults.find((r) => r.model_name === worst.model) ??
+        neutralResults.find((r) => r.model_name === worst.model);
       out.push({
         key: "worst",
         label: "Weakest engine",
@@ -141,8 +207,23 @@ export function SentimentMetricRows({ results, history }: Props) {
         valueColor: worstStatus.color,
         delta: null,
         href: "/audit",
-        cta: `Fix ${MODEL_LABELS[worst.model]} prompts`,
         icon: worst.model,
+        detail: (
+          <div className="flex flex-col gap-0.5 min-w-0 max-w-[420px]">
+            <div className="flex items-center gap-2 text-[11px] text-[var(--color-fg-muted)] whitespace-nowrap">
+              <span><span style={{ color: SURVEN_SEMANTIC.good, fontWeight: 600 }}>{worst.pos}</span> positive</span>
+              <span>·</span>
+              <span>{worst.total} total mention{worst.total !== 1 ? "s" : ""}</span>
+              <span>·</span>
+              <span><span style={{ color: SURVEN_SEMANTIC.bad, fontWeight: 600 }}>{worst.neg}</span> negative</span>
+            </div>
+            {worstPromptOnEngine && (
+              <span className="text-[11px] text-[var(--color-fg-secondary)] truncate">
+                Worst: &ldquo;{truncate(worstPromptOnEngine.prompt_text, 70)}&rdquo;
+              </span>
+            )}
+          </div>
+        ),
       });
     }
 
@@ -161,24 +242,18 @@ export function SentimentMetricRows({ results, history }: Props) {
             (i > 0 ? "border-t border-[var(--color-border)]" : "")
           }
         >
-          {/* Status pill (mini gauge replacement — colored badge) */}
+          {/* Status pill */}
           <div
             className="shrink-0 px-2.5 py-1 rounded-[var(--radius-sm)] flex items-center justify-center"
-            style={{
-              background: `${row.statusColor}1A`,
-              minWidth: 96,
-            }}
+            style={{ background: `${row.statusColor}1A`, minWidth: 96 }}
           >
-            <span
-              className="text-[10px] font-bold tracking-wider"
-              style={{ color: row.statusColor }}
-            >
+            <span className="text-[10px] font-bold tracking-wider" style={{ color: row.statusColor }}>
               {row.status}
             </span>
           </div>
 
-          {/* Label */}
-          <div className="flex-1 min-w-0">
+          {/* Compact label + value + delta — all left-grouped */}
+          <div className="flex items-center gap-3 shrink-0">
             <div className="flex items-center gap-1.5">
               {row.icon && <EngineIcon id={row.icon} size={13} />}
               <span className="text-sm font-medium text-[var(--color-fg)]">{row.label}</span>
@@ -186,14 +261,10 @@ export function SentimentMetricRows({ results, history }: Props) {
                 <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
               </HoverHint>
             </div>
-          </div>
-
-          {/* Value + delta */}
-          <div className="flex items-center gap-3 shrink-0">
             <span
               style={{
                 fontFamily: "var(--font-display)",
-                fontSize: 28,
+                fontSize: 26,
                 fontWeight: 600,
                 lineHeight: 1,
                 color: row.valueColor,
@@ -210,14 +281,22 @@ export function SentimentMetricRows({ results, history }: Props) {
             )}
           </div>
 
-          {/* CTA link */}
+          {/* Vertical divider */}
+          <div className="h-8 w-px bg-[var(--color-border)] shrink-0" />
+
+          {/* Inline data preview — actual content, not a link */}
+          <div className="flex-1 min-w-0">
+            {row.detail}
+          </div>
+
+          {/* Subtle drill-in arrow */}
           <Link
             href={row.href}
-            className="shrink-0 flex items-center gap-1 text-xs font-medium hover:opacity-70 transition-opacity"
-            style={{ color: SURVEN_SEMANTIC.good, minWidth: 140, justifyContent: "flex-end" }}
+            className="shrink-0 flex items-center justify-center h-7 w-7 rounded-[var(--radius-sm)] hover:bg-[var(--color-surface-alt)] transition-colors"
+            style={{ color: SURVEN_SEMANTIC.good }}
+            aria-label="View more"
           >
-            <span>{row.cta}</span>
-            <ArrowRight className="h-3 w-3" />
+            <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
       ))}
