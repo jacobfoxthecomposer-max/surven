@@ -22,12 +22,24 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
+const SUPABASE_UNCONFIGURED =
+  !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder");
+
+const UNCONFIGURED_MESSAGE =
+  "Auth isn't configured for local dev. Use /prompts-preview to view the dashboard without signing in.";
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (SUPABASE_UNCONFIGURED) {
+      setLoading(false);
+      return;
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -46,9 +58,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = useCallback(async (email: string, password: string) => {
+    if (SUPABASE_UNCONFIGURED) throw new Error(UNCONFIGURED_MESSAGE);
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
-    // Force sync session after signup
     const { data: sessionData } = await supabase.auth.getSession();
     setSession(sessionData.session);
     setUser(sessionData.session?.user ?? null);
@@ -56,9 +68,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
+    if (SUPABASE_UNCONFIGURED) throw new Error(UNCONFIGURED_MESSAGE);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    // Force sync session after login
     const { data: sessionData } = await supabase.auth.getSession();
     setSession(sessionData.session);
     setUser(sessionData.session?.user ?? null);
@@ -66,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    if (SUPABASE_UNCONFIGURED) return;
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   }, []);
