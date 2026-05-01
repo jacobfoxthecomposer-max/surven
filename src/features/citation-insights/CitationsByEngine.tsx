@@ -140,6 +140,28 @@ export function CitationsByEngine({ results }: CitationsByEngineProps) {
           </motion.div>
         ))}
       </div>
+
+      <ChartExplainer
+        blocks={[
+          {
+            label: "Cards",
+            body: "One card per AI engine that returned citations during the scan — ChatGPT, Claude, Gemini, Google AI. Engines with zero citations are hidden.",
+          },
+          {
+            label: "Sources",
+            body: "Number of unique domains the engine cited when answering prompts about you.",
+          },
+          {
+            label: "Citations",
+            body: "Total citation count — a single domain cited across many prompts counts each time. So citations are usually higher than sources.",
+          },
+          {
+            label: "Top domains",
+            body: "The 4 most-cited domains for that engine, with a click-through to open them. The number on the right is how many times that engine cited that domain.",
+          },
+        ]}
+        tip="Compare cards side-by-side — if one engine pulls heavily from low-authority sources and others pull from authoritative ones, that engine is your weakest link."
+      />
     </Card>
   );
 }
