@@ -286,36 +286,44 @@ export default function CitationInsightsPage() {
                 transition={{ duration: 0.4, delay: 0.15, ease }}
                 className="grid grid-cols-1 sm:grid-cols-3 gap-4"
               >
-                <Card className="flex items-center gap-4 p-5">
-                  <div className="h-10 w-10 rounded-xl bg-[#96A283]/10 flex items-center justify-center flex-shrink-0">
-                    <Link2 className="h-5 w-5 text-[#96A283]" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1 mb-0.5">
-                      <p className="text-xs text-[var(--color-fg-muted)]">Citation Rate</p>
-                      <HoverHint hint="Percentage of AI responses where your business is mentioned alongside a cited source.">
-                        <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
-                      </HoverHint>
-                    </div>
-                    <p
-                      style={{
-                        fontFamily: "var(--font-display)",
-                        fontSize: 22,
-                        fontWeight: 600,
-                        lineHeight: 1.2,
-                        color: "var(--color-fg)",
-                      }}
-                    >
-                      {insights.citationRate}%
-                    </p>
-                    <p className="text-xs text-[var(--color-fg-muted)]">
-                      Mentioned in responses
-                    </p>
-                    <p className="text-[11px] text-[var(--color-fg-muted)] mt-0.5 opacity-70 leading-tight">
-                      {insights.totalCitations} total citations
-                    </p>
-                  </div>
-                </Card>
+                {(() => {
+                  const rateColor = colorForValue(insights.citationRate, SURVEN_THRESHOLDS.citationRate);
+                  return (
+                    <Card className="flex items-center gap-4 p-5">
+                      <div
+                        className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: `${rateColor}1A` }}
+                      >
+                        <Link2 className="h-5 w-5" style={{ color: rateColor }} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1 mb-0.5">
+                          <p className="text-xs text-[var(--color-fg-muted)]">Citation Rate</p>
+                          <HoverHint hint="Share of AI responses about you that include a cited source. 50%+ is strong; under 25% means AI engines are answering without grounding their claims.">
+                            <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+                          </HoverHint>
+                        </div>
+                        <p
+                          style={{
+                            fontFamily: "var(--font-display)",
+                            fontSize: 22,
+                            fontWeight: 600,
+                            lineHeight: 1.2,
+                            color: "var(--color-fg)",
+                          }}
+                        >
+                          {insights.citationRate}%
+                        </p>
+                        <p className="text-xs text-[var(--color-fg-muted)]">
+                          Mentioned in responses
+                        </p>
+                        <p className="text-[11px] text-[var(--color-fg-muted)] mt-0.5 opacity-70 leading-tight">
+                          {insights.totalCitations} total citations
+                        </p>
+                      </div>
+                    </Card>
+                  );
+                })()}
 
                 <Card className="flex items-center gap-4 p-5">
                   <div className="h-10 w-10 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center flex-shrink-0">
