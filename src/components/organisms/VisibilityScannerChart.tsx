@@ -391,7 +391,7 @@ export function VisibilityScannerChart({
   strokeYou = 2.75,
   strokeHovered = 3.5,
   strokeDefault = 1.75,
-  youGlowBlur = 2,
+  youGlowBlur = 0.5,
   lineType = "linear",
   tooltipFontSize = 10,
   gridStroke = "rgba(107,109,107,0.45)",
@@ -555,10 +555,17 @@ export function VisibilityScannerChart({
         >
           <defs>
             <linearGradient id="visYouGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={COLORS.primary} stopOpacity={0.15} />
-              <stop offset="75%" stopColor={COLORS.primary} stopOpacity={0.03} />
+              <stop offset="0%" stopColor={COLORS.primary} stopOpacity={0.06} />
+              <stop offset="75%" stopColor={COLORS.primary} stopOpacity={0.02} />
               <stop offset="100%" stopColor={COLORS.primary} stopOpacity={0} />
             </linearGradient>
+            {visibleBrands.filter((b) => !b.isYou).map((b) => (
+              <linearGradient key={`grad-${b.id}`} id={`grad-${b.id}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={b.color} stopOpacity={0.15} />
+                <stop offset="75%" stopColor={b.color} stopOpacity={0.03} />
+                <stop offset="100%" stopColor={b.color} stopOpacity={0} />
+              </linearGradient>
+            ))}
           </defs>
 
           <CartesianGrid
