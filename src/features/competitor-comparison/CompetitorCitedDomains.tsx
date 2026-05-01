@@ -180,6 +180,28 @@ export function CompetitorCitedDomains({
             );
           })}
         </div>
+
+        <ChartExplainer
+          blocks={[
+            {
+              label: "Cards",
+              body: "One card per entity — your business is marked with a 'You' badge. Each card shows the top 6 domains AI engines cited when mentioning that entity.",
+            },
+            {
+              label: "Bar length",
+              body: "Relative citation count within the card — the longest bar is the most-cited domain for that entity. Lengths are scaled per card, so a long bar in one card may equal a short one in another.",
+            },
+            {
+              label: "Colored dots",
+              body: "Each dot is one AI engine that cited that domain — ChatGPT, Claude, Gemini, Google AI. More dots means broader engine coverage.",
+            },
+            {
+              label: "External link",
+              body: "Click any domain to open it in a new tab. Useful when you spot a competitor citation source you want to investigate.",
+            },
+          ]}
+          tip="Compare your top domains to a competitor's — if they have a high-authority source you don't, that's a target for outreach or content placement."
+        />
       </Card>
     </section>
   );
