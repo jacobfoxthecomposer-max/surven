@@ -166,6 +166,28 @@ export function SentimentDonut({ results }: Props) {
           )}
         </div>
       )}
+
+      <ChartExplainer
+        blocks={[
+          {
+            label: "Slices",
+            body: "Each slice is one sentiment category (positive, neutral, or negative) of how AI models describe your business.",
+          },
+          {
+            label: "Slice size",
+            body: "Bigger slice = more AI mentions in that tone. The center number shows the share for whichever tone leads.",
+          },
+          {
+            label: "Colors",
+            body: "Sage = positive, gray = neutral, rust = negative. These encode tone — sage means favorable, rust means critical.",
+          },
+          {
+            label: "Prompt highlights",
+            body: "Below the donut: the prompt with the highest positive rate, and (if different) the prompt with the lowest. Helps spot which queries drive favorable vs. critical AI responses.",
+          },
+        ]}
+        tip="Hover any slice for the exact share."
+      />
     </Card>
   );
 }
