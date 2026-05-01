@@ -3,6 +3,8 @@
 import { motion } from "framer-motion";
 import { Globe, Search, FileText, Lock, Link2 } from "lucide-react";
 import { HoverHint } from "@/components/atoms/HoverHint";
+import { ChartExplainer } from "@/components/atoms/ChartExplainer";
+import { SURVEN_SEMANTIC } from "@/utils/brandColors";
 import type { CategoryScores } from "@/types/crawlability";
 
 const CATEGORY_META: Array<{
