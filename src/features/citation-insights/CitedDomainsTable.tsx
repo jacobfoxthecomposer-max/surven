@@ -210,6 +210,28 @@ export function CitedDomainsTable({ results }: CitedDomainsTableProps) {
           </tbody>
         </table>
       </div>
+
+      <ChartExplainer
+        blocks={[
+          {
+            label: "Rows",
+            body: "One row per unique cited domain across all engines. Same domain cited many times = one row with a higher Citations count.",
+          },
+          {
+            label: "Authority",
+            body: "Sage = high (Yelp, Google, BBB, Wikipedia, major news), gold = medium (Facebook, Reddit, mid-tier directories), rust = low (everything else).",
+          },
+          {
+            label: "Status",
+            body: "Listed (sage) = your business was mentioned in at least one response that cited this domain. Gap (rust) = engines pull from this domain but never connect it back to you.",
+          },
+          {
+            label: "Engines column",
+            body: "Which AI engines cited this domain. More icons = broader coverage. Two engines citing the same source is a stronger signal than one.",
+          },
+        ]}
+        tip="Sort by Authority desc, then Status = Gap → that's your priority list of high-authority sources to get listed on."
+      />
     </Card>
   );
 }
