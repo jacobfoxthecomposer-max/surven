@@ -275,8 +275,6 @@ function ApplyFixModalInner({
             </div>
           </motion.div>
         </motion.div>
-      )}
-    </AnimatePresence>
   );
 }
 
