@@ -14,6 +14,10 @@ import {
   Info,
   Crown,
   ArrowRight,
+  Link2,
+  GitBranch,
+  Globe,
+  CheckCircle2,
 } from "lucide-react";
 import { Card } from "@/components/atoms/Card";
 import { Button } from "@/components/atoms/Button";
@@ -21,6 +25,7 @@ import { Input } from "@/components/atoms/Input";
 import { AIOverview } from "@/components/atoms/AIOverview";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { useCrawlabilityAudit } from "@/features/crawlability/hooks/useCrawlabilityAudit";
+import { useSiteConnections } from "@/features/crawlability/hooks/useSiteConnections";
 import { CrawlabilityScoreGauge } from "@/features/crawlability/components/CrawlabilityScoreGauge";
 import { StatusCodeDonut } from "@/features/crawlability/components/StatusCodeDonut";
 import { CategoryScoresBars } from "@/features/crawlability/components/CategoryScoresBars";
@@ -51,6 +56,9 @@ export function CrawlabilityAuditPage({
 
   const isFree = plan === "free";
   const isPremium = plan === "premium" || plan === "admin";
+
+  const { connections } = useSiteConnections(isPremium ? businessId : undefined);
+  const activeConnection = connections.find((c) => c.status === "active");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -141,6 +149,45 @@ export function CrawlabilityAuditPage({
         <p className="text-sm text-[var(--color-fg-muted)] mt-1.5">
           How easily AI models and search engines can crawl, index, and extract data from {businessName}.
         </p>
+
+        {/* Premium: connected site indicator */}
+        {isPremium && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {activeConnection ? (
+              <HoverHint
+                hint={`Surven can apply fixes directly to your ${connectionLabel(activeConnection.platform)} ${connectionTarget(activeConnection)}.`}
+              >
+                <span
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-full)] border text-xs font-medium"
+                  style={{
+                    cursor: "help",
+                    backgroundColor: "rgba(150,162,131,0.10)",
+                    borderColor: "rgba(150,162,131,0.4)",
+                    color: "var(--color-primary-hover)",
+                  }}
+                >
+                  <ConnectionIcon platform={activeConnection.platform} />
+                  <CheckCircle2 className="h-3 w-3" style={{ color: "var(--color-primary)" }} />
+                  {connectionLabel(activeConnection.platform)} connected
+                  {connections.length > 1 && (
+                    <span className="text-[var(--color-fg-muted)] font-normal">
+                      +{connections.length - 1} more
+                    </span>
+                  )}
+                </span>
+              </HoverHint>
+            ) : (
+              <Link
+                href="/settings"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-full)] border border-dashed border-[var(--color-border-hover)] text-xs font-medium text-[var(--color-fg-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] transition-colors"
+              >
+                <Link2 className="h-3 w-3" />
+                Connect a site to apply fixes directly
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            )}
+          </div>
+        )}
       </motion.div>
 
       {/* AIOverview callout */}
@@ -349,6 +396,30 @@ export function CrawlabilityAuditPage({
       )}
     </div>
   );
+}
+
+function connectionLabel(platform: string): string {
+  return platform === "github"
+    ? "GitHub"
+    : platform === "vercel"
+    ? "Vercel"
+    : platform === "wordpress"
+    ? "WordPress"
+    : platform === "webflow"
+    ? "Webflow"
+    : platform;
+}
+
+function connectionTarget(connection: { platform: string; repo?: string; site_url?: string; site_id?: string }): string {
+  if (connection.platform === "github" && connection.repo) return `repo (${connection.repo})`;
+  if (connection.platform === "wordpress" && connection.site_url) return `site (${connection.site_url})`;
+  if (connection.site_id) return `site (${connection.site_id})`;
+  return "site";
+}
+
+function ConnectionIcon({ platform }: { platform: string }) {
+  if (platform === "github") return <Github className="h-3.5 w-3.5" />;
+  return <Globe className="h-3.5 w-3.5" />;
 }
 
 interface KpiCardProps {
