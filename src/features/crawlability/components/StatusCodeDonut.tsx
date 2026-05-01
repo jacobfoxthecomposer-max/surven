@@ -2,13 +2,18 @@
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { HoverHint } from "@/components/atoms/HoverHint";
+import { ChartExplainer } from "@/components/atoms/ChartExplainer";
+import { SURVEN_SEMANTIC } from "@/utils/brandColors";
 import type { StatusBreakdown } from "@/types/crawlability";
 
+// HTTP status codes are semantically ranked (success → redirect → error → fatal),
+// so colors come from SURVEN_SEMANTIC. 4xx uses warning orange since it sits
+// between "mid" and "bad" in severity.
 const COLORS_MAP = {
-  "2xx": "#96A283", // sage
-  "3xx": "#B8A030", // yellow
-  "4xx": "#C97B45", // orange
-  "5xx": "#B54631", // rust
+  "2xx": SURVEN_SEMANTIC.good,    // sage — page loaded fine
+  "3xx": SURVEN_SEMANTIC.mid,     // gold — redirect, watch
+  "4xx": "#C97B45",               // warning orange — client error
+  "5xx": SURVEN_SEMANTIC.bad,     // rust — server error, blocks AI
 } as const;
 
 const LABELS: Record<keyof StatusBreakdown, string> = {
