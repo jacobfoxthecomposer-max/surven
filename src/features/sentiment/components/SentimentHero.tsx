@@ -205,9 +205,9 @@ export function SentimentHero({ results, history, businessName }: Props) {
                 <Line
                   type="monotone"
                   dataKey="positive"
-                  stroke={status.color}
+                  stroke={SURVEN_SEMANTIC.good}
                   strokeWidth={2.5}
-                  dot={{ r: 3, fill: status.color, strokeWidth: 0 }}
+                  dot={{ r: 3, fill: SURVEN_SEMANTIC.good, strokeWidth: 0 }}
                   activeDot={{ r: 5 }}
                   isAnimationActive={true}
                 />
