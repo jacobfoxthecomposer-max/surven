@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Spinner } from "@/components/atoms/Spinner";
+import { AIOverview } from "@/components/atoms/AIOverview";
 import { useToast } from "@/components/molecules/Toast";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
@@ -19,6 +20,35 @@ import { CitationGapSection } from "@/features/dashboard/pages/CitationGapSectio
 import { exportScanResultsAsCsv } from "@/utils/csvExport";
 import { Button } from "@/components/atoms/Button";
 import { Download } from "lucide-react";
+import type { ScanResult } from "@/types/database";
+
+const MODEL_LABELS: Record<ScanResult["model_name"], string> = {
+  chatgpt: "ChatGPT",
+  claude: "Claude",
+  gemini: "Gemini",
+  google_ai: "Google AI",
+};
+
+function buildDashboardInsight(results: ScanResult[]): string | null {
+  if (results.length === 0) return null;
+  const byEngine = new Map<ScanResult["model_name"], { mentioned: number; total: number }>();
+  for (const r of results) {
+    const e = byEngine.get(r.model_name) ?? { mentioned: 0, total: 0 };
+    e.total += 1;
+    if (r.business_mentioned) e.mentioned += 1;
+    byEngine.set(r.model_name, e);
+  }
+  const ranked = [...byEngine.entries()]
+    .map(([model, s]) => ({ model, ...s, rate: s.total ? s.mentioned / s.total : 0 }))
+    .sort((a, b) => b.rate - a.rate);
+  if (ranked.length === 0) return null;
+  const best = ranked[0];
+  const worst = ranked[ranked.length - 1];
+  if (ranked.length === 1) {
+    return `${MODEL_LABELS[best.model]} mentioned your business in ${best.mentioned} of ${best.total} prompts.`;
+  }
+  return `${MODEL_LABELS[best.model]} mentioned your business in ${best.mentioned} of ${best.total} prompts — your strongest engine. ${MODEL_LABELS[worst.model]} was lowest at ${worst.mentioned} of ${worst.total}.`;
+}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -70,6 +100,7 @@ export default function DashboardPage() {
   const score = latestScan?.visibility_score ?? 0;
   const results = latestScan?.results ?? [];
   const competitorNames = competitors.map((c) => c.name);
+  const insight = buildDashboardInsight(results);
 
   const ease = [0.16, 1, 0.3, 1] as const;
   const reveal = {
@@ -99,6 +130,13 @@ export default function DashboardPage() {
             onRunScan={handleRunScan}
           />
         </motion.div>
+
+        {/* 2: AI Overview — data-derived summary of strongest engine */}
+        {insight && (
+          <motion.div {...reveal}>
+            <AIOverview text={insight} size="md" />
+          </motion.div>
+        )}
 
         {/* 3: AI Model Breakdown */}
         {results.length > 0 && (
