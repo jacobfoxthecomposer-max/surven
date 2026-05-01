@@ -1768,7 +1768,7 @@ function PositionChart({
           const isDimmed = hoveredBrandId != null && !isHovered;
           const baseOpacity = s.brand.isYou ? 1 : 0.4;
           const lineOpacity = isHovered ? 1 : isDimmed ? 0.08 : baseOpacity;
-          const lineWidth = isHovered ? 3.5 : s.brand.isYou ? 3 : 1.25;
+          const lineWidth = isHovered ? 1.75 : s.brand.isYou ? 1.5 : 0.625;
           return (
           <Line
             key={s.brand.id}
