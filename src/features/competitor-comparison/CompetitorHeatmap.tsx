@@ -6,6 +6,7 @@ import { Info, Zap } from "lucide-react";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
+import { ChartExplainer } from "@/components/atoms/ChartExplainer";
 import type { ScanResult, ModelName } from "@/types/database";
 
 const MODELS: { id: ModelName; label: string }[] = [
