@@ -12,6 +12,7 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
 import { useScan } from "@/features/dashboard/hooks/useScan";
 import { CompetitorHero } from "@/features/competitor-comparison/CompetitorHero";
+import { EngineComparisonBars } from "@/features/competitor-comparison/EngineComparisonBars";
 import { DiagnosticBand } from "@/features/competitor-comparison/DiagnosticBand";
 import { CompetitorRowTable } from "@/features/competitor-comparison/CompetitorRowTable";
 import { CompetitorHeatmap } from "@/features/competitor-comparison/CompetitorHeatmap";
@@ -62,11 +63,9 @@ export default function CompetitorComparisonPage() {
     [results, selectedModels],
   );
 
-  // Avg competitor score & outperforming count — hooks must run before any returns
-  const { avgCompetitorScore, outperforming } = useMemo(() => {
-    if (!hasResults)
-      return { avgCompetitorScore: 0, outperforming: 0 };
-
+  // Avg competitor score — hook must run before any returns
+  const avgCompetitorScore = useMemo(() => {
+    if (!hasResults) return 0;
     const compScores = competitorNames.map((name) => {
       let mentioned = 0;
       let total = 0;
@@ -78,16 +77,10 @@ export default function CompetitorComparisonPage() {
       }
       return total > 0 ? Math.round((mentioned / total) * 100) : 0;
     });
-
-    const avg =
-      compScores.length > 0
-        ? Math.round(compScores.reduce((a, b) => a + b, 0) / compScores.length)
-        : 0;
-
-    const out = compScores.filter((cs) => score > cs).length;
-
-    return { avgCompetitorScore: avg, outperforming: out };
-  }, [filteredResults, competitorNames, score, hasResults]);
+    return compScores.length > 0
+      ? Math.round(compScores.reduce((a, b) => a + b, 0) / compScores.length)
+      : 0;
+  }, [filteredResults, competitorNames, hasResults]);
 
   const toggleModel = (id: string) => {
     setSelectedModels((prev) => {
@@ -125,15 +118,12 @@ export default function CompetitorComparisonPage() {
   return (
     <DashboardLayout>
       <div className="space-y-8" id="competitor-dashboard">
-        {/* Asymmetric hero strip */}
+        {/* Hero — headline + action panel */}
         <CompetitorHero
           businessName={business.name}
           score={score}
           avgCompetitorScore={avgCompetitorScore}
           competitorCount={competitorNames.length}
-          outperforming={outperforming}
-          results={filteredResults}
-          competitors={competitorNames}
           onExport={() => setExportOpen(true)}
         />
 
@@ -201,6 +191,12 @@ export default function CompetitorComparisonPage() {
                 })}
               </div>
             </motion.div>
+
+            {/* Per-engine you-vs-competitor bars */}
+            <EngineComparisonBars
+              results={filteredResults}
+              competitors={competitorNames}
+            />
 
             {/* Diagnostic callout band */}
             <DiagnosticBand
