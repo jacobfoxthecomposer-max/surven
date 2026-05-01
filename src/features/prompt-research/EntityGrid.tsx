@@ -96,6 +96,28 @@ export function EntityGrid({ data }: EntityGridProps) {
           );
         })}
       </div>
+
+      <ChartExplainer
+        blocks={[
+          {
+            label: "Columns",
+            body: "Four entity types — your brand, competitors, adjacent categories, and audience. Together they're the building blocks AI uses to recommend (or skip) you.",
+          },
+          {
+            label: "Brand",
+            body: "Your business itself. The 'thing' AI engines need to learn to recommend when someone asks a category question.",
+          },
+          {
+            label: "Competitors + Adjacent",
+            body: "Competitors are direct rivals AI may cite instead of you. Adjacent are nearby categories where you could plausibly surface — a hidden growth lane.",
+          },
+          {
+            label: "Audience",
+            body: "Who you're built for. Drives audience-modified prompts like 'best [category] for small businesses' — these often have less competition.",
+          },
+        ]}
+        tip="Empty 'Adjacent' or 'Audience' columns mean you haven't told the system enough yet — fill them in Settings to unlock more prompt variations."
+      />
     </Card>
   );
 }
