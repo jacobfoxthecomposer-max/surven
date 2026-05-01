@@ -391,7 +391,7 @@ export function VisibilityScannerChart({
   strokeYou = 2.75,
   strokeHovered = 3.5,
   strokeDefault = 1.75,
-  youGlowBlur = 7,
+  youGlowBlur = 2,
   lineType = "linear",
   tooltipFontSize = 10,
   gridStroke = "rgba(107,109,107,0.45)",
@@ -555,8 +555,8 @@ export function VisibilityScannerChart({
         >
           <defs>
             <linearGradient id="visYouGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={COLORS.primary} stopOpacity={0.35} />
-              <stop offset="75%" stopColor={COLORS.primary} stopOpacity={0.08} />
+              <stop offset="0%" stopColor={COLORS.primary} stopOpacity={0.15} />
+              <stop offset="75%" stopColor={COLORS.primary} stopOpacity={0.03} />
               <stop offset="100%" stopColor={COLORS.primary} stopOpacity={0} />
             </linearGradient>
           </defs>
