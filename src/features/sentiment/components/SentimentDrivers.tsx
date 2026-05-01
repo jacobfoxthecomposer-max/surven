@@ -128,7 +128,7 @@ export function SentimentDrivers({ results, businessName }: Props) {
             <div className="h-7 w-7 rounded-lg bg-[#B54631]/15 flex items-center justify-center">
               <AlertCircle className="h-4 w-4 text-[#8C3522]" />
             </div>
-            <h3 className="text-sm font-semibold text-[var(--color-fg)]">Areas for Improvement</h3>
+            <h3 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, color: "var(--color-fg)" }}>Areas for Improvement</h3>
             <HoverHint hint="Prompts where AI gives your brand negative sentiment or doesn't mention you at all. These are high-leverage targets for Optimizer work.">
               <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
             </HoverHint>
