@@ -2699,6 +2699,28 @@ function CoverageDonut({ items }: { items: IntentCoverage[] }) {
         </div>
       </div>
 
+      <ChartExplainer
+        blocks={[
+          {
+            label: "Slices",
+            body: "Each slice is one user-intent category — branded lookups, comparisons, transactional queries, etc.",
+          },
+          {
+            label: "Slice size",
+            body: "Proportional to how many prompts in your tracked set fall into that intent. Bigger slice = more prompts of that type.",
+          },
+          {
+            label: "Coverage % (right side)",
+            body: "Within that intent, the share of prompts where you're cited. Each row is its own independent score — they don't add up to 100%.",
+          },
+          {
+            label: "Colors",
+            body: "Visual differentiation between intent categories only. They don't indicate good or bad — sage isn't better than rust here.",
+          },
+        ]}
+        tip="Hover any slice to focus the donut and see that intent's coverage, average position, and sentiment in the center."
+      />
+
       <div className="mt-4 pt-3 border-t border-[var(--color-border)]">
         <CtaLink
           icon={Target}
