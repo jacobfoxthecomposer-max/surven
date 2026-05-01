@@ -110,6 +110,28 @@ export function CategoryScoresBars({ scores }: { scores: CategoryScores }) {
           );
         })}
       </div>
+
+      <ChartExplainer
+        blocks={[
+          {
+            label: "Rows",
+            body: "Five crawlability categories — HTTP health, indexability, content quality, security, and link health. Each is its own independent score.",
+          },
+          {
+            label: "Bar length",
+            body: "Score from 0 to 100. The bar fills proportionally — a full bar means a perfect score, a short bar means most checks are failing.",
+          },
+          {
+            label: "Colors",
+            body: "Semantic — sage = excellent (81+), lighter sage = healthy (56–80), gold = watch (26–55), rust = critical (under 26).",
+          },
+          {
+            label: "Why these five",
+            body: "Together they cover every signal AI engines use to decide whether to trust your site as a citation source. Failing one drags your overall crawlability score down.",
+          },
+        ]}
+        tip="Hover any row for what that category measures. The lowest-scoring category is usually the highest-leverage thing to fix first."
+      />
     </div>
   );
 }
