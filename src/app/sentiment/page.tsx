@@ -7,19 +7,24 @@ import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Spinner } from "@/components/atoms/Spinner";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { NextScanCard } from "@/components/atoms/NextScanCard";
-import { Calendar } from "lucide-react";
+import { Calendar, AlertTriangle, ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
 import { useScan } from "@/features/dashboard/hooks/useScan";
 import { useSentimentHistory } from "@/features/sentiment/hooks/useSentimentHistory";
-import { SentimentInsights } from "@/features/sentiment/components/SentimentInsights";
-import { SentimentDonut } from "@/features/sentiment/components/SentimentDonut";
+import { SentimentHero } from "@/features/sentiment/components/SentimentHero";
+import { SentimentMetricRows } from "@/features/sentiment/components/SentimentMetricRows";
 import { SentimentByPlatform } from "@/features/sentiment/components/SentimentByPlatform";
-import { SentimentDrivers } from "@/features/sentiment/components/SentimentDrivers";
-import { SentimentOverTime } from "@/features/sentiment/components/SentimentOverTime";
-import { WhatAISaid } from "@/features/sentiment/components/WhatAISaid";
 import { SentimentByFeature } from "@/features/sentiment/components/SentimentByFeature";
+import { SentimentDrivers } from "@/features/sentiment/components/SentimentDrivers";
+import { SentimentDiagnostic } from "@/features/sentiment/components/SentimentDiagnostic";
+import { SentimentCrossLinks } from "@/features/sentiment/components/SentimentCrossLinks";
+import { SentimentCTABanner } from "@/features/sentiment/components/SentimentCTABanner";
+import { WhatAISaid } from "@/features/sentiment/components/WhatAISaid";
+import { SURVEN_SEMANTIC } from "@/utils/brandColors";
 import { AI_MODELS } from "@/utils/constants";
+import type { ModelName } from "@/types/database";
 
 type TimeRange = "14d" | "30d" | "90d" | "ytd" | "all";
 const TIME_RANGES: { key: TimeRange; label: string }[] = [
@@ -29,6 +34,13 @@ const TIME_RANGES: { key: TimeRange; label: string }[] = [
   { key: "ytd", label: "YTD" },
   { key: "all", label: "All" },
 ];
+
+const MODEL_LABELS: Record<ModelName, string> = {
+  chatgpt: "ChatGPT",
+  claude: "Claude",
+  gemini: "Gemini",
+  google_ai: "Google AI",
+};
 
 const ease = [0.16, 1, 0.3, 1] as const;
 const reveal = {
@@ -41,7 +53,6 @@ const reveal = {
 export default function SentimentPage() {
   const router = useRouter();
 
-  // Filter state — must be before early returns
   const [timeRange, setTimeRange] = useState<TimeRange>("all");
   const [selectedModels, setSelectedModels] = useState<Set<string>>(
     () => new Set(AI_MODELS.map((m) => m.id))
@@ -52,6 +63,55 @@ export default function SentimentPage() {
   const { latestScan, isLoading: scanLoading } = useScan(business, competitors);
   const { data: sentimentHistory = [], isLoading: historyLoading } = useSentimentHistory(business?.id);
 
+  const allResults = latestScan?.results ?? [];
+
+  const results = selectedModels.size === AI_MODELS.length
+    ? allResults
+    : allResults.filter((r) => selectedModels.has(r.model_name));
+
+  const filteredHistory = useMemo(() => {
+    const now = new Date();
+    if (timeRange === "14d") return sentimentHistory.slice(-14);
+    if (timeRange === "30d") return sentimentHistory.slice(-30);
+    if (timeRange === "90d") return sentimentHistory.slice(-90);
+    if (timeRange === "ytd") {
+      const jan1 = new Date(now.getFullYear(), 0, 1).toISOString();
+      return sentimentHistory.filter((d) => d.date >= jan1);
+    }
+    return sentimentHistory;
+  }, [timeRange, sentimentHistory]);
+
+  // Headline word + warning detection
+  const { dominant, sentimentColor, sentimentWord, warning } = useMemo(() => {
+    const mentioned = results.filter((r) => r.business_mentioned && r.sentiment);
+    const total = mentioned.length;
+    if (total === 0) {
+      return { dominant: null, sentimentColor: SURVEN_SEMANTIC.neutral, sentimentWord: "unknown", warning: null };
+    }
+    const counts = { positive: 0, neutral: 0, negative: 0 };
+    for (const r of mentioned) if (r.sentiment) counts[r.sentiment as keyof typeof counts]++;
+
+    const dom = (Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0] as "positive" | "neutral" | "negative");
+    const word = dom === "positive" ? "Positive" : dom === "negative" ? "Negative" : "Mixed";
+    const color = dom === "positive" ? SURVEN_SEMANTIC.good : dom === "negative" ? SURVEN_SEMANTIC.bad : SURVEN_SEMANTIC.mid;
+
+    // Warning: a single engine is bleeding sentiment
+    const models: ModelName[] = ["chatgpt", "claude", "gemini", "google_ai"];
+    let warning: { engine: ModelName; negPct: number; negCount: number; total: number } | null = null;
+    for (const m of models) {
+      const mm = mentioned.filter((r) => r.model_name === m);
+      if (mm.length < 3) continue;
+      const neg = mm.filter((r) => r.sentiment === "negative").length;
+      const negPct = Math.round((neg / mm.length) * 100);
+      if (negPct >= 25 && (warning === null || negPct > warning.negPct)) {
+        warning = { engine: m, negPct, negCount: neg, total: mm.length };
+      }
+    }
+
+    return { dominant: dom, sentimentColor: color, sentimentWord: word, warning };
+  }, [results]);
+
+  // Auth gating — placed AFTER all hooks so React rules-of-hooks are satisfied
   if (!user && !authLoading) {
     router.push("/login");
     return null;
@@ -76,7 +136,7 @@ export default function SentimentPage() {
     setSelectedModels((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
-        if (next.size === 1) return prev; // keep at least one selected
+        if (next.size === 1) return prev;
         next.delete(id);
       } else {
         next.add(id);
@@ -85,44 +145,13 @@ export default function SentimentPage() {
     });
   };
 
-  const allResults = latestScan?.results ?? [];
-
-  // Apply model filter
-  const results = selectedModels.size === AI_MODELS.length
-    ? allResults
-    : allResults.filter((r) => selectedModels.has(r.model_name));
-
-  // Apply time range filter to history
-  const now = new Date();
-  const filteredHistory = (() => {
-    if (timeRange === "14d") return sentimentHistory.slice(-14);
-    if (timeRange === "30d") return sentimentHistory.slice(-30);
-    if (timeRange === "90d") return sentimentHistory.slice(-90);
-    if (timeRange === "ytd") {
-      const jan1 = new Date(now.getFullYear(), 0, 1).toISOString();
-      return sentimentHistory.filter((d) => d.date >= jan1);
-    }
-    return sentimentHistory;
-  })();
-
   const competitorNames = competitors.map((c) => c.name);
-
-  // Derive dominant sentiment for headline
-  const mentioned = results.filter((r) => r.business_mentioned && r.sentiment);
-  const sentimentCounts = { positive: 0, neutral: 0, negative: 0 };
-  for (const r of mentioned) {
-    if (r.sentiment) sentimentCounts[r.sentiment as keyof typeof sentimentCounts]++;
-  }
-  const dominant = mentioned.length > 0
-    ? (Object.entries(sentimentCounts).sort((a, b) => b[1] - a[1])[0][0] as "positive" | "neutral" | "negative")
-    : null;
-  const sentimentWord  = dominant === "positive" ? "Positive" : dominant === "negative" ? "Negative" : "Neutral";
-  const sentimentColor = dominant === "positive" ? "#7D8E6C" : dominant === "negative" ? "#B54631" : "#A09890";
+  const negativeCount = results.filter((r) => r.business_mentioned && r.sentiment === "negative").length;
+  const totalMentions = results.filter((r) => r.business_mentioned && r.sentiment).length;
 
   return (
     <DashboardLayout>
       <div className="space-y-5 w-full">
-
         {/* ── Header ── */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -158,14 +187,13 @@ export default function SentimentPage() {
           </div>
         </motion.div>
 
-        {/* ── Global filter bar ── */}
+        {/* ── Filter bar ── */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1, ease }}
           className="flex flex-wrap items-center gap-2 pb-4 border-b border-[var(--color-border)]"
         >
-          {/* Time range pills — grouped bordered container */}
           <div className="inline-flex rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-1 gap-1">
             {TIME_RANGES.map(({ key, label }) => (
               <button
@@ -184,7 +212,6 @@ export default function SentimentPage() {
             ))}
           </div>
 
-          {/* Custom button — separate with border */}
           <button
             className="inline-flex items-center gap-1.5 px-3.5 py-2 font-medium rounded-[var(--radius-md)] border transition-colors bg-[var(--color-surface)] text-[var(--color-fg-secondary)] border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]"
             style={{ fontSize: 14 }}
@@ -196,7 +223,6 @@ export default function SentimentPage() {
 
           <div className="h-4 w-px bg-[var(--color-border)]" />
 
-          {/* AI engine chips — outlined when inactive */}
           <span className="text-[var(--color-fg-muted)] mr-1" style={{ fontSize: 14 }}>AI engines:</span>
           <div className="flex flex-wrap items-center gap-1.5">
             {AI_MODELS.map((m) => {
@@ -240,23 +266,83 @@ export default function SentimentPage() {
           </motion.div>
         ) : (
           <>
+            {/* Hero — 3-zone asymmetric layout */}
             <motion.div {...reveal}>
-              <SentimentInsights results={results} sentimentHistory={filteredHistory} />
+              <SentimentHero
+                results={results}
+                history={filteredHistory}
+                businessName={business.name}
+              />
             </motion.div>
 
-            <motion.div {...reveal} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <SentimentDonut results={results} />
+            {/* Metric rows with action links */}
+            <motion.div {...reveal}>
+              <SentimentMetricRows results={results} history={filteredHistory} />
+            </motion.div>
+
+            {/* Warning callout — only renders if a single engine is bleeding sentiment */}
+            {warning && (
+              <motion.div {...reveal}>
+                <div
+                  className="rounded-[var(--radius-lg)] border p-4 flex items-start gap-3"
+                  style={{
+                    background: "rgba(181,70,49,0.04)",
+                    borderColor: "rgba(181,70,49,0.25)",
+                  }}
+                >
+                  <div
+                    className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ background: "rgba(181,70,49,0.12)" }}
+                  >
+                    <AlertTriangle className="h-4 w-4" style={{ color: SURVEN_SEMANTIC.bad }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className="text-sm font-semibold mb-1"
+                      style={{ color: "var(--color-fg)" }}
+                    >
+                      {MODEL_LABELS[warning.engine]} is showing {warning.negPct}% negative sentiment
+                    </p>
+                    <p className="text-xs text-[var(--color-fg-secondary)] leading-snug">
+                      {warning.negCount} of {warning.total} mentions on {MODEL_LABELS[warning.engine]} use critical or dismissive language. This is the highest-leverage engine to fix — every prompt hitting this engine inherits the negative framing.
+                    </p>
+                  </div>
+                  <Link
+                    href="/audit"
+                    className="shrink-0 inline-flex items-center gap-1 px-3 py-2 rounded-[var(--radius-md)] text-xs font-semibold text-white transition-opacity hover:opacity-90 self-center"
+                    style={{ background: SURVEN_SEMANTIC.bad }}
+                  >
+                    <span>Fix with audit</span>
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Sentiment by AI engine — restyled compact rows */}
+            <motion.div {...reveal}>
               <SentimentByPlatform results={results} />
             </motion.div>
 
-            <motion.div {...reveal}>
-              <SentimentOverTime data={filteredHistory} isLoading={historyLoading} />
-            </motion.div>
-
+            {/* Sentiment by feature */}
             <motion.div {...reveal}>
               <SentimentByFeature results={results} businessName={business.name} competitors={competitorNames} />
             </motion.div>
 
+            {/* Cross-link cards */}
+            <motion.div {...reveal}>
+              <SentimentCrossLinks
+                totalMentions={totalMentions}
+                negativeCount={negativeCount}
+              />
+            </motion.div>
+
+            {/* What's working / What to watch diagnostic */}
+            <motion.div {...reveal}>
+              <SentimentDiagnostic results={results} history={filteredHistory} />
+            </motion.div>
+
+            {/* Sentiment drivers + WhatAISaid */}
             <motion.div {...reveal}>
               <SentimentDrivers results={results} businessName={business.name} />
             </motion.div>
@@ -264,8 +350,16 @@ export default function SentimentPage() {
             <motion.div {...reveal}>
               <WhatAISaid results={results} businessName={business.name} />
             </motion.div>
+
+            {/* Bottom CTA banner */}
+            <motion.div {...reveal}>
+              <SentimentCTABanner negativeCount={negativeCount} />
+            </motion.div>
           </>
         )}
+
+        {/* historyLoading kept referenced to avoid lint warning during initial paint */}
+        {historyLoading && null}
       </div>
     </DashboardLayout>
   );

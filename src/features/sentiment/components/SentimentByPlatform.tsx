@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
-import { Info } from "lucide-react";
+import Link from "next/link";
+import { Info, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
-import { AIOverview } from "@/components/atoms/AIOverview";
 import { ChartExplainer } from "@/components/atoms/ChartExplainer";
 import { SURVEN_SEMANTIC } from "@/utils/brandColors";
 import type { ScanResult, ModelName } from "@/types/database";
@@ -24,7 +24,7 @@ interface Props {
 }
 
 export function SentimentByPlatform({ results }: Props) {
-  const { rows, insight } = useMemo(() => {
+  const { rows, best, worst } = useMemo(() => {
     const rows = MODELS.map((model) => {
       const modelResults = results.filter((r) => r.business_mentioned && r.model_name === model);
       const total = modelResults.length;
@@ -38,109 +38,134 @@ export function SentimentByPlatform({ results }: Props) {
       };
     }).filter((r) => r.total > 0);
 
-    const withData = rows.filter((r) => r.total > 0);
-    const best  = withData.length > 0 ? withData.reduce((a, b) => a.positive >= b.positive ? a : b) : null;
-    const worst = withData.length > 1 ? withData.reduce((a, b) => a.positive <= b.positive ? a : b) : null;
-    const insight = best && worst && best.model !== worst.model
-      ? `Strongest on ${MODEL_LABELS[best.model]} (${best.positive}% positive) — weakest on ${MODEL_LABELS[worst.model]} (${worst.positive}%). Closing this gap is your biggest lever.`
-      : best
-      ? `${MODEL_LABELS[best.model]} gives you the most favorable mentions at ${best.positive}% positive.`
-      : null;
+    const sorted = [...rows].sort((a, b) => b.positive - a.positive);
+    const best = sorted[0] ?? null;
+    const worst = sorted.length > 1 ? sorted[sorted.length - 1] : null;
 
-    return { rows, insight };
+    return { rows, best, worst };
   }, [results]);
 
   if (rows.length === 0) return null;
 
   return (
     <Card>
-      <div className="flex items-center gap-1.5 mb-3">
-        <h3 className="text-sm font-semibold text-[var(--color-fg)]">Sentiment by AI Platform</h3>
-        <HoverHint hint="How each AI platform rates your brand's tone when it mentions you. Positive means favorable language; negative means critical or dismissive.">
-          <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
-        </HoverHint>
-      </div>
-      {insight && <div className="mb-5"><AIOverview text={insight} size="sm" /></div>}
-      <div className="space-y-5">
-        {rows.map((row, i) => (
-          <div key={row.model}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="flex items-center gap-1.5 text-sm text-[var(--color-fg)]">
-                <EngineIcon id={row.model} size={13} />
-                {MODEL_LABELS[row.model]}
-              </span>
-              <span className="text-xs text-[var(--color-fg-muted)]">{row.total} mention{row.total !== 1 ? "s" : ""}</span>
-            </div>
-            {/* Stacked bar */}
-            <div className="h-3 rounded-full overflow-hidden flex bg-[var(--color-surface-alt)]">
-              {row.positive > 0 && (
-                <motion.div
-                  className="h-full"
-                  style={{ width: `${row.positive}%`, background: "#96A283" }}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${row.positive}%` }}
-                  transition={{ duration: 0.7, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
-                />
-              )}
-              {row.neutral > 0 && (
-                <motion.div
-                  className="h-full"
-                  style={{ width: `${row.neutral}%`, background: "#A09890" }}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${row.neutral}%` }}
-                  transition={{ duration: 0.7, delay: i * 0.1 + 0.05, ease: [0.16, 1, 0.3, 1] }}
-                />
-              )}
-              {row.negative > 0 && (
-                <motion.div
-                  className="h-full"
-                  style={{ width: `${row.negative}%`, background: "#B54631" }}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${row.negative}%` }}
-                  transition={{ duration: 0.7, delay: i * 0.1 + 0.1, ease: [0.16, 1, 0.3, 1] }}
-                />
-              )}
-            </div>
-            <div className="flex items-center gap-4 mt-1.5">
-              {row.positive > 0  && <span className="text-xs text-[#566A47]">{row.positive}% positive</span>}
-              {row.neutral > 0   && <span className="text-xs text-[var(--color-fg-muted)]">{row.neutral}% neutral</span>}
-              {row.negative > 0  && <span className="text-xs text-[#8C3522]">{row.negative}% negative</span>}
-            </div>
-          </div>
-        ))}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-1.5">
+          <h3
+            style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, color: "var(--color-fg)" }}
+          >
+            Sentiment by AI engine
+          </h3>
+          <HoverHint hint="Each engine's mentions broken down by tone. Positive means favorable framing; negative means critical or dismissive language.">
+            <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+          </HoverHint>
+        </div>
+        {best && worst && best.model !== worst.model && (
+          <span className="text-xs text-[var(--color-fg-muted)]">
+            <span className="font-semibold" style={{ color: SURVEN_SEMANTIC.good }}>{MODEL_LABELS[best.model]}</span>
+            {" leads · "}
+            <span className="font-semibold" style={{ color: SURVEN_SEMANTIC.bad }}>{MODEL_LABELS[worst.model]}</span>
+            {" trails"}
+          </span>
+        )}
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center gap-5 mt-5 pt-4 border-t border-[var(--color-border)]">
-        {[
-          { color: SURVEN_SEMANTIC.goodAlt, label: "Positive" },
-          { color: SURVEN_SEMANTIC.neutral, label: "Neutral" },
-          { color: SURVEN_SEMANTIC.bad,     label: "Negative" },
-        ].map((l) => (
-          <div key={l.label} className="flex items-center gap-1.5">
-            <div className="h-2 w-2 rounded-full" style={{ background: l.color }} />
-            <span className="text-xs text-[var(--color-fg-muted)]">{l.label}</span>
-          </div>
-        ))}
+      <div className="divide-y divide-[var(--color-border)]">
+        {rows.map((row, i) => {
+          const positiveColor = row.positive >= 70 ? SURVEN_SEMANTIC.good : row.positive >= 40 ? SURVEN_SEMANTIC.mid : SURVEN_SEMANTIC.bad;
+          return (
+            <div key={row.model} className="flex items-center gap-4 py-3 first:pt-0 last:pb-0">
+              {/* Engine */}
+              <div className="flex items-center gap-2 shrink-0" style={{ minWidth: 130 }}>
+                <EngineIcon id={row.model} size={14} />
+                <span className="text-sm font-medium text-[var(--color-fg)]">{MODEL_LABELS[row.model]}</span>
+              </div>
+
+              {/* Stacked mini-bar */}
+              <div className="flex-1 min-w-0">
+                <div className="h-2 rounded-full overflow-hidden flex bg-[var(--color-surface-alt)]">
+                  {row.positive > 0 && (
+                    <motion.div
+                      className="h-full"
+                      style={{ background: SURVEN_SEMANTIC.goodAlt }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${row.positive}%` }}
+                      transition={{ duration: 0.6, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+                    />
+                  )}
+                  {row.neutral > 0 && (
+                    <motion.div
+                      className="h-full"
+                      style={{ background: SURVEN_SEMANTIC.neutral }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${row.neutral}%` }}
+                      transition={{ duration: 0.6, delay: i * 0.08 + 0.05, ease: [0.16, 1, 0.3, 1] }}
+                    />
+                  )}
+                  {row.negative > 0 && (
+                    <motion.div
+                      className="h-full"
+                      style={{ background: SURVEN_SEMANTIC.bad }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${row.negative}%` }}
+                      transition={{ duration: 0.6, delay: i * 0.08 + 0.1, ease: [0.16, 1, 0.3, 1] }}
+                    />
+                  )}
+                </div>
+                <div className="flex items-center gap-3 mt-1.5 text-[11px] text-[var(--color-fg-muted)]">
+                  {row.positive > 0 && <span><span style={{ color: SURVEN_SEMANTIC.good, fontWeight: 600 }}>{row.positive}%</span> pos</span>}
+                  {row.neutral > 0 && <span>{row.neutral}% neu</span>}
+                  {row.negative > 0 && <span><span style={{ color: SURVEN_SEMANTIC.bad, fontWeight: 600 }}>{row.negative}%</span> neg</span>}
+                  <span className="ml-auto">{row.total} mention{row.total !== 1 ? "s" : ""}</span>
+                </div>
+              </div>
+
+              {/* Headline % */}
+              <div className="shrink-0 text-right" style={{ minWidth: 64 }}>
+                <span
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 24,
+                    fontWeight: 600,
+                    lineHeight: 1,
+                    color: positiveColor,
+                  }}
+                >
+                  {row.positive}%
+                </span>
+              </div>
+
+              {/* Drill-in link */}
+              <Link
+                href="/prompts"
+                className="shrink-0 flex items-center gap-1 text-xs font-medium hover:opacity-70 transition-opacity"
+                style={{ color: SURVEN_SEMANTIC.good, minWidth: 90, justifyContent: "flex-end" }}
+              >
+                <span>Audit</span>
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+          );
+        })}
       </div>
 
       <ChartExplainer
         blocks={[
           {
             label: "Rows",
-            body: "Each row is one AI engine (ChatGPT, Claude, Gemini, Google AI). Engines with no mentions are hidden.",
+            body: "Each row is one AI engine. Engines with no mentions are hidden.",
           },
           {
-            label: "Bar length",
-            body: "Each colored band is the share of that engine's mentions in that tone. The full bar always equals 100%.",
+            label: "Bar",
+            body: "The stacked bar splits each engine's mentions by tone. Sage = positive, gray = neutral, rust = negative. The full bar always equals 100%.",
           },
           {
-            label: "Colors",
-            body: "Sage = positive, gray = neutral, rust = negative. Sage-heavy engines are your strongest; rust-heavy engines need attention.",
+            label: "Headline %",
+            body: "The big number on the right is the positive rate — your headline metric per engine. Above 70% is healthy; below 40% is concerning.",
           },
           {
-            label: "Mention count",
-            body: "The right-aligned number shows how many AI responses included your business on that engine. Low counts mean less reliable signal.",
+            label: "Audit link",
+            body: "Click Audit on any row to open that engine's prompts and see exactly which queries are driving the score.",
           },
         ]}
       />
