@@ -137,6 +137,28 @@ export function StatusCodeDonut({ breakdown }: { breakdown: StatusBreakdown }) {
           })}
         </div>
       </div>
+
+      <ChartExplainer
+        blocks={[
+          {
+            label: "Slices",
+            body: "Each slice is one HTTP status code group — 2xx (success), 3xx (redirect), 4xx (client error), 5xx (server error).",
+          },
+          {
+            label: "Slice size",
+            body: "Number of crawled pages that returned that status. Right-side rows show the same data as a count + percentage.",
+          },
+          {
+            label: "Colors",
+            body: "Semantic — sage = success (good), gold = redirects (watch), orange = client errors (problem), rust = server errors (blocks AI completely).",
+          },
+          {
+            label: "Why it matters",
+            body: "AI engines stop crawling pages that 404 or 500. A high 4xx/5xx share means AI is hitting walls when trying to learn about your business.",
+          },
+        ]}
+        tip="Hover any row for what that status code means. Mostly sage = healthy. Rust slice = stop everything and fix your server."
+      />
     </div>
   );
 }
