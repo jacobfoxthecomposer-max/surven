@@ -19,6 +19,7 @@ import { SentimentByPlatform } from "@/features/sentiment/components/SentimentBy
 import { SentimentByFeature } from "@/features/sentiment/components/SentimentByFeature";
 import { SentimentDrivers } from "@/features/sentiment/components/SentimentDrivers";
 import { SentimentDiagnostic } from "@/features/sentiment/components/SentimentDiagnostic";
+import { SentimentFixActions } from "@/features/sentiment/components/SentimentFixActions";
 import { SentimentCrossLinks } from "@/features/sentiment/components/SentimentCrossLinks";
 import { SentimentCTABanner } from "@/features/sentiment/components/SentimentCTABanner";
 import { WhatAISaid } from "@/features/sentiment/components/WhatAISaid";
