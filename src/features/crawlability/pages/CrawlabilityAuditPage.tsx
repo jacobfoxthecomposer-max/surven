@@ -418,7 +418,7 @@ function connectionTarget(connection: { platform: string; repo?: string; site_ur
 }
 
 function ConnectionIcon({ platform }: { platform: string }) {
-  if (platform === "github") return <Github className="h-3.5 w-3.5" />;
+  if (platform === "github") return <GitBranch className="h-3.5 w-3.5" />;
   return <Globe className="h-3.5 w-3.5" />;
 }
 
