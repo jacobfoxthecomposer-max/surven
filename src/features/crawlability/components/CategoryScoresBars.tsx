@@ -45,11 +45,13 @@ const CATEGORY_META: Array<{
   },
 ];
 
+// Crawlability is a semantic metric — sage means healthy, rust means concerning.
+// Thresholds: 81+ excellent (good), 56–80 healthy (goodAlt), 26–55 watch (mid), <26 critical (bad).
 function scoreColor(score: number): string {
-  if (score < 26) return "#B54631";
-  if (score < 56) return "#C97B45";
-  if (score < 81) return "#96A283";
-  return "#7D8E6C";
+  if (score < 26) return SURVEN_SEMANTIC.bad;
+  if (score < 56) return SURVEN_SEMANTIC.mid;
+  if (score < 81) return SURVEN_SEMANTIC.goodAlt;
+  return SURVEN_SEMANTIC.good;
 }
 
 export function CategoryScoresBars({ scores }: { scores: CategoryScores }) {
