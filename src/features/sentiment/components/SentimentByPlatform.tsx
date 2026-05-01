@@ -85,7 +85,7 @@ export function SentimentByPlatform({ results }: Props) {
               {row.neutral > 0 && (
                 <motion.div
                   className="h-full"
-                  style={{ width: `${row.neutral}%`, background: "#C8C2B4" }}
+                  style={{ width: `${row.neutral}%`, background: "#A09890" }}
                   initial={{ width: 0 }}
                   animate={{ width: `${row.neutral}%` }}
                   transition={{ duration: 0.7, delay: i * 0.1 + 0.05, ease: [0.16, 1, 0.3, 1] }}
@@ -114,7 +114,7 @@ export function SentimentByPlatform({ results }: Props) {
       <div className="flex items-center gap-5 mt-5 pt-4 border-t border-[var(--color-border)]">
         {[
           { color: "#96A283", label: "Positive" },
-          { color: "#C8C2B4", label: "Neutral" },
+          { color: "#A09890", label: "Neutral" },
           { color: "#B54631", label: "Negative" },
         ].map((l) => (
           <div key={l.label} className="flex items-center gap-1.5">
