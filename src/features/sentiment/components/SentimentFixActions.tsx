@@ -5,7 +5,6 @@ import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Card } from "@/components/atoms/Card";
 import { Modal } from "@/components/molecules/Modal";
-import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { SURVEN_SEMANTIC } from "@/utils/brandColors";
 import type { ScanResult, ModelName } from "@/types/database";
 
