@@ -168,6 +168,28 @@ export function SentimentOverTime({ data, isLoading }: Props) {
               </button>
             ))}
           </div>
+
+          <ChartExplainer
+            blocks={[
+              {
+                label: "X-axis",
+                body: "Each tick is one of your past scans, oldest on the left, most recent on the right.",
+              },
+              {
+                label: "Y-axis",
+                body: "The share of mentions in each tone for that scan, 0 to 100%. The three lines always add up to 100% per scan.",
+              },
+              {
+                label: "Line thickness",
+                body: "Positive is drawn thicker because it's the metric you're optimizing — neutral and negative are reference lines.",
+              },
+              {
+                label: "Colors",
+                body: "Sage = positive, gray = neutral, rust = negative. Sage trending up is the goal; rust trending up is a warning.",
+              },
+            ]}
+            tip="Hover a line in the legend to focus it; the others fade so you can read it cleanly."
+          />
         </>
       )}
     </Card>
