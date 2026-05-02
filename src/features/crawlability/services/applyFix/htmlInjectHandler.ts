@@ -100,16 +100,13 @@ async function findHtmlFile(repo: string, branch: string, token: string): Promis
 }
 
 async function isNextJsRepo(repo: string, branch: string, token: string): Promise<boolean> {
-  for (const marker of NEXTJS_MARKERS) {
-    if (await pathExists(repo, marker, branch, token)) return true;
-  }
-  return false;
+  const checks = await Promise.all(
+    NEXTJS_MARKERS.map((marker) => pathExists(repo, marker, branch, token).catch(() => false)),
+  );
+  return checks.some(Boolean);
 }
 
-function injectIntoHead(html: string, snippet: string, marker: string): string {
-  if (html.includes(marker.trim())) {
-    return html;
-  }
+function injectIntoHead(html: string, snippet: string): string {
   const closeHead = html.indexOf("</head>");
   if (closeHead === -1) {
     return html.replace(/<body[^>]*>/, (m) => `${m}\n${snippet}`);
@@ -120,22 +117,57 @@ function injectIntoHead(html: string, snippet: string, marker: string): string {
   return `${beforeClose}${snippet.replace(/\n/g, `\n${indent}`)}\n${afterClose}`;
 }
 
+/**
+ * Returns the @type values of every JSON-LD <script> currently in the HTML.
+ * Used to detect whether a schema of a given type is already present so we
+ * don't double-inject (e.g. two LocalBusiness blocks with stale data).
+ */
+function existingJsonLdTypes(html: string): Set<string> {
+  const types = new Set<string>();
+  const regex = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(html)) !== null) {
+    try {
+      const parsed = JSON.parse(match[1].trim());
+      collectTypes(parsed, types);
+    } catch {
+      // skip malformed scripts — don't block our injection on someone else's bad markup
+    }
+  }
+  return types;
+}
+
+function collectTypes(node: unknown, out: Set<string>): void {
+  if (!node) return;
+  if (Array.isArray(node)) {
+    for (const item of node) collectTypes(item, out);
+    return;
+  }
+  if (typeof node !== "object") return;
+  const obj = node as Record<string, unknown>;
+  const t = obj["@type"];
+  if (typeof t === "string") out.add(t.toLowerCase());
+  else if (Array.isArray(t)) for (const x of t) if (typeof x === "string") out.add(x.toLowerCase());
+  if (obj["@graph"]) collectTypes(obj["@graph"], out);
+  if (obj["mainEntity"]) collectTypes(obj["mainEntity"], out);
+}
+
 function replaceMetaDescription(html: string, description: string): string {
   const escaped = description.replace(/"/g, "&quot;");
   const newTag = `<meta name="description" content="${escaped}">`;
   if (/<meta\s+name=["']description["'][^>]*>/i.test(html)) {
     return html.replace(/<meta\s+name=["']description["'][^>]*>/i, newTag);
   }
-  return injectIntoHead(html, newTag, `name="description"`);
+  return injectIntoHead(html, newTag);
 }
 
 function replaceTitle(html: string, title: string): string {
   const escaped = title.replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const newTag = `<title>${escaped}</title>`;
-  if (/<title>[\s\S]*?<\/title>/i.test(html)) {
-    return html.replace(/<title>[\s\S]*?<\/title>/i, newTag);
+  if (/<title[^>]*>[\s\S]*?<\/title>/i.test(html)) {
+    return html.replace(/<title[^>]*>[\s\S]*?<\/title>/i, newTag);
   }
-  return injectIntoHead(html, newTag, "<title>");
+  return injectIntoHead(html, newTag);
 }
 
 function replaceAltAttributes(html: string, replacements: Array<{ src: string; alt: string }>): { html: string; modified: number } {
@@ -219,7 +251,14 @@ export async function applyHtmlInject(options: HtmlInjectOptions): Promise<HtmlI
 
   switch (payload.kind) {
     case "schema_org": {
-      updatedHtml = injectIntoHead(file.content, payload.jsonLd, payload.jsonLd);
+      const existingTypes = existingJsonLdTypes(file.content);
+      if (existingTypes.has(payload.schemaType.toLowerCase())) {
+        return {
+          ok: false,
+          error: `${payload.schemaType} schema is already present in this file. Remove the existing one first if you want to replace it.`,
+        };
+      }
+      updatedHtml = injectIntoHead(file.content, payload.jsonLd);
       commitSubject = `feat(schema): add ${payload.schemaType} JSON-LD`;
       break;
     }
