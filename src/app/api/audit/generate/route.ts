@@ -144,6 +144,24 @@ export async function POST(request: NextRequest) {
 
   const { kind, pageContext, commit, findingId, findingTitle, schemaType, approvedContent, images, replacements } = parse.data;
 
+  // Refuse to generate on ambiguous pages (dashboards, directories, agency portfolios, etc.)
+  // unless the user has explicitly approved content from a prior preview. The risk:
+  // body-text signals on these pages belong to a featured entity, not the site itself,
+  // and we'd commit a description / schema for the wrong business.
+  // The exception (commit + approvedContent) lets users force commit when they really
+  // want to — but they'd have had to bypass the preview UX, which already shows the warning.
+  if (pageContext.ambiguousPage && !(commit && approvedContent)) {
+    const reasons = pageContext.ambiguousReasons ?? [];
+    return NextResponse.json(
+      {
+        error: "ambiguous_page",
+        message: "This page looks like a dashboard, directory, or admin panel showing data about other entities — generating schema/meta for it would likely describe the wrong business. Try this on a real business homepage instead.",
+        reasons,
+      },
+      { status: 422 },
+    );
+  }
+
   if (kind === "schema_org") {
     if (!schemaType) {
       return NextResponse.json({ error: "schemaType is required for schema_org" }, { status: 400 });
