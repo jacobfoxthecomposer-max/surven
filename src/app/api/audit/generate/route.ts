@@ -160,12 +160,16 @@ export async function POST(request: NextRequest) {
   }
 
   if (kind === "meta_desc") {
-    const result = await rewriteMetaDescription(pageContext as PageContext);
-    if (!result.ok || !result.data) {
-      return NextResponse.json({ error: result.error ?? "rewrite_failed" }, { status: 422 });
+    let description: string;
+    if (approvedContent && commit) {
+      description = approvedContent;
+    } else {
+      const result = await rewriteMetaDescription(pageContext as PageContext);
+      if (!result.ok || !result.data) {
+        return NextResponse.json({ error: result.error ?? "rewrite_failed" }, { status: 422 });
+      }
+      description = result.data.description;
     }
-
-    const description = result.data.description;
 
     if (!commit) {
       return NextResponse.json({
