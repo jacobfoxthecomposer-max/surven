@@ -1,4 +1,1 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://surven-756qiuq15-jacobfoxthecomposer-6176s-projects.vercel.app/sitemap.xml
+Sitemap: https://thehiddenstill.com/sitemap.xml
