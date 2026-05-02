@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Upload,
   Zap,
+  Search,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useUserProfile } from "@/features/auth/hooks/useUserProfile";
@@ -67,6 +68,7 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
     title: "Optimization",
     items: [
       { label: "Website Audit", href: "/audit", icon: BarChart3 },
+      { label: "Code Scanner", href: "/site-audit", icon: Search },
       { label: "Crawlability Audit", href: "/crawlability-audit", icon: Zap },
       { label: "Alerts", href: "/dashboard", icon: AlertCircle },
     ],
