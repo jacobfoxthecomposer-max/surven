@@ -59,18 +59,6 @@ function clearAllHighlights() {
   document.querySelectorAll(".surven-toast").forEach((el) => el.remove());
 }
 
-function highlightEl(el: HTMLElement) {
-  highlighted.push({
-    el,
-    outline: el.style.outline,
-    outlineOffset: el.style.outlineOffset,
-    backgroundColor: el.style.backgroundColor,
-  });
-  el.style.outline = SAGE_BORDER;
-  el.style.outlineOffset = "3px";
-  el.style.backgroundColor = SAGE;
-}
-
 function showToast(message: string) {
   const toast = document.createElement("div");
   toast.className = "surven-toast";
