@@ -369,6 +369,9 @@ export function AeoAuditSection({
               <ScoreCard result={result} />
             </motion.div>
             <motion.div {...reveal}>
+              <TopFixesPanel checks={result.checks} />
+            </motion.div>
+            <motion.div {...reveal}>
               <PillarGrid pillars={result.pillars} checks={result.checks} />
             </motion.div>
             <motion.div {...reveal}>
@@ -399,19 +402,19 @@ function ScoreCard({ result }: { result: ScanResult }) {
         <div className="min-w-0">
           <p
             className="uppercase tracking-wider text-[var(--color-fg-muted)] font-semibold mb-1"
-            style={{ fontSize: 11, letterSpacing: "0.12em" }}
+            style={{ fontSize: 12, letterSpacing: "0.12em" }}
           >
             Readability score
           </p>
           <p
             className="text-[var(--color-fg-secondary)]"
-            style={{ fontSize: 14 }}
+            style={{ fontSize: 15 }}
           >
             How clearly AI can read your site, across 25 checks
           </p>
           <p
             className="text-[var(--color-fg-muted)] mt-1"
-            style={{ fontSize: 12 }}
+            style={{ fontSize: 13 }}
           >
             Scanned {new Date(result.scannedAt).toLocaleString()} ·{" "}
             {(result.durationMs / 1000).toFixed(1)}s
@@ -422,7 +425,7 @@ function ScoreCard({ result }: { result: ScanResult }) {
             className="tabular-nums"
             style={{
               fontFamily: "var(--font-display)",
-              fontSize: 72,
+              fontSize: 84,
               fontWeight: 500,
               color: tok.color,
               lineHeight: 1,
@@ -433,14 +436,14 @@ function ScoreCard({ result }: { result: ScanResult }) {
           </span>
           <span
             className="text-[var(--color-fg-muted)] tabular-nums"
-            style={{ fontSize: 18, fontFamily: "var(--font-display)" }}
+            style={{ fontSize: 20, fontFamily: "var(--font-display)" }}
           >
             /100
           </span>
           <span
             className="rounded-full px-3 py-1 self-center font-semibold"
             style={{
-              fontSize: 12,
+              fontSize: 13,
               backgroundColor: `${tok.color}1f`,
               color: tok.color,
             }}
@@ -521,7 +524,7 @@ function PillarCard({
             <p
               style={{
                 fontFamily: "var(--font-display)",
-                fontSize: 22,
+                fontSize: 24,
                 fontWeight: 500,
                 letterSpacing: "-0.01em",
                 color: "var(--color-fg)",
@@ -531,8 +534,8 @@ function PillarCard({
               {PILLAR_LABELS[score.pillar]}
             </p>
             <p
-              className="uppercase tracking-wider font-semibold mt-0.5"
-              style={{ fontSize: 10.5, letterSpacing: "0.10em", color: tok.color }}
+              className="uppercase tracking-wider font-semibold mt-1"
+              style={{ fontSize: 11, letterSpacing: "0.10em", color: tok.color }}
             >
               {tok.label}
             </p>
@@ -543,7 +546,7 @@ function PillarCard({
             className="tabular-nums"
             style={{
               fontFamily: "var(--font-display)",
-              fontSize: 36,
+              fontSize: 40,
               fontWeight: 500,
               color: tok.color,
               letterSpacing: "-0.02em",
@@ -554,7 +557,7 @@ function PillarCard({
           </span>
           <span
             className="tabular-nums text-[var(--color-fg-muted)]"
-            style={{ fontSize: 16, fontFamily: "var(--font-display)" }}
+            style={{ fontSize: 17, fontFamily: "var(--font-display)" }}
           >
             /{score.max}
           </span>
@@ -577,25 +580,25 @@ function PillarCard({
         </div>
 
         {/* Pass / partial / fail breakdown */}
-        <div className="flex items-center gap-3 text-[var(--color-fg-secondary)]" style={{ fontSize: 12 }}>
-          <span className="inline-flex items-center gap-1">
+        <div className="flex items-center gap-3 text-[var(--color-fg-secondary)]" style={{ fontSize: 13 }}>
+          <span className="inline-flex items-center gap-1.5">
             <span
               className="rounded-full"
-              style={{ width: 8, height: 8, backgroundColor: STATUS_TOK.pass.color }}
+              style={{ width: 9, height: 9, backgroundColor: STATUS_TOK.pass.color }}
             />
             <span className="tabular-nums font-semibold">{passCount}</span> pass
           </span>
-          <span className="inline-flex items-center gap-1">
+          <span className="inline-flex items-center gap-1.5">
             <span
               className="rounded-full"
-              style={{ width: 8, height: 8, backgroundColor: STATUS_TOK.partial.color }}
+              style={{ width: 9, height: 9, backgroundColor: STATUS_TOK.partial.color }}
             />
             <span className="tabular-nums font-semibold">{partialCount}</span> partial
           </span>
-          <span className="inline-flex items-center gap-1">
+          <span className="inline-flex items-center gap-1.5">
             <span
               className="rounded-full"
-              style={{ width: 8, height: 8, backgroundColor: STATUS_TOK.fail.color }}
+              style={{ width: 9, height: 9, backgroundColor: STATUS_TOK.fail.color }}
             />
             <span className="tabular-nums font-semibold">{failCount}</span> fail
           </span>
@@ -603,7 +606,7 @@ function PillarCard({
 
         <p
           className="text-[var(--color-fg-secondary)]"
-          style={{ fontSize: 13, lineHeight: 1.5 }}
+          style={{ fontSize: 14, lineHeight: 1.5 }}
         >
           {PILLAR_BLURBS[score.pillar]}
         </p>
@@ -612,9 +615,131 @@ function PillarCard({
   );
 }
 
+// ─── Top fixes panel ──────────────────────────────────────────────────────
+// Surfaces the 3 highest-point failures + partials across all pillars so the
+// user can act without scanning the full 25-row list.
+
+function TopFixesPanel({ checks }: { checks: CheckResult[] }) {
+  const fixable = checks
+    .filter((c) => c.status !== "pass")
+    .map((c) => ({ check: c, gain: c.max - c.earned }))
+    .filter((x) => x.gain > 0)
+    .sort((a, b) => b.gain - a.gain)
+    .slice(0, 3);
+
+  if (fixable.length === 0) return null;
+  const totalGain = fixable.reduce((s, x) => s + x.gain, 0);
+
+  return (
+    <div
+      className="rounded-[var(--radius-lg)] border bg-[var(--color-surface)] overflow-hidden"
+      style={{ borderColor: "rgba(150,162,131,0.45)" }}
+    >
+      <div
+        className="px-5 py-4 border-b border-[var(--color-border)]"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(150,162,131,0.20) 0%, rgba(150,162,131,0.05) 100%)",
+        }}
+      >
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2.5">
+            <Sparkles className="h-5 w-5" style={{ color: COLORS.primary }} />
+            <p
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 22,
+                fontWeight: 500,
+                letterSpacing: "-0.01em",
+                color: "var(--color-fg)",
+              }}
+            >
+              Fix these first
+            </p>
+          </div>
+          <p
+            className="text-[var(--color-fg-secondary)]"
+            style={{ fontSize: 13.5 }}
+          >
+            Recover ~
+            <span
+              className="font-semibold tabular-nums"
+              style={{ color: COLORS.primary }}
+            >
+              {Math.round(totalGain)}
+            </span>{" "}
+            points by tackling these 3.
+          </p>
+        </div>
+      </div>
+      <ul className="divide-y divide-[var(--color-border)]">
+        {fixable.map(({ check, gain }) => {
+          const tok = STATUS_TOK[check.status];
+          const Icon = tok.Icon;
+          return (
+            <li
+              key={check.id}
+              className="px-5 py-4 flex items-start gap-4 hover:bg-[var(--color-surface-alt)]/40 transition-colors"
+            >
+              <span
+                className="inline-flex items-center justify-center rounded-[var(--radius-md)] shrink-0 mt-0.5"
+                style={{
+                  width: 36,
+                  height: 36,
+                  backgroundColor: tok.bg,
+                  color: tok.color,
+                }}
+              >
+                <Icon className="h-5 w-5" />
+              </span>
+              <div className="flex-1 min-w-0 space-y-1">
+                <p
+                  className="text-[var(--color-fg)]"
+                  style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.3 }}
+                >
+                  {check.label}
+                </p>
+                <p
+                  className="text-[var(--color-fg-secondary)]"
+                  style={{ fontSize: 14, lineHeight: 1.5 }}
+                >
+                  {check.recommendation}
+                </p>
+              </div>
+              <span
+                className="rounded-full px-3 py-1 font-semibold tabular-nums shrink-0 mt-1"
+                style={{
+                  fontSize: 13,
+                  backgroundColor: `${COLORS.primary}1f`,
+                  color: COLORS.primaryHover,
+                }}
+              >
+                +{Math.round(gain)} pts
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 // ─── Checks list ──────────────────────────────────────────────────────────
+// Single card containing all checks. Header: filter chips. Body: rows
+// grouped by pillar with thin eyebrow dividers, sorted fail → partial →
+// pass within each group. Passes auto-collapse into a single strip.
+
+type ChecksFilter = "needs-work" | "all" | "passing";
+
+const STATUS_RANK: Record<CheckResult["status"], number> = {
+  fail: 0,
+  partial: 1,
+  pass: 2,
+};
 
 function ChecksList({ checks }: { checks: CheckResult[] }) {
+  const [filter, setFilter] = useState<ChecksFilter>("needs-work");
+
   const grouped: Record<Pillar, CheckResult[]> = {
     discoverable: [],
     structured: [],
@@ -623,51 +748,200 @@ function ChecksList({ checks }: { checks: CheckResult[] }) {
   };
   for (const c of checks) grouped[c.pillar].push(c);
 
+  // Sort each pillar's rows: fail → partial → pass.
+  for (const p of Object.keys(grouped) as Pillar[]) {
+    grouped[p].sort((a, b) => STATUS_RANK[a.status] - STATUS_RANK[b.status]);
+  }
+
+  const totalNeedsWork = checks.filter((c) => c.status !== "pass").length;
+  const totalPassing = checks.filter((c) => c.status === "pass").length;
+
   return (
-    <div className="space-y-5">
-      {(Object.keys(grouped) as Pillar[]).map((p) => {
-        const Icon = PILLAR_ICON[p];
-        const rows = grouped[p];
-        const passCount = rows.filter((c) => c.status === "pass").length;
-        return (
-          <div
-            key={p}
-            className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden"
-          >
-            <div
-              className="px-5 py-3.5 border-b border-[var(--color-border)] flex items-center justify-between gap-3"
-              style={{
-                background:
-                  "linear-gradient(135deg, rgba(150,162,131,0.22) 0%, rgba(184,160,48,0.10) 50%, rgba(201,123,69,0.10) 100%)",
-              }}
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div
-                  className="h-9 w-9 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: "rgba(150,162,131,0.22)" }}
-                >
-                  <Icon className="h-4.5 w-4.5" style={{ color: COLORS.primary, height: 18, width: 18 }} />
-                </div>
-                <SectionHeading text={PILLAR_LABELS[p]} info={PILLAR_BLURBS[p]} />
-              </div>
-              <span
-                className="tabular-nums shrink-0 text-[var(--color-fg-secondary)]"
-                style={{ fontSize: 12, fontFamily: "var(--font-sans)" }}
+    <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
+      {/* Header — filter chips */}
+      <div className="px-5 py-3.5 border-b border-[var(--color-border)] flex items-center justify-between gap-3 flex-wrap">
+        <p
+          className="uppercase tracking-wider text-[var(--color-fg-muted)] font-semibold"
+          style={{ fontSize: 11, letterSpacing: "0.12em" }}
+        >
+          All 25 checks
+        </p>
+        <div className="inline-flex items-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] p-1 gap-1">
+          {(
+            [
+              { id: "needs-work", label: `Needs work (${totalNeedsWork})` },
+              { id: "all", label: `All (${checks.length})` },
+              { id: "passing", label: `Passing (${totalPassing})` },
+            ] as { id: ChecksFilter; label: string }[]
+          ).map((f) => {
+            const active = filter === f.id;
+            return (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setFilter(f.id)}
+                aria-pressed={active}
+                className={
+                  "px-3 py-1.5 rounded-[var(--radius-sm)] transition-colors whitespace-nowrap " +
+                  (active
+                    ? "bg-[var(--color-primary)] text-white"
+                    : "text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-alt)]")
+                }
+                style={{ fontSize: 13, fontWeight: 600 }}
               >
-                <span className="font-semibold text-[var(--color-fg)]">
-                  {passCount}
-                </span>
-                /{rows.length} passing
-              </span>
-            </div>
-            <ul className="divide-y divide-[var(--color-border)]">
-              {rows.map((c) => (
-                <CheckRow key={c.id} check={c} />
-              ))}
-            </ul>
-          </div>
-        );
-      })}
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Per-pillar groups */}
+      <div className="divide-y divide-[var(--color-border)]">
+        {(Object.keys(grouped) as Pillar[]).map((p) => (
+          <PillarGroup
+            key={p}
+            pillar={p}
+            checks={grouped[p]}
+            filter={filter}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PillarGroup({
+  pillar,
+  checks,
+  filter,
+}: {
+  pillar: Pillar;
+  checks: CheckResult[];
+  filter: ChecksFilter;
+}) {
+  const Icon = PILLAR_ICON[pillar];
+  const [showPasses, setShowPasses] = useState(false);
+
+  const fails = checks.filter((c) => c.status === "fail");
+  const partials = checks.filter((c) => c.status === "partial");
+  const passes = checks.filter((c) => c.status === "pass");
+
+  // Determine what's visible based on filter
+  let visibleNeedsWork: CheckResult[] = [];
+  let showPassStrip = false;
+  let showPassRows = false;
+
+  if (filter === "needs-work") {
+    visibleNeedsWork = [...fails, ...partials];
+    showPassStrip = false;
+    showPassRows = false;
+  } else if (filter === "passing") {
+    visibleNeedsWork = [];
+    showPassStrip = false;
+    showPassRows = passes.length > 0;
+  } else {
+    // all
+    visibleNeedsWork = [...fails, ...partials];
+    showPassStrip = passes.length > 0 && !showPasses;
+    showPassRows = passes.length > 0 && showPasses;
+  }
+
+  // Hide entire group if nothing to show under current filter
+  if (
+    visibleNeedsWork.length === 0 &&
+    !showPassStrip &&
+    !showPassRows
+  ) {
+    return null;
+  }
+
+  return (
+    <div>
+      {/* Thin pillar eyebrow */}
+      <div className="px-5 py-3 flex items-center gap-2.5 bg-[var(--color-surface-alt)]/30">
+        <div
+          className="h-7 w-7 rounded-[var(--radius-sm)] flex items-center justify-center shrink-0"
+          style={{ backgroundColor: "rgba(150,162,131,0.20)" }}
+        >
+          <Icon className="h-4 w-4" style={{ color: COLORS.primary }} />
+        </div>
+        <p
+          className="uppercase tracking-wider font-semibold"
+          style={{
+            fontSize: 12,
+            letterSpacing: "0.10em",
+            color: "var(--color-fg-secondary)",
+          }}
+        >
+          {PILLAR_LABELS[pillar]}
+        </p>
+        <span
+          className="text-[var(--color-fg-muted)] tabular-nums ml-auto"
+          style={{ fontSize: 12 }}
+        >
+          {passes.length}/{checks.length} passing
+        </span>
+      </div>
+
+      {/* Needs-work rows */}
+      <ul className="divide-y divide-[var(--color-border)]">
+        {visibleNeedsWork.map((c) => (
+          <CheckRow key={c.id} check={c} />
+        ))}
+      </ul>
+
+      {/* Collapsed pass strip — only on the "all" filter */}
+      {showPassStrip && (
+        <button
+          type="button"
+          onClick={() => setShowPasses(true)}
+          className="w-full px-5 py-3 flex items-center gap-3 hover:bg-[var(--color-surface-alt)]/40 transition-colors text-left border-t border-[var(--color-border)]"
+        >
+          <span
+            className="inline-flex items-center justify-center rounded-full shrink-0"
+            style={{
+              width: 26,
+              height: 26,
+              backgroundColor: STATUS_TOK.pass.bg,
+              color: STATUS_TOK.pass.color,
+            }}
+          >
+            <Check className="h-3.5 w-3.5" />
+          </span>
+          <span
+            className="text-[var(--color-fg-secondary)]"
+            style={{ fontSize: 13.5, fontWeight: 500 }}
+          >
+            <span className="font-semibold text-[var(--color-fg)]">
+              {passes.length}
+            </span>{" "}
+            check{passes.length === 1 ? "" : "s"} passing in this pillar
+          </span>
+          <ChevronDown className="h-4 w-4 text-[var(--color-fg-muted)] ml-auto" />
+        </button>
+      )}
+
+      {/* Expanded pass rows */}
+      {showPassRows && (
+        <ul className="divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
+          {passes.map((c) => (
+            <CheckRow key={c.id} check={c} />
+          ))}
+          {filter === "all" && (
+            <li>
+              <button
+                type="button"
+                onClick={() => setShowPasses(false)}
+                className="w-full px-5 py-2.5 text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors"
+                style={{ fontSize: 12.5 }}
+              >
+                Hide passing checks
+              </button>
+            </li>
+          )}
+        </ul>
+      )}
     </div>
   );
 }
@@ -712,14 +986,14 @@ function CheckRow({ check }: { check: CheckResult }) {
           <div className="flex items-center gap-2 flex-wrap">
             <p
               className="text-[var(--color-fg)]"
-              style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.3 }}
+              style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.3 }}
             >
               {check.label}
             </p>
             <span
               className="rounded-full px-2 py-0.5 font-semibold uppercase"
               style={{
-                fontSize: 10,
+                fontSize: 10.5,
                 letterSpacing: "0.08em",
                 backgroundColor: tok.bg,
                 color: tok.color,
@@ -730,7 +1004,7 @@ function CheckRow({ check }: { check: CheckResult }) {
           </div>
           <p
             className="text-[var(--color-fg-secondary)]"
-            style={{ fontSize: 13.5, lineHeight: 1.5 }}
+            style={{ fontSize: 14, lineHeight: 1.5 }}
           >
             {check.detail}
           </p>
@@ -742,7 +1016,7 @@ function CheckRow({ check }: { check: CheckResult }) {
             <span
               style={{
                 fontFamily: "var(--font-display)",
-                fontSize: 20,
+                fontSize: 22,
                 color: tok.color,
                 fontWeight: 500,
                 letterSpacing: "-0.01em",
@@ -753,7 +1027,7 @@ function CheckRow({ check }: { check: CheckResult }) {
             </span>
             <span
               className="text-[var(--color-fg-muted)]"
-              style={{ fontSize: 13, fontFamily: "var(--font-display)" }}
+              style={{ fontSize: 14, fontFamily: "var(--font-display)" }}
             >
               /{check.max}
             </span>
@@ -800,13 +1074,13 @@ function CheckRow({ check }: { check: CheckResult }) {
                 <div>
                   <p
                     className="uppercase tracking-wider text-[var(--color-fg-muted)] font-semibold mb-1.5"
-                    style={{ fontSize: 10.5, letterSpacing: "0.10em" }}
+                    style={{ fontSize: 11.5, letterSpacing: "0.10em" }}
                   >
                     How this affects readability
                   </p>
                   <p
                     className="text-[var(--color-fg)]"
-                    style={{ fontSize: 13.5, lineHeight: 1.6 }}
+                    style={{ fontSize: 14.5, lineHeight: 1.6 }}
                   >
                     {check.readabilityImpact}
                   </p>
@@ -817,7 +1091,7 @@ function CheckRow({ check }: { check: CheckResult }) {
                   <p
                     className="uppercase tracking-wider font-semibold mb-1.5 inline-flex items-center gap-1"
                     style={{
-                      fontSize: 10.5,
+                      fontSize: 11.5,
                       letterSpacing: "0.10em",
                       color: tok.color,
                     }}
@@ -827,7 +1101,7 @@ function CheckRow({ check }: { check: CheckResult }) {
                   </p>
                   <p
                     className="text-[var(--color-fg)]"
-                    style={{ fontSize: 13.5, lineHeight: 1.6 }}
+                    style={{ fontSize: 14.5, lineHeight: 1.6 }}
                   >
                     {check.recommendation}
                   </p>
