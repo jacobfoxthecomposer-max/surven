@@ -1300,6 +1300,29 @@ export default function App() {
                               </div>
                             );
                           }
+                          if (fixState.status === "ambiguous") {
+                            return (
+                              <div style={{ padding: "12px", background: "#FEF3C7", border: "1px solid #C97B45", borderRadius: "6px", fontSize: "12px", color: "#3D3F3D" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "6px", color: "#C97B45" }}>
+                                  <AlertCircle size={14} /> Wrong page for this fix
+                                </div>
+                                <div style={{ marginBottom: "8px", lineHeight: "1.4" }}>
+                                  This page looks like a dashboard, directory, or admin panel — it shows data about other businesses, not its own identity. Generating a description here would likely describe the wrong business.
+                                </div>
+                                {fixState.reasons.length > 0 && (
+                                  <details style={{ marginBottom: "8px", fontSize: "11px" }}>
+                                    <summary style={{ cursor: "pointer", color: "#666", fontWeight: 500 }}>Why we think so</summary>
+                                    <ul style={{ margin: "4px 0 0 18px", padding: 0, color: "#666" }}>
+                                      {fixState.reasons.map((r, i) => <li key={i} style={{ marginBottom: "2px" }}>{r}</li>)}
+                                    </ul>
+                                  </details>
+                                )}
+                                <div style={{ fontSize: "11px", color: "#3D3F3D", lineHeight: "1.4", padding: "8px 10px", background: "white", borderRadius: "4px" }}>
+                                  <strong>Try this:</strong> open the actual website you want to optimize (your client&apos;s real homepage, not a dashboard about it) and run the auditor there.
+                                </div>
+                              </div>
+                            );
+                          }
                           if (fixState.status === "error") {
                             return (
                               <div
