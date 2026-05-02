@@ -1,22 +1,29 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
-  Globe,
   Sparkles,
+  Lock,
+  Crown,
+  ArrowRight,
   Check,
   AlertTriangle,
   X as XIcon,
   ChevronDown,
-  ArrowRight,
+  RefreshCw,
   Loader2,
+  ExternalLink,
 } from "lucide-react";
 import { Card } from "@/components/atoms/Card";
+import { Button } from "@/components/atoms/Button";
+import { Input } from "@/components/atoms/Input";
+import { AIOverview } from "@/components/atoms/AIOverview";
 import { SectionHeading } from "@/components/atoms/SectionHeading";
-import { HoverHint } from "@/components/atoms/HoverHint";
 import { COLORS } from "@/utils/constants";
+import { buildMockScanResult } from "./mockResult";
 import {
   PILLAR_BLURBS,
   PILLAR_LABELS,
@@ -27,6 +34,12 @@ import {
 } from "./types";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
+const reveal = {
+  initial: { opacity: 0, y: 16 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: "-60px" },
+  transition: { duration: 0.5, ease: EASE },
+} as const;
 
 const STATUS_TOK = {
   pass: {
@@ -55,11 +68,22 @@ const GRADE_TOK = {
   poor: { color: "#B54631", label: "Needs work" },
 } as const;
 
-export function AeoAuditSection() {
+interface AeoAuditSectionProps {
+  /** "free" gates behind a Plus paywall; "plus"/"premium"/"admin" unlocks. */
+  plan?: "free" | "plus" | "premium" | "admin";
+  /** Display name of the business in subtitle copy. */
+  businessName?: string;
+}
+
+export function AeoAuditSection({
+  plan = "plus",
+  businessName = "your site",
+}: AeoAuditSectionProps) {
   const [input, setInput] = useState("");
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ScanResult | null>(null);
+  const isFree = plan === "free";
 
   async function handleScan(e: React.FormEvent) {
     e.preventDefault();
@@ -89,97 +113,223 @@ export function AeoAuditSection() {
     }
   }
 
+  function handleLoadExample() {
+    setError(null);
+    setResult(buildMockScanResult());
+    setInput("");
+  }
+
+  function handleNewScan() {
+    setResult(null);
+    setError(null);
+    setInput("");
+  }
+
+  // Score-derived headline word + color (mirrors crawlability page).
+  const scoreWord = result
+    ? result.score < 26
+      ? "Poor"
+      : result.score < 56
+      ? "Fair"
+      : result.score < 81
+      ? "Good"
+      : "Excellent"
+    : null;
+  const scoreColor = result
+    ? result.score < 26
+      ? "#B54631"
+      : result.score < 56
+      ? "#C97B45"
+      : result.score < 81
+      ? "#96A283"
+      : "#7D8E6C"
+    : null;
+
+  // Top-of-page AI summary copy.
+  const failCount =
+    result?.checks.filter((c) => c.status === "fail").length ?? 0;
+  const partialCount =
+    result?.checks.filter((c) => c.status === "partial").length ?? 0;
+  const aiOverviewText = !result
+    ? "Scan your site to see exactly which AEO and SEO checks are passing — and which gaps are costing you AI citations."
+    : failCount > 0
+    ? `${failCount} check${failCount === 1 ? "" : "s"} failed and ${partialCount} need partial fixes. Tackle the failures first to lift your score fast.`
+    : partialCount > 0
+    ? `Solid foundation — no failures, but ${partialCount} check${partialCount === 1 ? "" : "s"} could go from partial to pass with light edits.`
+    : "Site is well-tuned for AI visibility. Keep monitoring for content freshness and schema coverage.";
+
   return (
-    <div className="space-y-5">
-      {/* Hero — title + intro */}
+    <div className="space-y-5 w-full">
+      {/* ── Header ── */}
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: EASE }}
-        className="space-y-2"
+        transition={{ duration: 0.5, ease: EASE }}
       >
         <h1
           style={{
             fontFamily: "var(--font-display)",
-            fontSize: 44,
-            fontWeight: 500,
+            fontSize: "clamp(32px, 4vw, 52px)",
+            fontWeight: 600,
+            lineHeight: 1.15,
             letterSpacing: "-0.01em",
             color: "var(--color-fg)",
-            lineHeight: 1.1,
           }}
         >
-          Site audit — measure how AI sees your site
-        </h1>
-        <p
-          className="text-[var(--color-fg-secondary)]"
-          style={{ fontSize: 14, lineHeight: 1.55, maxWidth: 760 }}
-        >
-          Drop in a URL and we'll grade it across 25 checks covering
-          discoverability, structured metadata, content quotability, and
-          trustworthiness signals — the same axes AI engines weigh when
-          deciding whose page to cite.
-        </p>
-      </motion.div>
-
-      {/* URL input form */}
-      <motion.form
-        onSubmit={handleScan}
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, delay: 0.05, ease: EASE }}
-        className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3"
-      >
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <Globe className="h-4 w-4 shrink-0 text-[var(--color-fg-muted)]" />
-          <input
-            type="text"
-            inputMode="url"
-            placeholder="example.com"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            disabled={scanning}
-            className="flex-1 min-w-0 bg-transparent outline-none text-[var(--color-fg)]"
-            style={{ fontSize: 15, fontFamily: "var(--font-sans)" }}
-          />
-        </div>
-        <motion.button
-          type="submit"
-          whileTap={{ scale: 0.96 }}
-          disabled={scanning || !input.trim()}
-          className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-[var(--radius-md)] bg-[var(--color-primary)] text-white font-medium disabled:opacity-60"
-          style={{ fontSize: 14 }}
-        >
-          {scanning ? (
+          {!result ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Scanning…
+              Your site&apos;s AEO score is{" "}
+              <span style={{ color: "var(--color-fg-muted)", fontStyle: "italic" }}>
+                unknown
+              </span>
+              .
             </>
           ) : (
             <>
-              <Search className="h-4 w-4" />
-              Run audit
+              Your site&apos;s AEO score is{" "}
+              <span style={{ color: scoreColor!, fontStyle: "italic" }}>
+                {scoreWord}
+              </span>
+              .
             </>
           )}
-        </motion.button>
-      </motion.form>
+        </h1>
+        <p className="text-sm text-[var(--color-fg-muted)] mt-1.5">
+          How well {businessName} is set up to be discovered, parsed, quoted,
+          and trusted by AI engines like ChatGPT, Claude, and Gemini.
+        </p>
+      </motion.div>
 
-      {error && (
-        <div
-          role="alert"
-          className="rounded-[var(--radius-md)] px-4 py-3"
-          style={{
-            backgroundColor: "rgba(181,70,49,0.10)",
-            borderLeft: `3px solid ${STATUS_TOK.fail.color}`,
-          }}
+      {/* AIOverview callout */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.1, ease: EASE }}
+      >
+        <AIOverview text={aiOverviewText} />
+      </motion.div>
+
+      {/* ── Free upgrade prompt ── */}
+      {isFree && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2, ease: EASE }}
         >
-          <p style={{ color: STATUS_TOK.fail.color, fontSize: 13, fontWeight: 500 }}>
-            {error}
-          </p>
-        </div>
+          <Card>
+            <div className="flex flex-col items-center text-center py-8 gap-4">
+              <div
+                className="h-14 w-14 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: "rgba(150,162,131,0.15)" }}
+              >
+                <Lock className="h-7 w-7" style={{ color: "var(--color-primary)" }} />
+              </div>
+              <div className="space-y-1.5 max-w-md">
+                <h2
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 26,
+                    fontWeight: 600,
+                    color: "var(--color-fg)",
+                  }}
+                >
+                  Site Audit is a Plus feature
+                </h2>
+                <p className="text-sm text-[var(--color-fg-secondary)] leading-relaxed">
+                  Run a 25-check AEO audit on any URL. See exactly which AI
+                  visibility levers your site is missing — schema, freshness,
+                  AI-bot access, citation links, and more.
+                </p>
+              </div>
+              <Link
+                href="/pricing"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-[var(--radius-md)] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium text-sm shadow-md transition-colors"
+              >
+                <Crown className="h-4 w-4" />
+                Upgrade to Plus
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <button
+                type="button"
+                onClick={handleLoadExample}
+                className="inline-flex items-center gap-1.5 text-xs text-[var(--color-fg-muted)] hover:text-[var(--color-primary)] transition-colors"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Or view an example audit
+              </button>
+            </div>
+          </Card>
+        </motion.div>
       )}
 
+      {/* ── Scan form (paid users) ── */}
+      {!isFree && !result && !scanning && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2, ease: EASE }}
+        >
+          <Card>
+            <form onSubmit={handleScan} className="space-y-4">
+              <Input
+                label="Website URL"
+                type="url"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="https://example.com"
+                required
+                disabled={scanning}
+              />
+              <div className="flex items-center gap-3 flex-wrap">
+                <Button
+                  type="submit"
+                  loading={scanning}
+                  disabled={scanning || !input.trim()}
+                >
+                  <Search className="h-4 w-4" />
+                  Run Site Audit
+                </Button>
+                <button
+                  type="button"
+                  onClick={handleLoadExample}
+                  className="inline-flex items-center gap-1.5 text-xs text-[var(--color-fg-muted)] hover:text-[var(--color-primary)] transition-colors"
+                >
+                  <Sparkles className="h-3.5 w-3.5" style={{ color: "var(--color-primary)" }} />
+                  Or load an example audit
+                </button>
+              </div>
+              {error && (
+                <div
+                  className="text-sm rounded-[var(--radius-md)] p-3 border-l-4"
+                  style={{
+                    color: "#B54631",
+                    borderLeftColor: "#B54631",
+                    backgroundColor: "rgba(181,70,49,0.06)",
+                  }}
+                >
+                  {error}
+                </div>
+              )}
+            </form>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* ── Loading ── */}
+      {scanning && (
+        <Card className="!p-6">
+          <div className="flex items-center justify-center gap-3 py-6 text-[var(--color-fg-secondary)]">
+            <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--color-primary)" }} />
+            <span style={{ fontSize: 14, fontWeight: 500 }}>
+              Running 25 checks across 4 pillars…
+            </span>
+          </div>
+        </Card>
+      )}
+
+      {/* ── Results ── */}
       <AnimatePresence>
-        {result && !error && (
+        {result && !scanning && (
           <motion.div
             key={result.scannedAt}
             initial={{ opacity: 0, y: 12 }}
@@ -188,9 +338,37 @@ export function AeoAuditSection() {
             transition={{ duration: 0.45, ease: EASE }}
             className="space-y-5"
           >
-            <ScoreCard result={result} />
-            <PillarGrid pillars={result.pillars} />
-            <ChecksList checks={result.checks} />
+            {/* Action bar — matches crawlability */}
+            <motion.div
+              {...reveal}
+              className="flex items-center justify-between flex-wrap gap-3"
+            >
+              <a
+                href={result.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm text-[var(--color-fg-muted)] hover:text-[var(--color-primary)] transition-colors"
+              >
+                <ExternalLink className="h-4 w-4" />
+                {result.url}
+              </a>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={handleNewScan}>
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Scan a different URL
+                </Button>
+              </div>
+            </motion.div>
+
+            <motion.div {...reveal}>
+              <ScoreCard result={result} />
+            </motion.div>
+            <motion.div {...reveal}>
+              <PillarGrid pillars={result.pillars} />
+            </motion.div>
+            <motion.div {...reveal}>
+              <ChecksList checks={result.checks} />
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -202,7 +380,13 @@ export function AeoAuditSection() {
 
 function ScoreCard({ result }: { result: ScanResult }) {
   const tier =
-    result.score >= 75 ? "good" : result.score >= 45 ? "average" : "poor";
+    result.score >= 81
+      ? "good"
+      : result.score >= 56
+      ? "good"
+      : result.score >= 26
+      ? "average"
+      : "poor";
   const tok = GRADE_TOK[tier];
   return (
     <Card className="!p-6">
@@ -215,14 +399,10 @@ function ScoreCard({ result }: { result: ScanResult }) {
             Site audit score
           </p>
           <p
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: 18,
-              color: "var(--color-fg-secondary)",
-              wordBreak: "break-all",
-            }}
+            className="text-[var(--color-fg-secondary)]"
+            style={{ fontSize: 14 }}
           >
-            {result.url}
+            Overall AEO grade across 25 checks
           </p>
           <p
             className="text-[var(--color-fg-muted)] mt-1"
@@ -237,7 +417,7 @@ function ScoreCard({ result }: { result: ScanResult }) {
             className="tabular-nums"
             style={{
               fontFamily: "var(--font-display)",
-              fontSize: 64,
+              fontSize: 72,
               fontWeight: 500,
               color: tok.color,
               lineHeight: 1,
@@ -487,6 +667,3 @@ function CheckRow({ check }: { check: CheckResult }) {
     </li>
   );
 }
-
-// HoverHint is imported for future use (will wire pillar info icons next pass)
-void HoverHint;
