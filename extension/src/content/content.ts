@@ -4,6 +4,7 @@ import { scoreQuoteability, TIER_TINTS, TIER_BORDERS, TIER_GLOWS, TIER_LABELS, T
 import type { QuoteScore } from "../shared/quoteability";
 import { scanSchema } from "../shared/schemaDetect";
 import type { SchemaScanResult } from "../shared/schemaDetect";
+import { extractPageContext } from "../shared/pageContextExtractor";
 
 const BADGE_HOST_ID = "surven-badge-host";
 const HEATMAP_DATA_ATTR = "data-surven-heatmap";
@@ -913,6 +914,16 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "SCHEMA_HIDE") {
     removeSchemaOverlay();
     sendResponse({ success: true });
+    return true;
+  }
+
+  if (message.type === "EXTRACT_PAGE_CONTEXT") {
+    try {
+      const context = extractPageContext();
+      sendResponse({ success: true, context });
+    } catch (error) {
+      sendResponse({ success: false, error: String(error) });
+    }
     return true;
   }
 });
