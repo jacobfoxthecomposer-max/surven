@@ -18,7 +18,7 @@ const cormorant = Cormorant_Garamond({
 export const metadata: Metadata = {
   title: "Surven — AI Visibility Tracker",
   description:
-    "Track your business visibility across ChatGPT, Claude, Gemini, Google AI, and more. See if AI is recommending your business.",
+    "GitHub hosts jacobfoxthecomposer-max's Surven project in San Francisco, CA, offering JSON-LD schema for businesses to track AI visibility.",
   keywords: [
     "AI visibility",
     "GEO",
