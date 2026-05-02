@@ -131,15 +131,26 @@ export default function App() {
     });
   }, []);
 
-  function saveSettings() {
+  async function saveSettings() {
     const trimmed: Settings = {
       apiUrl: draftSettings.apiUrl.trim(),
       apiKey: draftSettings.apiKey.trim(),
       showBadge: draftSettings.showBadge ?? true,
     };
-    chrome.storage.local.set({ surven_settings: trimmed });
+    await chrome.storage.local.set({ surven_settings: trimmed });
     setSettings(trimmed);
     setSettingsOpen(false);
+
+    if (!trimmed.showBadge) {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab?.id) chrome.tabs.sendMessage(tab.id, { type: "BADGE_HIDE" }).catch(() => {});
+    } else if (state.findings.length > 0) {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab?.id) {
+        const score = computeVisibilityScore(state.findings);
+        chrome.tabs.sendMessage(tab.id, { type: "BADGE_UPDATE", score }).catch(() => {});
+      }
+    }
   }
 
   async function broadcastBadge(findings: AuditFinding[]) {
