@@ -321,18 +321,15 @@ export default function CitationInsightsPage() {
             {/* Divider line — sits between control row and the data row below */}
             <div className="border-t border-[var(--color-border)]" />
 
-            {/* Data row — left 2/3: KPIs + AIOverview + diagnostic. Right 1/3: fix actions */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-              <div className="lg:col-span-2 flex flex-col gap-4 min-w-0">
-                {/* KPI cards */}
-                {insights && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: 0.15, ease }}
-                    className="grid grid-cols-1 sm:grid-cols-3 gap-3"
-                  >
-                    {(() => {
+            {/* Full-width KPI cards */}
+            {insights && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.15, ease }}
+                className="grid grid-cols-1 sm:grid-cols-3 gap-3"
+              >
+                {(() => {
                       const rateColor = colorForValue(
                         insights.citationRate,
                         SURVEN_THRESHOLDS.citationRate,
@@ -481,20 +478,24 @@ export default function CitationInsightsPage() {
                   </motion.div>
                 )}
 
-                {/* AIOverview */}
-                {aiInsight && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: 0.2, ease }}
-                  >
-                    <AIOverview text={aiInsight} size="md" />
-                  </motion.div>
-                )}
+            {/* Full-width AIOverview */}
+            {aiInsight && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.2, ease }}
+              >
+                <AIOverview text={aiInsight} size="md" />
+              </motion.div>
+            )}
 
+            {/* What to watch (col-span-2) | FixActions (col-span-1) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+              <div className="lg:col-span-2 flex flex-col min-w-0">
                 <CitationDiagnosticBand
                   results={results}
                   businessName={business.name}
+                  mode="watch"
                 />
               </div>
 
@@ -505,6 +506,13 @@ export default function CitationInsightsPage() {
                 />
               </div>
             </div>
+
+            {/* Full-width What's working */}
+            <CitationDiagnosticBand
+              results={results}
+              businessName={business.name}
+              mode="working"
+            />
 
             {/* Sections */}
             <motion.div {...reveal}>

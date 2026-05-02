@@ -18,6 +18,7 @@ const ease = [0.16, 1, 0.3, 1] as const;
 interface CitationDiagnosticBandProps {
   results: ScanResult[];
   businessName: string;
+  mode?: "watch" | "working" | "both";
 }
 
 interface DomainStat {
@@ -31,6 +32,7 @@ interface DomainStat {
 export function CitationDiagnosticBand({
   results,
   businessName,
+  mode = "both",
 }: CitationDiagnosticBandProps) {
   const { gapDomains, listedDomains, topGap, topListed, totalGap, totalListed } = useMemo(() => {
     const map = new Map<
@@ -83,6 +85,9 @@ export function CitationDiagnosticBand({
   const total = totalGap + totalListed;
   if (total === 0) return null;
 
+  const showWatch = (mode === "watch" || mode === "both") && topGap;
+  const showWorking = (mode === "working" || mode === "both") && topListed;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -91,7 +96,7 @@ export function CitationDiagnosticBand({
       className="grid grid-cols-1 gap-4 flex-1"
     >
       {/* What to watch — citation gaps */}
-      {topGap && (
+      {showWatch && (
         <div
           className="rounded-[var(--radius-lg)] border p-4 flex flex-col gap-3"
           style={{
@@ -194,7 +199,7 @@ export function CitationDiagnosticBand({
       )}
 
       {/* What's working — top cited sources */}
-      {topListed && (
+      {showWorking && (
         <div
           className="rounded-[var(--radius-lg)] border p-4 flex flex-col gap-3 flex-1"
           style={{
