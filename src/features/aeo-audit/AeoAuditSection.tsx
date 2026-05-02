@@ -239,7 +239,7 @@ export function AeoAuditSection({
                     color: "var(--color-fg)",
                   }}
                 >
-                  Site Readability Audit is a Plus feature
+                  Code Scanner is a Plus feature
                 </h2>
                 <p className="text-sm text-[var(--color-fg-secondary)] leading-relaxed">
                   Scan any URL and see exactly what AI engines can and can&apos;t
@@ -293,7 +293,7 @@ export function AeoAuditSection({
                   disabled={scanning || !input.trim()}
                 >
                   <Search className="h-4 w-4" />
-                  Run readability audit
+                  Run code scan
                 </Button>
                 <button
                   type="button"
