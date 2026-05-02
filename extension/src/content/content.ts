@@ -926,4 +926,42 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     }
     return true;
   }
+
+  if (message.type === "FIND_IMAGES_MISSING_ALT") {
+    try {
+      const images = findImagesMissingAlt();
+      sendResponse({ success: true, images });
+    } catch (error) {
+      sendResponse({ success: false, error: String(error) });
+    }
+    return true;
+  }
 });
+
+function findImagesMissingAlt(): Array<{ src: string; surroundingText?: string }> {
+  const candidates = Array.from(document.querySelectorAll<HTMLImageElement>("img"));
+  const results: Array<{ src: string; surroundingText?: string }> = [];
+  const seen = new Set<string>();
+
+  for (const img of candidates) {
+    const alt = img.getAttribute("alt");
+    if (alt !== null && alt.trim().length > 0) continue;
+
+    const src = img.currentSrc || img.src;
+    if (!src) continue;
+    if (src.startsWith("data:")) continue;
+    if (img.naturalWidth > 0 && img.naturalWidth < 32 && img.naturalHeight < 32) continue;
+    if (seen.has(src)) continue;
+    seen.add(src);
+
+    const parent = img.closest("figure, section, article, div") as HTMLElement | null;
+    const surroundingText = parent
+      ? (parent.innerText ?? "").trim().replace(/\s+/g, " ").slice(0, 280)
+      : undefined;
+
+    results.push({ src, surroundingText });
+    if (results.length >= 12) break;
+  }
+
+  return results;
+}
