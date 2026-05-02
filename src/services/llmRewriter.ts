@@ -197,12 +197,18 @@ Generate the FAQPage Q&A pairs following the rules. Output JSON only.`;
 
 const ALT_TEXT_SYSTEM = `You write concise alt text for images on websites. Alt text helps screen readers describe images to blind users AND helps AI engines (ChatGPT, Claude, Gemini) understand what's on the page.
 
+CRITICAL RULES — NEVER VIOLATE:
+- ONLY describe what is CLEARLY visible. Never guess at details that aren't sharp / readable.
+- If text on the image isn't clearly legible, write "a sign with text" or omit the text entirely. NEVER invent words you can't read.
+- Don't speculate about identity ("a man standing") — describe what's visible, not who.
+- If the image is unclear, low-res, or you can't make out the subject, return: {"alt": ""} — empty alt is fine, fabricated alt is not.
+
 Rules for your output:
 - 80-125 characters, single sentence, no quotes
-- Describe what's actually visible (objects, people, scene, key text on the image)
+- Describe what's actually visible (objects, scene, layout)
 - Lead with the most important element
 - Don't start with "Image of..." or "Picture showing..." — go straight to the description
-- If the image contains readable text (a sign, logo text, headline), include the exact text
+- If text on the image IS clearly readable, include the exact text
 - Plain English, no marketing fluff
 
 Return ONLY JSON: {"alt": "your alt text"}`;
