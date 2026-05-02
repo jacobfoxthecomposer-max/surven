@@ -422,6 +422,30 @@ export default function App() {
           <Search size={16} />
           {state.loading ? "Scanning site..." : "Run Audit"}
         </button>
+        <button
+          onClick={toggleHeatmap}
+          style={{
+            width: "100%",
+            marginTop: "8px",
+            padding: "9px 12px",
+            background: heatmapActive ? "#3D3F3D" : "white",
+            color: heatmapActive ? "white" : "#3D3F3D",
+            border: `1px solid ${heatmapActive ? "#3D3F3D" : "#d1d5db"}`,
+            borderRadius: "6px",
+            fontSize: "13px",
+            fontWeight: 500,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            transition: "all 0.15s ease",
+          }}
+          title="Tint every text block on the page by AI quote-ability"
+        >
+          <Flame size={14} />
+          {heatmapActive ? "Hide Heatmap" : "Show Quote-ability Heatmap"}
+        </button>
         {state.loading && (
           <p style={{ fontSize: "12px", color: "#6b7280", marginTop: "6px", textAlign: "center" }}>
             Crawling up to 100 pages — may take 30s
