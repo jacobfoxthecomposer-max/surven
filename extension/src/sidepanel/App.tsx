@@ -1141,23 +1141,41 @@ export default function App() {
                           }
 
                           if (fixState.status === "manual") {
+                            const instructions = getInstructionsForPlatform(detectedPlatform, "schema_org");
                             return (
                               <div
                                 style={{
-                                  padding: "10px",
+                                  padding: "12px",
                                   background: "#FEF3C7",
                                   border: "1px solid #C97B45",
-                                  borderRadius: "4px",
+                                  borderRadius: "6px",
                                   fontSize: "12px",
                                   color: "#3D3F3D",
                                 }}
                               >
                                 <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "6px", color: "#C97B45" }}>
-                                  <AlertCircle size={14} /> Auto-commit not available
+                                  <AlertCircle size={14} /> Add this to {getDisplayName(detectedPlatform)} manually
                                 </div>
-                                <div style={{ marginBottom: "8px", lineHeight: "1.4" }}>{fixState.manualNote}</div>
+                                <div style={{ marginBottom: "10px", lineHeight: "1.4", fontSize: "11px", color: "#666" }}>
+                                  We can&apos;t auto-deploy to {getDisplayName(detectedPlatform)} (yet) — but here&apos;s exactly where to paste it:
+                                </div>
+
+                                <div style={{ background: "white", border: "1px solid #E5D8B8", borderRadius: "4px", padding: "10px", marginBottom: "10px" }}>
+                                  <div style={{ fontWeight: 600, fontSize: "11px", marginBottom: "6px", color: "#3D3F3D" }}>Steps for {instructions.platformName}:</div>
+                                  <ol style={{ margin: 0, paddingLeft: "18px", fontSize: "11px", lineHeight: "1.55" }}>
+                                    {instructions.steps.map((step, i) => (
+                                      <li key={i} style={{ marginBottom: "3px" }}>{step}</li>
+                                    ))}
+                                  </ol>
+                                  {instructions.note && (
+                                    <div style={{ marginTop: "8px", padding: "6px 8px", background: "#FFF8E1", borderRadius: "3px", fontSize: "10px", color: "#7C5800", fontStyle: "italic" }}>
+                                      💡 {instructions.note}
+                                    </div>
+                                  )}
+                                </div>
+
                                 <details style={{ marginBottom: "8px" }}>
-                                  <summary style={{ cursor: "pointer", fontWeight: 500, color: "#3D3F3D", fontSize: "11px" }}>Show generated snippet</summary>
+                                  <summary style={{ cursor: "pointer", fontWeight: 500, color: "#3D3F3D", fontSize: "11px" }}>Preview the snippet</summary>
                                   <pre style={{
                                     marginTop: "6px",
                                     padding: "8px",
@@ -1174,14 +1192,14 @@ export default function App() {
                                 <button
                                   onClick={() => copyToClipboard(fixState.snippet ?? "")}
                                   style={{
-                                    padding: "6px 10px",
+                                    padding: "8px 12px",
                                     background: "#C97B45",
                                     border: "none",
                                     color: "white",
                                     borderRadius: "4px",
-                                    fontSize: "11px",
+                                    fontSize: "12px",
                                     cursor: "pointer",
-                                    fontWeight: 500,
+                                    fontWeight: 600,
                                     width: "100%",
                                   }}
                                 >
