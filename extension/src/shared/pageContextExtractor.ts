@@ -71,6 +71,7 @@ export function extractPageContext(): ExtractedPageContext {
 
   ctx.title = document.title?.trim() || undefined;
   ctx.description = (document.querySelector('meta[name="description"]') as HTMLMetaElement | null)?.content?.trim() || undefined;
+  ctx.bodyContent = extractBodyContent();
 
   ctx.businessName = extractBusinessName();
   ctx.logo = extractLogo();
