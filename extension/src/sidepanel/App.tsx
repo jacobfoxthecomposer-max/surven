@@ -18,8 +18,6 @@ type FixState =
 const FINDING_TO_SCHEMA_TYPE: Record<string, string> = {
   org_schema_missing: "Organization",
   local_business_schema_missing: "LocalBusiness",
-  faq_schema_missing: "FAQPage",
-  faq_schema_insufficient: "FAQPage",
 };
 
 const FINDING_TO_REWRITE_KIND: Record<string, "meta_desc" | "title_tag"> = {
