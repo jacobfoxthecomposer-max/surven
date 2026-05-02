@@ -15,6 +15,8 @@ interface AuthState {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  /** True when local-dev placeholder Supabase env is detected. */
+  unconfigured: boolean;
   signUp: (email: string, password: string) => Promise<{ user: User | null; session: Session | null }>;
   signIn: (email: string, password: string) => Promise<{ user: User | null; session: Session | null }>;
   signOut: () => Promise<void>;
@@ -84,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext value={{ user, session, loading, signUp, signIn, signOut }}>
+    <AuthContext value={{ user, session, loading, unconfigured: SUPABASE_UNCONFIGURED, signUp, signIn, signOut }}>
       {children}
     </AuthContext>
   );
