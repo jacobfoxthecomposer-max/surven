@@ -788,7 +788,7 @@ function renderSchemaInventory(result: SchemaScanResult) {
       <div class="title">Schema Inventory</div>
       <div class="section-label">Present (${presentTypes.length})</div>
       <ul>${presentHtml}</ul>
-      <div class="section-label">Suggested (${missingItems.length})</div>
+      <div class="section-label">Suggested (${result.missing.length})</div>
       <ul>${missingHtml}</ul>
       <div class="footnote">Sage outlines = schema present. Rust dashed = schema missing for detected pattern. Click any missing item to scroll to it.</div>
     </div>
