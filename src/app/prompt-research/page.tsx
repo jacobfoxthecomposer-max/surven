@@ -285,7 +285,7 @@ export default function PromptResearchPage() {
           </div>
         ) : (
           <>
-            {/* ===== Bottom grid — data + fix actions ===== */}
+            {/* ===== Zone 1: KPIs + AIOverview + EntityGrid (left) | FixActions (right) ===== */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
               <div className="lg:col-span-2 flex flex-col gap-4 min-w-0">
                 {/* KPI cards */}
@@ -361,25 +361,13 @@ export default function PromptResearchPage() {
                   </motion.div>
                 )}
 
-                {/* Entity grid */}
-                <motion.div {...reveal}>
+                {/* Entity grid — last item in left column, sets the bottom edge */}
+                <motion.div {...reveal} className="flex-1">
                   <EntityGrid data={data.entityGrid} />
                 </motion.div>
-
-                {/* Charts row */}
-                <motion.div {...reveal} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <TaxonomyCoverage intents={data.intents} />
-                  <IntentDistribution intents={data.intents} />
-                </motion.div>
-
-                {/* Diagnostic band — flex-1 to stretch */}
-                <PromptResearchDiagnosticBand
-                  intents={data.intents}
-                  businessName={business.name}
-                />
               </div>
 
-              {/* Right column — fix actions, h-full */}
+              {/* Right column — fix actions, h-full to match left column height */}
               <div className="flex flex-col">
                 <PromptResearchFixActions
                   intents={data.intents}
@@ -389,6 +377,17 @@ export default function PromptResearchPage() {
                 />
               </div>
             </div>
+
+            {/* ===== Zone 2: full-width charts + diagnostic ===== */}
+            <motion.div {...reveal} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <TaxonomyCoverage intents={data.intents} />
+              <IntentDistribution intents={data.intents} />
+            </motion.div>
+
+            <PromptResearchDiagnosticBand
+              intents={data.intents}
+              businessName={business.name}
+            />
 
             {/* Intents table */}
             <motion.div {...reveal} id="intents-table" className="scroll-mt-6">
