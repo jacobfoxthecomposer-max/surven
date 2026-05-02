@@ -5,8 +5,6 @@ import type { QuoteScore } from "../shared/quoteability";
 import { scanSchema } from "../shared/schemaDetect";
 import type { SchemaScanResult } from "../shared/schemaDetect";
 
-const SAGE = "rgba(150, 162, 131, 0.35)";
-const SAGE_BORDER = "3px solid rgba(107, 122, 89, 0.85)";
 const BADGE_HOST_ID = "surven-badge-host";
 const HEATMAP_DATA_ATTR = "data-surven-heatmap";
 const HEATMAP_STYLE_ID = "surven-heatmap-style";
