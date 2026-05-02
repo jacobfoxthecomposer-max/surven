@@ -624,31 +624,50 @@ function ChecksList({ checks }: { checks: CheckResult[] }) {
   for (const c of checks) grouped[c.pillar].push(c);
 
   return (
-    <div className="space-y-5">
-      {(Object.keys(grouped) as Pillar[]).map((p) => (
-        <div
-          key={p}
-          className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)]"
-        >
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+      {(Object.keys(grouped) as Pillar[]).map((p) => {
+        const Icon = PILLAR_ICON[p];
+        const rows = grouped[p];
+        const passCount = rows.filter((c) => c.status === "pass").length;
+        return (
           <div
-            className="px-5 py-3 border-b border-[var(--color-border)] rounded-t-[var(--radius-lg)]"
-            style={{
-              background:
-                "linear-gradient(135deg, rgba(150,162,131,0.22) 0%, rgba(184,160,48,0.10) 50%, rgba(201,123,69,0.10) 100%)",
-            }}
+            key={p}
+            className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden"
           >
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5" style={{ color: COLORS.primary }} />
-              <SectionHeading text={PILLAR_LABELS[p]} info={PILLAR_BLURBS[p]} />
+            <div
+              className="px-5 py-3.5 border-b border-[var(--color-border)] flex items-center justify-between gap-3"
+              style={{
+                background:
+                  "linear-gradient(135deg, rgba(150,162,131,0.22) 0%, rgba(184,160,48,0.10) 50%, rgba(201,123,69,0.10) 100%)",
+              }}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div
+                  className="h-9 w-9 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: "rgba(150,162,131,0.22)" }}
+                >
+                  <Icon className="h-4.5 w-4.5" style={{ color: COLORS.primary, height: 18, width: 18 }} />
+                </div>
+                <SectionHeading text={PILLAR_LABELS[p]} info={PILLAR_BLURBS[p]} />
+              </div>
+              <span
+                className="tabular-nums shrink-0 text-[var(--color-fg-secondary)]"
+                style={{ fontSize: 12, fontFamily: "var(--font-sans)" }}
+              >
+                <span className="font-semibold text-[var(--color-fg)]">
+                  {passCount}
+                </span>
+                /{rows.length} passing
+              </span>
             </div>
+            <ul className="divide-y divide-[var(--color-border)]">
+              {rows.map((c) => (
+                <CheckRow key={c.id} check={c} />
+              ))}
+            </ul>
           </div>
-          <ul className="divide-y divide-[var(--color-border)]">
-            {grouped[p].map((c) => (
-              <CheckRow key={c.id} check={c} />
-            ))}
-          </ul>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
