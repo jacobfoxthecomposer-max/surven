@@ -20,11 +20,18 @@ interface RewriteResult<T> {
 
 const META_SYSTEM = `You rewrite website meta descriptions so AI engines (ChatGPT, Claude, Gemini, Google AI) are more likely to cite the site when answering questions about businesses like it.
 
-Rules for your output:
+CRITICAL RULES — NEVER VIOLATE:
+- NEVER invent facts that aren't in the source data
+- NEVER add a city / state / address unless one is explicitly in the BUSINESS DATA section
+- NEVER guess at company structure (e.g. "GitHub hosts X's project") — describe the business itself
+- If you don't have enough information for a strong description, write a shorter, simpler one
+- If the existing description is already accurate and well-written, return something close to it (only fix length / clarity issues)
+
+Style rules:
 - 140-160 characters total (no shorter, no longer)
-- Lead with what the business does + where it's located (specific entities)
+- Lead with what the business does
+- Include city/state ONLY if explicitly given in BUSINESS DATA
 - Mention 1-2 concrete products / services / categories
-- Use specific names (city, state, business name, signature offering)
 - AVOID buzzwords: "world-class", "cutting-edge", "industry-leading", "passionate about", "best-in-class", "synergy", "innovative solutions"
 - AVOID hedge words: "we believe", "we strive", "we aim", "may be", "could be"
 - Read like a direct factual answer to "What is [business name]?"
@@ -34,11 +41,17 @@ Return ONLY JSON: {"description": "your rewritten text"}`;
 
 const TITLE_SYSTEM = `You rewrite website <title> tags so AI engines and search engines understand the business better and cite it more often.
 
-Rules for your output:
+CRITICAL RULES — NEVER VIOLATE:
+- NEVER invent facts that aren't in the source data
+- NEVER add a city / state unless explicitly in BUSINESS DATA
+- NEVER guess at organizational details (e.g. "GitHub hosts X's project")
+- If the existing title is already good, return something close to it
+
+Style rules:
 - 50-65 characters total
-- Format options (pick whichever fits best): "[Service/Category] in [City] | [Brand Name]" or "[Brand Name] — [What They Do] in [City]" or "[Brand Name] | [Specific Offering]"
+- Format options: "[Brand Name] | [Specific Offering]" or "[Brand Name] — [What They Do]"
+- If a city/state IS in BUSINESS DATA: "[Service] in [City] | [Brand]" works well
 - Include the business name + their primary category/service
-- Include city or region if it's a local business
 - AVOID buzzwords: "world-class", "best", "premier", "top-rated"
 - AVOID emoji, special characters, ALL CAPS
 - Read like a clear headline a real human would write

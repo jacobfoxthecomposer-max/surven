@@ -69,7 +69,7 @@ const STREET_SUFFIX = /(St|Street|Ave|Avenue|Rd|Road|Blvd|Boulevard|Dr|Drive|Way
 
 export function extractPageContext(): ExtractedPageContext {
   const ctx: ExtractedPageContext = {
-    url: window.location.href,
+    url: getCanonicalUrl(),
   };
 
   ctx.title = document.title?.trim() || undefined;
@@ -99,6 +99,43 @@ export function extractPageContext(): ExtractedPageContext {
   }
 
   return ctx;
+}
+
+/**
+ * Returns the canonical URL for the page, preferring (in order):
+ *   1. <link rel="canonical"> href
+ *   2. <meta property="og:url"> content
+ *   3. window.location.href, but with Vercel preview hashes stripped
+ *      (e.g. surven-abc123-someproject-x6.vercel.app → surven.vercel.app)
+ *
+ * Schemas should always reference the canonical URL — preview URLs change with every
+ * deploy and confuse AI engines indexing the site.
+ */
+function getCanonicalUrl(): string {
+  const canonical = (document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null)?.href?.trim();
+  if (canonical) {
+    try { return new URL(canonical).href; } catch { /* fall through */ }
+  }
+
+  const ogUrl = (document.querySelector('meta[property="og:url"]') as HTMLMetaElement | null)?.content?.trim();
+  if (ogUrl) {
+    try { return new URL(ogUrl).href; } catch { /* fall through */ }
+  }
+
+  const current = window.location.href;
+  try {
+    const u = new URL(current);
+    // Vercel preview pattern: <project>-<hash>-<scope>.vercel.app
+    // Production: <project>.vercel.app or a custom domain
+    const previewMatch = u.hostname.match(/^([a-z0-9]+(?:-[a-z0-9]+)*)-[a-z0-9]{6,}-[a-z0-9-]+\.vercel\.app$/i);
+    if (previewMatch) {
+      u.hostname = `${previewMatch[1]}.vercel.app`;
+      return u.href;
+    }
+    return current;
+  } catch {
+    return current;
+  }
 }
 
 function extractBodyContent(): string | undefined {
