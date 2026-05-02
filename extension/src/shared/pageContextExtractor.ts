@@ -8,12 +8,15 @@
  * "Not enough data" errors honestly when required fields are missing.
  */
 
+import { detectPlatform, type CmsPlatform } from "./platformInstructions";
+
 export interface ExtractedPageContext {
   url: string;
   title?: string;
   description?: string;
   businessName?: string;
   bodyContent?: string;
+  platform?: CmsPlatform;
   phone?: string;
   address?: {
     street?: string;
@@ -72,6 +75,7 @@ export function extractPageContext(): ExtractedPageContext {
   ctx.title = document.title?.trim() || undefined;
   ctx.description = (document.querySelector('meta[name="description"]') as HTMLMetaElement | null)?.content?.trim() || undefined;
   ctx.bodyContent = extractBodyContent();
+  ctx.platform = detectPlatform();
 
   ctx.businessName = extractBusinessName();
   ctx.logo = extractLogo();

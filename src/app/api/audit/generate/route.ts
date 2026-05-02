@@ -19,7 +19,7 @@ import { createServerClient } from "@/services/supabaseServer";
 import { decryptCredentials } from "@/utils/credentialsEncryption";
 import { applyHtmlInject } from "@/features/crawlability/services/applyFix/htmlInjectHandler";
 import { generateSchema, type SchemaKind, type PageContext } from "@/services/schemaGenerator";
-import { rewriteMetaDescription, rewriteTitleTag } from "@/services/llmRewriter";
+import { rewriteMetaDescription, rewriteTitleTag, generateFaqPairs, generateAltText } from "@/services/llmRewriter";
 import { writeAuditLog, ipFromRequest } from "@/services/auditLog";
 
 export const maxDuration = 30;
@@ -94,6 +94,15 @@ const BodySchema = z.object({
    * so we commit what they saw — not a fresh LLM regeneration.
    */
   approvedContent: z.string().optional(),
+  /**
+   * For alt_text kind: list of images to generate descriptions for.
+   * Sent as the FIRST step (no commit). Side panel then sends `replacements` to commit.
+   */
+  images: z.array(z.object({ src: z.string(), surroundingText: z.string().optional() })).optional(),
+  /**
+   * For alt_text kind: pre-approved alt text per image, ready to commit.
+   */
+  replacements: z.array(z.object({ src: z.string(), alt: z.string() })).optional(),
 });
 
 interface ConnectionRow {
@@ -131,7 +140,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request", details: parse.error.flatten() }, { status: 400 });
   }
 
-  const { kind, pageContext, commit, findingId, findingTitle, schemaType, approvedContent } = parse.data;
+  const { kind, pageContext, commit, findingId, findingTitle, schemaType, approvedContent, images, replacements } = parse.data;
 
   if (kind === "schema_org") {
     if (!schemaType) {
@@ -225,6 +234,85 @@ export async function POST(request: NextRequest) {
       ipAddress: ipFromRequest(request),
     });
     return NextResponse.json({ ...commitResult, suggested: title, current: pageContext.title ?? null });
+  }
+
+  if (kind === "faq_page") {
+    let pairs: Array<{ question: string; answer: string }>;
+
+    if (approvedContent && commit) {
+      try {
+        pairs = JSON.parse(approvedContent);
+        if (!Array.isArray(pairs)) throw new Error("not an array");
+      } catch {
+        return NextResponse.json({ error: "approvedContent must be a JSON array of {question, answer} pairs" }, { status: 400 });
+      }
+    } else {
+      const result = await generateFaqPairs(pageContext as PageContext);
+      if (!result.ok || !result.data) {
+        return NextResponse.json({ error: result.error ?? "faq_generation_failed" }, { status: 422 });
+      }
+      pairs = result.data.pairs;
+    }
+
+    const ctxWithFaq: PageContext = { ...(pageContext as PageContext), faqItems: pairs };
+    const schemaResult = generateSchema("FAQPage", ctxWithFaq);
+    if (!schemaResult.ok || !schemaResult.jsonLd) {
+      return NextResponse.json({ error: schemaResult.error ?? "schema_build_failed" }, { status: 422 });
+    }
+
+    if (!commit) {
+      return NextResponse.json({
+        ok: true,
+        kind: "faq_page",
+        pairs,
+        snippet: schemaResult.jsonLd,
+      });
+    }
+
+    const commitResult = await commitToConnectedRepo({
+      userId,
+      siteUrl: pageContext.url,
+      kind: "schema_org",
+      payload: { kind: "schema_org", jsonLd: schemaResult.jsonLd, schemaType: "FAQPage" },
+      findingId,
+      findingTitle,
+      origin: request.nextUrl.origin,
+      ipAddress: ipFromRequest(request),
+    });
+    return NextResponse.json({ ...commitResult, snippet: schemaResult.jsonLd, pairs, schemaType: "FAQPage" });
+  }
+
+  if (kind === "alt_text") {
+    if (replacements && commit) {
+      const commitResult = await commitToConnectedRepo({
+        userId,
+        siteUrl: pageContext.url,
+        kind: "alt_text",
+        payload: { kind: "alt_text", replacements },
+        findingId,
+        findingTitle,
+        origin: request.nextUrl.origin,
+        ipAddress: ipFromRequest(request),
+      });
+      return NextResponse.json({ ...commitResult, replacements });
+    }
+
+    if (!images || images.length === 0) {
+      return NextResponse.json({ error: "alt_text requires images array (first call) or replacements array (commit call)" }, { status: 400 });
+    }
+
+    const capped = images.slice(0, 12);
+    const results = await Promise.all(
+      capped.map(async (img) => {
+        const result = await generateAltText(img.src, {
+          surroundingText: img.surroundingText,
+          pageTitle: pageContext.title,
+        });
+        return { src: img.src, alt: result.ok ? result.data?.alt : null, error: result.ok ? null : result.error };
+      }),
+    );
+
+    return NextResponse.json({ ok: true, kind: "alt_text", suggestions: results });
   }
 
   return NextResponse.json(
