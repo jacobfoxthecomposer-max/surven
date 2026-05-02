@@ -582,12 +582,8 @@ export function AeoAuditSection({
               <PriorityFixCards checks={result.checks} />
             </motion.div>
 
-            <motion.div
-              {...reveal}
-              className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch"
-            >
+            <motion.div {...reveal}>
               <ChromeExtCallout />
-              <WebsiteAuditCallout />
             </motion.div>
           </motion.div>
         )}
@@ -998,10 +994,13 @@ function PriorityFixCards({ checks }: { checks: CheckResult[] }) {
           >
             <Sparkles className="h-4.5 w-4.5" style={{ color: COLORS.primary, height: 18, width: 18 }} />
           </div>
-          <SectionHeading
-            text="Fix these first"
-            info="The three highest-impact issues across all pillars, ranked by points recoverable."
-          />
+          <SectionHeading text="Fix these first" />
+          <HoverHint hint="The three highest-impact issues across all pillars, ranked by points recoverable.">
+            <Info
+              className="h-3.5 w-3.5 text-[var(--color-fg-muted)] hover:text-[var(--color-fg-secondary)] cursor-help transition-colors"
+              aria-label="What this card shows"
+            />
+          </HoverHint>
         </div>
         <p className="text-[var(--color-fg-secondary)]" style={{ fontSize: 14 }}>
           Recover ~
