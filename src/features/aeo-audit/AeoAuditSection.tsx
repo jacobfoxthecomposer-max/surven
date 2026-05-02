@@ -480,10 +480,12 @@ export function AeoAuditSection({
             transition={{ duration: 0.45, ease: EASE }}
             className="space-y-5"
           >
-            {/* Pillar bars (70%, left) + Priority fixes (30%, right). */}
+            {/* Pillar bars (~63%, left) + Priority fixes (~37%, right).
+                items-stretch so the left card fills the right column's
+                height — no empty-space gap at the bottom. */}
             <motion.div
               {...reveal}
-              className="grid grid-cols-1 lg:grid-cols-[7fr_3fr] gap-5 items-start"
+              className="grid grid-cols-1 lg:grid-cols-[63fr_37fr] gap-5 items-stretch"
             >
               <PillarBars pillars={result.pillars} checks={result.checks} />
               <PriorityFixCards checks={result.checks} />
@@ -972,7 +974,7 @@ function PillarBars({
   checks: CheckResult[];
 }) {
   return (
-    <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
+    <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden flex flex-col h-full">
       <div
         className="px-5 py-3.5 border-b border-[var(--color-border)] flex items-center gap-2.5"
         style={{
@@ -991,7 +993,7 @@ function PillarBars({
           info="Score per pillar across the 25 checks. Hover the icon for each pillar's role."
         />
       </div>
-      <div className="px-5 py-5 space-y-5">
+      <div className="px-5 py-5 flex-1 flex flex-col justify-around gap-5">
         {pillars.map((p, i) => {
           const Icon = PILLAR_ICON[p.pillar];
           const tok = GRADE_TOK[p.grade];
