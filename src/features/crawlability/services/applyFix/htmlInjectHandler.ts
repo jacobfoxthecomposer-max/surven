@@ -116,6 +116,165 @@ async function isNextJsRepo(repo: string, branch: string, token: string): Promis
   return checks.some(Boolean);
 }
 
+async function findNextLayoutFile(repo: string, branch: string, token: string): Promise<{ path: string; content: string; sha: string } | null> {
+  for (const candidate of NEXTJS_LAYOUT_CANDIDATES) {
+    const found = await getFileContents(repo, candidate, branch, token);
+    if (found) return { path: candidate, ...found };
+  }
+  return null;
+}
+
+/**
+ * Inject a JSON-LD script element into a Next.js layout.tsx body.
+ * Looks for <body ...>...</body> JSX and inserts a <script ... /> element right after the opening <body> tag.
+ * Conservative: only modifies if we can confidently locate the body element.
+ */
+function injectJsonLdIntoNextLayout(content: string, jsonLdHtml: string, schemaType: string): { ok: boolean; updated?: string; reason?: string } {
+  const inner = jsonLdHtml.replace(/^<script[^>]*>\n?/, "").replace(/\n?<\/script>$/, "").trim();
+  if (!inner) return { ok: false, reason: "Could not parse JSON from snippet" };
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(inner);
+  } catch {
+    return { ok: false, reason: "Snippet was not valid JSON" };
+  }
+
+  const escapedJson = JSON.stringify(parsed)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026");
+
+  const marker = `data-surven-schema-type="${schemaType}"`;
+  if (content.includes(marker)) {
+    return { ok: false, reason: `${schemaType} schema is already present in this layout. Remove the existing one first.` };
+  }
+
+  const scriptElement = `        <script
+          type="application/ld+json"
+          ${marker}
+          dangerouslySetInnerHTML={{ __html: ${"`"}${escapedJson}${"`"} }}
+        />`;
+
+  const bodyOpen = content.match(/<body\b[^>]*>/);
+  if (!bodyOpen || bodyOpen.index === undefined) {
+    return { ok: false, reason: "Couldn't find a <body> JSX tag in your layout file" };
+  }
+
+  const insertAt = bodyOpen.index + bodyOpen[0].length;
+  const updated = content.slice(0, insertAt) + "\n" + scriptElement + content.slice(insertAt);
+  return { ok: true, updated };
+}
+
+/**
+ * Replace the description field inside a Next.js metadata export.
+ *
+ * Matches the common patterns:
+ *   export const metadata = { description: "..." }
+ *   export const metadata: Metadata = { description: "..." }
+ *
+ * Conservatively bails on async generateMetadata or other dynamic patterns.
+ */
+function replaceMetadataField(content: string, field: "description" | "title", newValue: string): { ok: boolean; updated?: string; reason?: string } {
+  const escapedValue = newValue.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  const fieldRegex = new RegExp(`(\\b${field}\\s*:\\s*)(["'\`])((?:\\\\.|[^\\\\])*?)\\2`, "m");
+
+  if (!fieldRegex.test(content)) {
+    if (/export\s+async\s+function\s+generateMetadata/.test(content) || /export\s+function\s+generateMetadata/.test(content)) {
+      return { ok: false, reason: `Your metadata is generated dynamically via generateMetadata(). Auto-edit can only handle the static metadata = {...} pattern. Edit it manually for now.` };
+    }
+    return { ok: false, reason: `Couldn't find a ${field} field in your metadata export. Make sure you're using the standard "export const metadata = { ${field}: '...' }" pattern.` };
+  }
+
+  const updated = content.replace(fieldRegex, `$1"${escapedValue}"`);
+  if (updated === content) return { ok: false, reason: "Pattern matched but replacement was a no-op" };
+  return { ok: true, updated };
+}
+
+async function applyNextJsInject(
+  repo: string,
+  branch: string,
+  token: string,
+  payload: HtmlInjectPayload,
+  findingId: string,
+  findingTitle: string,
+): Promise<HtmlInjectResult> {
+  const layout = await findNextLayoutFile(repo, branch, token);
+  if (!layout) {
+    return {
+      ok: false,
+      manualSnippet: payload.kind === "schema_org" ? payload.jsonLd : undefined,
+      manualNote: "Couldn't find your Next.js layout file (looked for src/app/layout.tsx, app/layout.tsx, etc.). Add the snippet manually.",
+    };
+  }
+
+  let updatedContent = layout.content;
+  let commitSubject = "";
+
+  switch (payload.kind) {
+    case "schema_org": {
+      const result = injectJsonLdIntoNextLayout(layout.content, payload.jsonLd, payload.schemaType);
+      if (!result.ok || !result.updated) {
+        return {
+          ok: false,
+          error: result.reason,
+          manualSnippet: payload.jsonLd,
+          manualNote: result.reason ?? "Auto-inject failed — paste this into your layout.tsx manually.",
+        };
+      }
+      updatedContent = result.updated;
+      commitSubject = `feat(schema): add ${payload.schemaType} JSON-LD to layout`;
+      break;
+    }
+    case "meta_desc": {
+      const result = replaceMetadataField(layout.content, "description", payload.description);
+      if (!result.ok || !result.updated) {
+        return {
+          ok: false,
+          error: result.reason,
+          manualNote: result.reason ?? "Auto-update failed — edit description in your metadata export manually.",
+        };
+      }
+      updatedContent = result.updated;
+      commitSubject = "fix(seo): update meta description in Next.js metadata";
+      break;
+    }
+    case "title_tag": {
+      const result = replaceMetadataField(layout.content, "title", payload.title);
+      if (!result.ok || !result.updated) {
+        return {
+          ok: false,
+          error: result.reason,
+          manualNote: result.reason ?? "Auto-update failed — edit title in your metadata export manually.",
+        };
+      }
+      updatedContent = result.updated;
+      commitSubject = "fix(seo): update title in Next.js metadata";
+      break;
+    }
+    case "alt_text": {
+      return {
+        ok: false,
+        manualNote: "Auto-update for alt text on Next.js images isn't wired yet — Next.js uses <Image> components and JSX-only image references. Update each image's alt prop manually.",
+      };
+    }
+  }
+
+  if (updatedContent === layout.content) {
+    return { ok: false, error: "Nothing changed — the value may already be set." };
+  }
+
+  const message = `${commitSubject}\n\nApplied via Surven Optimizer (finding: ${findingId} — ${findingTitle})`;
+  const { committedSha, commitUrl } = await commitFile(repo, layout.path, branch, token, updatedContent, layout.sha, message);
+
+  return {
+    ok: true,
+    committedSha,
+    commitUrl,
+    filePath: layout.path,
+  };
+}
+
 function injectIntoHead(html: string, snippet: string): string {
   const closeHead = html.indexOf("</head>");
   if (closeHead === -1) {
