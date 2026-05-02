@@ -408,10 +408,11 @@ export function AeoAuditSection({
               </div>
             </motion.div>
 
-            <motion.div {...reveal}>
+            <motion.div
+              {...reveal}
+              className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch"
+            >
               <ScoreCard result={result} />
-            </motion.div>
-            <motion.div {...reveal}>
               <TopFixesPanel checks={result.checks} />
             </motion.div>
             <motion.div {...reveal}>
@@ -443,7 +444,7 @@ function ScoreCard({ result }: { result: ScanResult }) {
       : "poor";
   const tok = GRADE_TOK[tier];
   return (
-    <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
+    <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden flex flex-col h-full">
       <div
         className="px-5 py-3.5 border-b border-[var(--color-border)] flex items-center gap-2.5"
         style={{
@@ -462,7 +463,7 @@ function ScoreCard({ result }: { result: ScanResult }) {
           info="Overall grade across 25 checks of how clearly AI engines can read your site."
         />
       </div>
-      <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-4">
+      <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-4 flex-1">
         <div className="min-w-0">
           <p
             className="text-[var(--color-fg-secondary)]"
@@ -692,7 +693,7 @@ function TopFixesPanel({ checks }: { checks: CheckResult[] }) {
 
   return (
     <div
-      className="rounded-[var(--radius-lg)] border bg-[var(--color-surface)] overflow-hidden"
+      className="rounded-[var(--radius-lg)] border bg-[var(--color-surface)] overflow-hidden flex flex-col h-full"
       style={{ borderColor: "rgba(150,162,131,0.45)" }}
     >
       <div
