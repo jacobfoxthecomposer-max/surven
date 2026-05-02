@@ -19,6 +19,7 @@ import { createServerClient } from "@/services/supabaseServer";
 import { decryptCredentials } from "@/utils/credentialsEncryption";
 import { applyHtmlInject } from "@/features/crawlability/services/applyFix/htmlInjectHandler";
 import { generateSchema, type SchemaKind, type PageContext } from "@/services/schemaGenerator";
+import { rewriteMetaDescription, rewriteTitleTag } from "@/services/llmRewriter";
 import { writeAuditLog, ipFromRequest } from "@/services/auditLog";
 
 export const maxDuration = 30;
@@ -30,6 +31,7 @@ const PageContextSchema = z.object({
   title: z.string().optional(),
   description: z.string().optional(),
   businessName: z.string().optional(),
+  bodyContent: z.string().optional(),
   phone: z.string().optional(),
   address: z
     .object({
@@ -86,6 +88,12 @@ const BodySchema = z.object({
   commit: z.boolean().default(true),
   findingId: z.string().min(1),
   findingTitle: z.string().min(1),
+  /**
+   * Pre-approved content from a previous preview call. When the side panel shows the user
+   * a suggested rewrite and they click "Use this version," it sends the exact text back
+   * so we commit what they saw — not a fresh LLM regeneration.
+   */
+  approvedContent: z.string().optional(),
 });
 
 interface ConnectionRow {
@@ -149,6 +157,66 @@ export async function POST(request: NextRequest) {
       ipAddress: ipFromRequest(request),
     });
     return NextResponse.json({ ...commitResult, snippet: result.jsonLd, schemaType });
+  }
+
+  if (kind === "meta_desc") {
+    const result = await rewriteMetaDescription(pageContext as PageContext);
+    if (!result.ok || !result.data) {
+      return NextResponse.json({ error: result.error ?? "rewrite_failed" }, { status: 422 });
+    }
+
+    const description = result.data.description;
+
+    if (!commit) {
+      return NextResponse.json({
+        ok: true,
+        kind: "meta_desc",
+        suggested: description,
+        current: pageContext.description ?? null,
+      });
+    }
+
+    const commitResult = await commitToConnectedRepo({
+      userId,
+      siteUrl: pageContext.url,
+      kind: "meta_desc",
+      payload: { kind: "meta_desc", description },
+      findingId,
+      findingTitle,
+      origin: request.nextUrl.origin,
+      ipAddress: ipFromRequest(request),
+    });
+    return NextResponse.json({ ...commitResult, suggested: description, current: pageContext.description ?? null });
+  }
+
+  if (kind === "title_tag") {
+    const result = await rewriteTitleTag(pageContext as PageContext);
+    if (!result.ok || !result.data) {
+      return NextResponse.json({ error: result.error ?? "rewrite_failed" }, { status: 422 });
+    }
+
+    const title = result.data.title;
+
+    if (!commit) {
+      return NextResponse.json({
+        ok: true,
+        kind: "title_tag",
+        suggested: title,
+        current: pageContext.title ?? null,
+      });
+    }
+
+    const commitResult = await commitToConnectedRepo({
+      userId,
+      siteUrl: pageContext.url,
+      kind: "title_tag",
+      payload: { kind: "title_tag", title },
+      findingId,
+      findingTitle,
+      origin: request.nextUrl.origin,
+      ipAddress: ipFromRequest(request),
+    });
+    return NextResponse.json({ ...commitResult, suggested: title, current: pageContext.title ?? null });
   }
 
   return NextResponse.json(
