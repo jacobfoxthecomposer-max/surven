@@ -290,16 +290,6 @@ function buildPageSummaryParts(result: ScanResult): { good: string; fix: string 
     (s, c) => s + (c.max - c.earned),
     0,
   );
-  const totalEffort = [...fails, ...partials].reduce(
-    (s, c) => s + c.effortMin,
-    0,
-  );
-  const effortLabel =
-    totalEffort < 60
-      ? "under an hour"
-      : totalEffort < 240
-      ? `${Math.round(totalEffort / 60)} hours of focused work`
-      : "a focused day of work";
 
   if (fails.length === 0 && partials.length === 0) {
     return {
@@ -310,12 +300,12 @@ function buildPageSummaryParts(result: ScanResult): { good: string; fix: string 
   if (fails.length === 0) {
     return {
       good: `${result.score}/100 across 25 checks. ${PILLAR_LABELS[strongest.pillar]} is your strongest pillar at ${strongPct}%, and ${passing.length} checks are already passing.`,
-      fix: `${partials.length} partial issue${partials.length === 1 ? "" : "s"} ${partials.length === 1 ? "is" : "are"} sitting between you and a higher score — roughly ${Math.round(recoverable)} points are recoverable in ${effortLabel}.`,
+      fix: `${partials.length} partial issue${partials.length === 1 ? "" : "s"} ${partials.length === 1 ? "is" : "are"} sitting between you and a higher score — roughly ${Math.round(recoverable)} points are recoverable.`,
     };
   }
   return {
     good: `${PILLAR_LABELS[strongest.pillar]} is your strongest pillar at ${strongPct}%, and ${passing.length} of the easy wins are already locked in.`,
-    fix: `${PILLAR_LABELS[weakest.pillar]} is the weakest at ${weakPct}% — ${fails.length} critical check${fails.length === 1 ? "" : "s"} ${fails.length === 1 ? "is" : "are"} blocking AI from reading parts of your site, plus ${partials.length} partial issue${partials.length === 1 ? "" : "s"}. Roughly ${Math.round(recoverable)} points are recoverable in ${effortLabel}.`,
+    fix: `${PILLAR_LABELS[weakest.pillar]} is the weakest at ${weakPct}% — ${fails.length} critical check${fails.length === 1 ? "" : "s"} ${fails.length === 1 ? "is" : "are"} blocking AI from reading parts of your site, plus ${partials.length} partial issue${partials.length === 1 ? "" : "s"}. Roughly ${Math.round(recoverable)} points are recoverable.`,
   };
 }
 
