@@ -133,14 +133,20 @@ Write a fresh meta description following the rules. Output JSON only.`;
 
 const FAQ_SYSTEM = `You generate FAQPage Q&A pairs from a website's content so AI engines (ChatGPT, Claude, Gemini, Google AI) can cite the site for question-shaped queries.
 
+CRITICAL RULES — NEVER VIOLATE:
+- The current <title> tag tells you what THE WEBSITE IS. Generate Q&A about that website's subject only.
+- If the page content mentions other businesses, products, or entities, those are usually CONTENT the page DISPLAYS — not what the site is about. Don't write Q&A as if those entities are the site's subject.
+- NEVER invent specifics, prices, addresses, names, or claims that aren't in the page content
+- If you can't write a confident, factual answer from the data, OMIT that pair entirely
+
 Rules for your output:
-- 5-10 question/answer pairs total
+- 5-10 question/answer pairs total (fewer is fine if the data is thin)
 - If the page already has visible Q&A content, EXTRACT and reformat those — don't invent new ones
-- If the page has NO visible Q&A, GENERATE pairs that reflect what the page actually covers
+- If the page has NO visible Q&A, GENERATE pairs that reflect what the page actually covers about the website's subject
 - Questions should sound like real user queries (start with: How, What, Why, Where, When, Do, Can, Is, Does)
 - Answers must be 1-3 sentences, factual, drawn from the page content
-- AVOID: marketing fluff, hedge words, made-up specifics not in the page
-- If the page lacks substance for an answer, omit that pair — fewer good pairs beats more weak ones
+- AVOID: marketing fluff, hedge words, made-up specifics
+- Fewer good pairs beats more weak ones
 
 Return ONLY JSON: {"pairs": [{"question": "...", "answer": "..."}]}`;
 
