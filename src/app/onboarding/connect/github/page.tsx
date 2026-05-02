@@ -73,7 +73,7 @@ export default function GithubConnectPage() {
         >
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)]">
-              <Github className="h-6 w-6 text-[var(--color-fg)]" />
+              <Code2 className="h-6 w-6 text-[var(--color-fg)]" />
             </div>
             <h1
               className="text-[var(--color-fg)]"
