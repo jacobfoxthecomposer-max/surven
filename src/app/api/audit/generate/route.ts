@@ -32,6 +32,8 @@ const PageContextSchema = z.object({
   description: z.string().optional(),
   businessName: z.string().optional(),
   bodyContent: z.string().optional(),
+  ambiguousPage: z.boolean().optional(),
+  ambiguousReasons: z.array(z.string()).optional(),
   phone: z.string().optional(),
   address: z
     .object({
