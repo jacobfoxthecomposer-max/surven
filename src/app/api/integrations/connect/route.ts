@@ -10,6 +10,8 @@ import {
   validateWordpress,
   validateWebflow,
 } from "@/utils/platformValidators";
+import { enqueueJob } from "@/services/jobQueue";
+import { writeAuditLog, ipFromRequest } from "@/services/auditLog";
 
 const PREMIUM_PLANS = ["premium", "admin"];
 
@@ -198,6 +200,26 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+
+  await writeAuditLog({
+    eventType: "connection_created",
+    source: "api/integrations/connect",
+    userId: user.id,
+    businessId: data.businessId,
+    connectionId: saved.id,
+    payload: { platform: data.platform, validationMeta: validation.meta },
+    ipAddress: ipFromRequest(request),
+    userAgent: request.headers.get("user-agent"),
+  });
+
+  await enqueueJob({
+    jobType: "detect-framework",
+    userId: user.id,
+    businessId: data.businessId,
+    connectionId: saved.id,
+    payload: { platform: data.platform },
+    priority: 3,
+  });
 
   return NextResponse.json({
     connection: saved,

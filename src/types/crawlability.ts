@@ -20,9 +20,16 @@ export interface CrawlabilityFinding {
   whyItMatters: string;
   howToFix: string;
   fixCode?: string;
-  fixType?: "html" | "robots" | "sitemap" | "config";
+  fixType?: "html" | "robots" | "sitemap" | "config" | "llms";
   fixLabel?: string;
   isApplied?: boolean;
+}
+
+export interface LlmsTxtAnalysis {
+  exists: boolean;
+  url?: string;
+  byteLength?: number;
+  rawContent?: string;
 }
 
 export interface StatusBreakdown {
@@ -82,6 +89,7 @@ export interface CrawlabilityResult {
   categoryScores: CategoryScores;
   robotsAnalysis: RobotsAnalysis;
   sitemapAnalysis: SitemapAnalysis;
+  llmsTxtAnalysis?: LlmsTxtAnalysis;
   redirectChains: RedirectChain[];
   homepageMeta: { title: string; description: string; faviconUrl: string };
   crawlStats: { pagesCrawled: number; pagesCapped: boolean; crawlDurationMs: number };

@@ -10,6 +10,11 @@ export interface AuditFinding {
   whatIsIt: string;
   whyItMatters: string;
   howToFix: string;
+  // Fix metadata (only present on findings the backend can auto-fix)
+  fixCode?: string;
+  fixType?: "html" | "robots" | "sitemap" | "config" | "llms";
+  fixLabel?: string;
+  isApplied?: boolean;
 }
 
 export interface CrawledPage {
@@ -22,4 +27,22 @@ export interface CrawledPage {
   schemas: Record<string, unknown>[];
   lastModified?: Date;
   statusCode: number;
+}
+
+export interface ApplyFixResponse {
+  ok: boolean;
+  committedSha?: string;
+  commitUrl?: string;
+  filePath?: string;
+  error?: string;
+  message?: string;
+  connectUrl?: string;
+}
+
+export interface ApplyFixRequest {
+  siteUrl: string;
+  findingId: string;
+  findingTitle: string;
+  fixType: NonNullable<AuditFinding["fixType"]>;
+  fixCode: string;
 }

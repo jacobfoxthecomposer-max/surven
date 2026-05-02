@@ -5,7 +5,9 @@ import type {
   RobotsAnalysis,
   SitemapAnalysis,
   RedirectChain,
+  LlmsTxtAnalysis,
 } from "@/types/crawlability";
+import { autoBuildLlmsTxt } from "@/services/fixes/llmsTxtGenerator";
 
 const MAX_AFFECTED_URLS = 50;
 
@@ -15,6 +17,7 @@ export interface RuleContext {
   pageLinks: Record<string, string[]>;
   robots: RobotsAnalysis;
   sitemap: SitemapAnalysis;
+  llmsTxt?: LlmsTxtAnalysis;
   redirects: RedirectChain[];
   siteUrl: string;
 }
@@ -125,6 +128,9 @@ const checkRobotsTxt: RuleCheck = ({ robots, siteUrl }) => {
     if (robots.blocksGPTBot) blocked.push("GPTBot (ChatGPT)");
     if (robots.blocksAnthropicAI) blocked.push("anthropic-ai (Claude)");
 
+    // Build a clean robots.txt that strips the AI blocks while preserving everything else
+    const cleaned = stripAiBotBlocks(robots.rawContent ?? "", siteUrl);
+
     return makeFinding({
       id: "robots_blocks_ai_bots",
       title: `robots.txt Blocks ${blocked.join(" and ")}`,
@@ -138,12 +144,62 @@ const checkRobotsTxt: RuleCheck = ({ robots, siteUrl }) => {
       whyItMatters:
         "Surven's mission is to make you visible in AI responses. If you're blocking the bots that build those AI models, you've cut yourself off from a major source of visibility. Only block these if you have a strict content-protection reason.",
       howToFix:
-        "If you want AI visibility, remove the User-agent: GPTBot and User-agent: anthropic-ai 'Disallow: /' blocks from your robots.txt.",
+        "Replace your robots.txt with the version below. It strips the GPTBot/anthropic-ai/ClaudeBot disallow blocks while keeping the rest of your file intact.",
+      fixCode: cleaned,
+      fixType: "robots",
+      fixLabel: "Replace your robots.txt with:",
     });
   }
 
   return null;
 };
+
+/**
+ * Strip Disallow blocks for known AI crawlers from a robots.txt file.
+ * Preserves all other user-agent groups, comments, and Sitemap directives.
+ */
+function stripAiBotBlocks(rawRobots: string, siteUrl: string): string {
+  if (!rawRobots) {
+    return `User-agent: *\nAllow: /\n\nSitemap: ${new URL(siteUrl).origin}/sitemap.xml\n`;
+  }
+  const aiAgents = ["gptbot", "anthropic-ai", "claudebot", "claude-web"];
+  const lines = rawRobots.split(/\r?\n/);
+  const out: string[] = [];
+  let skipping = false;
+  let buffered: string[] = [];
+  let bufferedIsAi = false;
+
+  const flush = () => {
+    if (buffered.length === 0) return;
+    if (!bufferedIsAi) out.push(...buffered);
+    buffered = [];
+    bufferedIsAi = false;
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    const lower = line.toLowerCase();
+    if (lower.startsWith("user-agent:")) {
+      flush();
+      const agent = lower.slice("user-agent:".length).trim();
+      bufferedIsAi = aiAgents.some((a) => agent === a || agent.includes(a));
+      buffered.push(rawLine);
+      skipping = bufferedIsAi;
+    } else if (line === "" || line.startsWith("#") || lower.startsWith("sitemap:")) {
+      flush();
+      out.push(rawLine);
+      skipping = false;
+    } else {
+      if (skipping) buffered.push(rawLine);
+      else out.push(rawLine);
+    }
+  }
+  flush();
+
+  // Collapse runs of blank lines
+  const result = out.join("\n").replace(/\n{3,}/g, "\n\n");
+  return result.endsWith("\n") ? result : result + "\n";
+}
 
 // 2. sitemap coverage
 const checkSitemapCoverage: RuleCheck = ({ sitemap, siteUrl }) => {
@@ -726,6 +782,55 @@ const checkOgTagsCoverage: RuleCheck = ({ pages }) => {
   });
 };
 
+// 17. llms.txt presence (NEW — GEO-specific, AI engine wayfinder)
+const checkLlmsTxt: RuleCheck = ({ llmsTxt, pages, homepage, siteUrl }) => {
+  if (llmsTxt?.exists) return null;
+
+  const indexable = pages.filter(
+    (p) => p.statusCode >= 200 && p.statusCode < 300
+  );
+  if (indexable.length === 0) return null;
+
+  let origin: string;
+  try {
+    origin = new URL(siteUrl).origin;
+  } catch {
+    return null;
+  }
+
+  const siteName = (homepage.title ?? "").trim() || new URL(origin).hostname;
+  const description = homepage.metaDescription?.trim() || undefined;
+
+  const generated = autoBuildLlmsTxt({
+    siteName,
+    siteUrl: origin,
+    description,
+    pages: indexable.slice(0, 60).map((p) => ({
+      url: p.url,
+      title: (p.title ?? p.url).trim() || p.url,
+    })),
+  });
+
+  return makeFinding({
+    id: "llms_txt_missing",
+    title: "Site Missing llms.txt — AI Engine Wayfinder",
+    severity: "high",
+    category: "indexability",
+    affectedPages: 1,
+    fixTime: 10,
+    impact: 8,
+    whatIsIt:
+      "llms.txt is a curated map of your most important pages, written for LLM crawlers (ChatGPT, Claude, Gemini, Perplexity). Spec at llmstxt.org. AI engines look for it at the site root and use it to prioritize what to read.",
+    whyItMatters:
+      "It's the single highest-leverage GEO file you can ship — no other audit tool generates it for you. AI engines that find a clean llms.txt index your important pages first, skipping noise.",
+    howToFix:
+      "Create /llms.txt at your site root. Surven's draft below is auto-generated from your crawl — refine the page list and descriptions before merging.",
+    fixCode: generated,
+    fixType: "llms",
+    fixLabel: "Create /llms.txt with this content:",
+  });
+};
+
 export const CRAWLABILITY_RULES: Array<{ id: string; check: RuleCheck }> = [
   { id: "robots_txt", check: checkRobotsTxt },
   { id: "sitemap_coverage", check: checkSitemapCoverage },
@@ -743,4 +848,5 @@ export const CRAWLABILITY_RULES: Array<{ id: string; check: RuleCheck }> = [
   { id: "internal_broken_links", check: checkInternalBrokenLinks },
   { id: "viewport_meta", check: checkViewportMeta },
   { id: "og_tags_coverage", check: checkOgTagsCoverage },
+  { id: "llms_txt", check: checkLlmsTxt },
 ];

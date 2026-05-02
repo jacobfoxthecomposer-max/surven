@@ -11,7 +11,7 @@ const COMMIT_AUTHOR = {
   email: "bot@surven.ai",
 };
 
-export type SupportedFixType = "robots" | "sitemap";
+export type SupportedFixType = "robots" | "sitemap" | "llms";
 
 export interface GithubApplyFixOptions {
   token: string;
@@ -34,6 +34,7 @@ export interface ApplyFixResult {
 const FILE_PATH_BY_FIX: Record<SupportedFixType, { primary: string; fallback: string }> = {
   robots: { primary: "public/robots.txt", fallback: "robots.txt" },
   sitemap: { primary: "public/sitemap.xml", fallback: "sitemap.xml" },
+  llms: { primary: "public/llms.txt", fallback: "llms.txt" },
 };
 
 interface GithubContentResponse {
@@ -170,5 +171,5 @@ export async function applyFixToGithub(opts: GithubApplyFixOptions): Promise<App
 }
 
 export function isFixTypeSupportedForGithub(fixType: string | undefined): fixType is SupportedFixType {
-  return fixType === "robots" || fixType === "sitemap";
+  return fixType === "robots" || fixType === "sitemap" || fixType === "llms";
 }

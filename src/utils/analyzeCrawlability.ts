@@ -6,6 +6,7 @@ import type {
   RobotsAnalysis,
   SitemapAnalysis,
   RedirectChain,
+  LlmsTxtAnalysis,
 } from "@/types/crawlability";
 import { CRAWLABILITY_RULES } from "./crawlabilityRules";
 import { trackRedirects } from "./redirectTracker";
@@ -22,6 +23,7 @@ export interface AnalyzeCrawlabilityResult {
   statusBreakdown: StatusBreakdown;
   robotsAnalysis: RobotsAnalysis;
   sitemapAnalysis: SitemapAnalysis;
+  llmsTxtAnalysis: LlmsTxtAnalysis;
   redirectChains: RedirectChain[];
 }
 
@@ -37,9 +39,10 @@ export async function analyzeCrawlability(
 
   const origin = new URL(siteUrl).origin;
 
-  // Fetch robots.txt and sitemap in parallel
-  const [robots, redirectsHomepage] = await Promise.all([
+  // Fetch robots.txt, llms.txt, and homepage redirect in parallel
+  const [robots, llmsTxt, redirectsHomepage] = await Promise.all([
     fetchRobotsTxt(origin),
+    fetchLlmsTxt(origin),
     trackRedirects(siteUrl).catch(() => null),
   ]);
 
@@ -62,6 +65,7 @@ export async function analyzeCrawlability(
     pageLinks,
     robots,
     sitemap,
+    llmsTxt,
     redirects: redirectChains,
     siteUrl,
   };
@@ -85,6 +89,7 @@ export async function analyzeCrawlability(
     statusBreakdown,
     robotsAnalysis: robots,
     sitemapAnalysis: sitemap,
+    llmsTxtAnalysis: llmsTxt,
     redirectChains,
   };
 }
@@ -112,8 +117,28 @@ function emptyResult(): AnalyzeCrawlabilityResult {
       coveragePct: 0,
       missingPages: [],
     },
+    llmsTxtAnalysis: { exists: false },
     redirectChains: [],
   };
+}
+
+async function fetchLlmsTxt(origin: string): Promise<LlmsTxtAnalysis> {
+  const url = `${origin}/llms.txt`;
+  if (checkSsrfSafety(url)) return { exists: false };
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": USER_AGENT },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+    if (!res.ok) return { exists: false };
+    const ctype = res.headers.get("content-type") ?? "";
+    if (!ctype.includes("text") && !ctype.includes("markdown")) return { exists: false };
+    const text = await res.text();
+    if (text.length < 5) return { exists: false };
+    return { exists: true, url, byteLength: text.length, rawContent: text.slice(0, 4000) };
+  } catch {
+    return { exists: false };
+  }
 }
 
 async function fetchRobotsTxt(origin: string): Promise<RobotsAnalysis> {

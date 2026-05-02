@@ -169,14 +169,33 @@ export default function App() {
         body: JSON.stringify({ siteUrl: tab.url }),
       });
 
-      const data = await res.json();
+      // Read body as text first so an empty body (e.g. timeout) doesn't crash JSON.parse
+      const rawText = await res.text();
+      let data: { findings?: AuditFinding[]; error?: string; crawlStats?: { pagesCrawled: number; pagesCapped: boolean } } = {};
+      if (rawText) {
+        try {
+          data = JSON.parse(rawText);
+        } catch {
+          setState({
+            loading: false,
+            findings: [],
+            error: `Server returned an unparseable response (status ${res.status}). The audit may have timed out — try again.`,
+            fromCache: false,
+          });
+          return;
+        }
+      }
 
       if (!res.ok) {
-        setState({ loading: false, findings: [], error: data.error ?? "Audit failed", fromCache: false });
+        const fallback =
+          res.status === 504
+            ? "Audit timed out. Try a smaller site or re-scan to retry."
+            : `Audit failed (status ${res.status})`;
+        setState({ loading: false, findings: [], error: data.error ?? fallback, fromCache: false });
         return;
       }
 
-      const findings: AuditFinding[] = data.findings;
+      const findings: AuditFinding[] = data.findings ?? [];
       await chrome.storage.local.set({ [cacheKey]: { findings, timestamp: Date.now() } as CachedAudit });
 
       setState({ loading: false, findings, crawlStats: data.crawlStats, fromCache: false });
