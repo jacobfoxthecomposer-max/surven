@@ -2,11 +2,11 @@
 // Site Readability Audit page. Mirrors the shape and check IDs returned
 // by the real /api/aeo-scan endpoint so the UI renders identically.
 
-import { READABILITY_IMPACT } from "./checks";
+import { CHECK_EFFORT_MIN, READABILITY_IMPACT } from "./checks";
 import type { CheckResult, ScanResult } from "./types";
 
 export function buildMockScanResult(displayUrl = "thecurbskateshop.com"): ScanResult {
-  const rawChecks: Omit<CheckResult, "readabilityImpact">[] = [
+  const rawChecks: Omit<CheckResult, "readabilityImpact" | "effortMin">[] = [
     // ── Discoverable ──────────────────────────────────────────────
     {
       id: "https",
@@ -284,6 +284,7 @@ export function buildMockScanResult(displayUrl = "thecurbskateshop.com"): ScanRe
   const checks: CheckResult[] = rawChecks.map((c) => ({
     ...c,
     readabilityImpact: READABILITY_IMPACT[c.id] || "",
+    effortMin: CHECK_EFFORT_MIN[c.id] ?? 15,
   }));
 
   const pillars = (["discoverable", "structured", "quotable", "trustworthy"] as const).map((p) => {

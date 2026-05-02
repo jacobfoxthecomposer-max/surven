@@ -36,6 +36,8 @@ export interface CheckResult {
   readabilityImpact: string;
   /** What to do if the check failed or partial. Empty when passed cleanly. */
   recommendation: string;
+  /** Estimated time to fix in minutes — used for effort tags on priority cards. */
+  effortMin: number;
 }
 
 export interface PillarScore {
