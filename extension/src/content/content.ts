@@ -1,9 +1,23 @@
 import { parseCurrentPage } from "../shared/domParser";
 import type { VisibilityScore } from "../shared/scoring";
+import { scoreQuoteability, TIER_TINTS, TIER_BORDERS } from "../shared/quoteability";
 
 const SAGE = "rgba(150, 162, 131, 0.35)";
 const SAGE_BORDER = "3px solid rgba(107, 122, 89, 0.85)";
 const BADGE_HOST_ID = "surven-badge-host";
+const HEATMAP_DATA_ATTR = "data-surven-heatmap";
+const HEATMAP_STYLE_ID = "surven-heatmap-style";
+
+interface HeatmapEntry {
+  el: HTMLElement;
+  prevBg: string;
+  prevBoxShadow: string;
+  prevTransition: string;
+  score: number;
+  tier: "high" | "mid" | "low";
+}
+
+const heatmapEntries: HeatmapEntry[] = [];
 
 interface SavedStyle {
   el: HTMLElement;
@@ -196,7 +210,7 @@ function renderBadge(score: VisibilityScore) {
       ${score.topFindings.length > 0 ? `<div class="panel-title">Top Issues to Fix</div><ul>${findingsHtml}</ul>` : `<div class="empty">No issues — your page looks great.</div>`}
     </div>
     <div class="pill" id="pill">
-      <span class="geo-label">GEO</span>
+      <span class="geo-label">PAGE HEALTH</span>
       <div class="divider"></div>
       <span class="score-num">${score.score}</span>
       <span class="label">${escapeHtml(score.label)}</span>
