@@ -242,6 +242,109 @@ function hideBadge() {
   host?.remove();
 }
 
+const HEATMAP_SELECTORS = [
+  "p", "h1", "h2", "h3", "h4", "h5", "h6",
+  "li", "blockquote", "dd", "dt",
+  "td", "th", "caption", "figcaption",
+  "summary", "details",
+  "article", "section",
+].join(",");
+
+const HEATMAP_SKIP_TAGS = new Set([
+  "SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE",
+  "NAV", "FOOTER", "ASIDE", "HEADER",
+  "FORM", "INPUT", "TEXTAREA", "SELECT", "BUTTON",
+  "SVG", "CANVAS", "IFRAME", "VIDEO", "AUDIO",
+  "PICTURE", "IMG",
+]);
+
+function isInsideSkipped(el: HTMLElement): boolean {
+  let cur: HTMLElement | null = el;
+  while (cur && cur !== document.body) {
+    if (HEATMAP_SKIP_TAGS.has(cur.tagName)) return true;
+    if (cur.id === BADGE_HOST_ID) return true;
+    const role = cur.getAttribute("role");
+    if (role && (role === "navigation" || role === "banner" || role === "complementary" || role === "contentinfo")) return true;
+    cur = cur.parentElement;
+  }
+  return false;
+}
+
+function getDirectText(el: HTMLElement): string {
+  let txt = "";
+  for (const node of Array.from(el.childNodes)) {
+    if (node.nodeType === Node.TEXT_NODE) txt += (node.textContent ?? "");
+  }
+  return txt.trim();
+}
+
+function detectSchemaContext(el: HTMLElement): boolean {
+  let cur: HTMLElement | null = el;
+  while (cur && cur !== document.body) {
+    const itemtype = cur.getAttribute("itemtype");
+    if (itemtype && /faq|article|howto|recipe|product|qapage/i.test(itemtype)) return true;
+    cur = cur.parentElement;
+  }
+  return false;
+}
+
+function applyHeatmap() {
+  removeHeatmap();
+
+  if (!document.getElementById(HEATMAP_STYLE_ID)) {
+    const style = document.createElement("style");
+    style.id = HEATMAP_STYLE_ID;
+    style.textContent = `
+      [${HEATMAP_DATA_ATTR}] { transition: background-color 0.18s ease, box-shadow 0.18s ease !important; }
+      [${HEATMAP_DATA_ATTR}]:hover { outline: 2px solid currentColor; outline-offset: 2px; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  const candidates = document.querySelectorAll<HTMLElement>(HEATMAP_SELECTORS);
+  let tinted = 0;
+
+  for (const el of Array.from(candidates)) {
+    if (el.hasAttribute(HEATMAP_DATA_ATTR)) continue;
+    if (isInsideSkipped(el)) continue;
+
+    const directText = getDirectText(el);
+    const text = directText || (el.tagName.match(/^H[1-6]$/) ? (el.innerText ?? "").trim() : "");
+    if (text.length < 20) continue;
+
+    const hasSchema = detectSchemaContext(el);
+    const hasLinks = el.querySelector("a[href^='http']") !== null;
+    const result = scoreQuoteability(text, { hasSchema, hasLinks });
+
+    heatmapEntries.push({
+      el,
+      prevBg: el.style.backgroundColor,
+      prevBoxShadow: el.style.boxShadow,
+      prevTransition: el.style.transition,
+      score: result.score,
+      tier: result.tier,
+    });
+
+    el.setAttribute(HEATMAP_DATA_ATTR, String(result.score));
+    el.style.setProperty("background-color", TIER_TINTS[result.tier], "important");
+    el.style.setProperty("box-shadow", `inset 4px 0 0 ${TIER_BORDERS[result.tier]}`, "important");
+    tinted++;
+  }
+
+  showToast(`Heatmap on — ${tinted} text blocks scored`);
+}
+
+function removeHeatmap() {
+  for (const { el, prevBg, prevBoxShadow, prevTransition } of heatmapEntries) {
+    el.style.backgroundColor = prevBg;
+    el.style.boxShadow = prevBoxShadow;
+    el.style.transition = prevTransition;
+    el.removeAttribute(HEATMAP_DATA_ATTR);
+  }
+  heatmapEntries.length = 0;
+  document.getElementById(HEATMAP_STYLE_ID)?.remove();
+}
+
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (ch) => {
     switch (ch) {
