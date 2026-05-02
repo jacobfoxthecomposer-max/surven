@@ -28,6 +28,8 @@ export interface PageContext {
   description?: string;
   businessName?: string;
   bodyContent?: string;
+  ambiguousPage?: boolean;
+  ambiguousReasons?: string[];
   phone?: string;
   address?: {
     street?: string;
