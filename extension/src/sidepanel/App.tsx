@@ -1166,7 +1166,7 @@ export default function App() {
                                   }}>{fixState.snippet}</pre>
                                 </details>
                                 <button
-                                  onClick={() => copyToClipboard(fixState.snippet)}
+                                  onClick={() => copyToClipboard(fixState.snippet ?? "")}
                                   style={{
                                     padding: "6px 10px",
                                     background: "#C97B45",
