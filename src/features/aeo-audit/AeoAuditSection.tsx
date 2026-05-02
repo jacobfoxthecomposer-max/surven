@@ -624,7 +624,7 @@ function ChecksList({ checks }: { checks: CheckResult[] }) {
   for (const c of checks) grouped[c.pillar].push(c);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+    <div className="space-y-5">
       {(Object.keys(grouped) as Pillar[]).map((p) => {
         const Icon = PILLAR_ICON[p];
         const rows = grouped[p];
@@ -676,9 +676,9 @@ function CheckRow({ check }: { check: CheckResult }) {
   const [open, setOpen] = useState(false);
   const tok = STATUS_TOK[check.status];
   const Icon = tok.Icon;
-  // Always expandable when there's a readability blurb (every check has one).
   const expandable =
     check.readabilityImpact.length > 0 || check.recommendation.length > 0;
+  const pct = check.max === 0 ? 0 : (check.earned / check.max) * 100;
 
   return (
     <li>
@@ -686,65 +686,99 @@ function CheckRow({ check }: { check: CheckResult }) {
         type="button"
         onClick={() => expandable && setOpen((o) => !o)}
         className={
-          "w-full text-left px-5 py-3 flex items-center gap-3 transition-colors " +
+          "w-full text-left px-5 py-4 flex items-start gap-4 transition-colors " +
           (expandable
-            ? "hover:bg-[var(--color-surface-alt)]/40 cursor-pointer"
+            ? "hover:bg-[var(--color-surface-alt)]/50 cursor-pointer"
             : "cursor-default")
         }
         aria-expanded={open}
       >
+        {/* Status icon tile — bigger and rounded square instead of circle */}
         <span
-          className="inline-flex items-center justify-center rounded-full shrink-0"
+          className="inline-flex items-center justify-center rounded-[var(--radius-md)] shrink-0 mt-0.5"
           style={{
-            width: 28,
-            height: 28,
+            width: 36,
+            height: 36,
             backgroundColor: tok.bg,
             color: tok.color,
           }}
           aria-label={tok.label}
         >
-          <Icon className="h-4 w-4" />
+          <Icon className="h-5 w-5" />
         </span>
-        <div className="flex-1 min-w-0">
-          <p
-            className="text-[var(--color-fg)]"
-            style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.3 }}
-          >
-            {check.label}
-          </p>
+
+        {/* Title + status pill + detail */}
+        <div className="flex-1 min-w-0 space-y-1.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p
+              className="text-[var(--color-fg)]"
+              style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.3 }}
+            >
+              {check.label}
+            </p>
+            <span
+              className="rounded-full px-2 py-0.5 font-semibold uppercase"
+              style={{
+                fontSize: 10,
+                letterSpacing: "0.08em",
+                backgroundColor: tok.bg,
+                color: tok.color,
+              }}
+            >
+              {tok.label}
+            </span>
+          </div>
           <p
             className="text-[var(--color-fg-secondary)]"
-            style={{ fontSize: 12.5, lineHeight: 1.4 }}
+            style={{ fontSize: 13.5, lineHeight: 1.5 }}
           >
             {check.detail}
           </p>
         </div>
-        <span
-          className="tabular-nums shrink-0"
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: 16,
-            color: tok.color,
-            fontWeight: 500,
-          }}
-        >
-          {check.earned}
-          <span
-            className="text-[var(--color-fg-muted)]"
-            style={{ fontSize: 12 }}
-          >
-            /{check.max}
+
+        {/* Score column with mini bar */}
+        <div className="flex flex-col items-end gap-1.5 shrink-0 mt-1">
+          <span className="inline-flex items-baseline tabular-nums">
+            <span
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 20,
+                color: tok.color,
+                fontWeight: 500,
+                letterSpacing: "-0.01em",
+                lineHeight: 1,
+              }}
+            >
+              {check.earned}
+            </span>
+            <span
+              className="text-[var(--color-fg-muted)]"
+              style={{ fontSize: 13, fontFamily: "var(--font-display)" }}
+            >
+              /{check.max}
+            </span>
           </span>
-        </span>
+          <div
+            className="rounded-full bg-[var(--color-surface-alt)] overflow-hidden"
+            style={{ width: 64, height: 4 }}
+          >
+            <div
+              className="h-full rounded-full"
+              style={{ width: `${pct}%`, backgroundColor: tok.color }}
+            />
+          </div>
+        </div>
+
         {expandable && (
           <ChevronDown
             className={
-              "h-4 w-4 text-[var(--color-fg-muted)] transition-transform " +
+              "h-4 w-4 text-[var(--color-fg-muted)] transition-transform shrink-0 mt-2 " +
               (open ? "rotate-180" : "")
             }
           />
         )}
       </button>
+
       <AnimatePresence initial={false}>
         {open && expandable && (
           <motion.div
@@ -756,7 +790,7 @@ function CheckRow({ check }: { check: CheckResult }) {
             className="overflow-hidden"
           >
             <div
-              className="ml-12 mr-5 mb-4 px-4 py-3 rounded-[var(--radius-md)] space-y-3"
+              className="mx-5 mb-5 px-5 py-4 rounded-[var(--radius-md)] grid grid-cols-1 md:grid-cols-2 gap-5"
               style={{
                 borderLeft: `3px solid ${tok.color}`,
                 backgroundColor: "rgba(150,162,131,0.06)",
@@ -765,14 +799,14 @@ function CheckRow({ check }: { check: CheckResult }) {
               {check.readabilityImpact && (
                 <div>
                   <p
-                    className="uppercase tracking-wider text-[var(--color-fg-muted)] font-semibold mb-1"
+                    className="uppercase tracking-wider text-[var(--color-fg-muted)] font-semibold mb-1.5"
                     style={{ fontSize: 10.5, letterSpacing: "0.10em" }}
                   >
                     How this affects readability
                   </p>
                   <p
-                    className="text-[var(--color-fg-secondary)]"
-                    style={{ fontSize: 13, lineHeight: 1.5 }}
+                    className="text-[var(--color-fg)]"
+                    style={{ fontSize: 13.5, lineHeight: 1.6 }}
                   >
                     {check.readabilityImpact}
                   </p>
@@ -781,7 +815,7 @@ function CheckRow({ check }: { check: CheckResult }) {
               {check.recommendation && (
                 <div>
                   <p
-                    className="uppercase tracking-wider font-semibold mb-1 inline-flex items-center gap-1"
+                    className="uppercase tracking-wider font-semibold mb-1.5 inline-flex items-center gap-1"
                     style={{
                       fontSize: 10.5,
                       letterSpacing: "0.10em",
@@ -792,8 +826,8 @@ function CheckRow({ check }: { check: CheckResult }) {
                     Recommended fix
                   </p>
                   <p
-                    className="text-[var(--color-fg-secondary)]"
-                    style={{ fontSize: 13, lineHeight: 1.5 }}
+                    className="text-[var(--color-fg)]"
+                    style={{ fontSize: 13.5, lineHeight: 1.6 }}
                   >
                     {check.recommendation}
                   </p>
