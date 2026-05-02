@@ -220,7 +220,7 @@ export default function ConnectPickerPage() {
                 >
                   <div className="shrink-0 mt-0.5">
                     {tile.id === "github" ? (
-                      <Github className="h-5 w-5 text-[var(--color-fg)]" />
+                      <Code2 className="h-5 w-5 text-[var(--color-fg)]" />
                     ) : (
                       <Globe className="h-5 w-5 text-[var(--color-fg)]" />
                     )}
