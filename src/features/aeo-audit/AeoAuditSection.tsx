@@ -22,7 +22,9 @@ import {
 } from "lucide-react";
 import { HoverHint } from "@/components/atoms/HoverHint";
 
-const CHROME_EXT_URL = "https://chromewebstore.google.com/detail/surven-auditor/";
+// Was the Chrome Web Store URL; now points to the in-app Website Audit
+// page until the extension's surface goes live.
+const CHROME_EXT_URL = "/audit";
 
 // Small inline link surfaced in low-key spots (hero subtitle, scan form
 // helper text, loading state tip).
@@ -557,14 +559,6 @@ function ResultStatStrip({ result }: { result: ScanResult }) {
       : result.score >= 26
       ? "FAIR"
       : "LOW";
-  const tierDescription =
-    result.score >= 81
-      ? "AI engines read your site clearly across nearly every signal — protect this position."
-      : result.score >= 56
-      ? "Solid foundation with room to climb. A few targeted fixes will lift the score."
-      : result.score >= 26
-      ? "AI engines pick up parts of your site but miss key signals. Plenty of room to improve."
-      : "AI engines struggle to read this page. The biggest growth lever sits here.";
 
   return (
     <motion.div
@@ -655,8 +649,10 @@ function ResultStatStrip({ result }: { result: ScanResult }) {
             /100
           </text>
         </svg>
-        {/* Tier label + question-mark hover hint, centered below the arc */}
-        <div className="flex items-center justify-center gap-1.5 mt-1">
+        {/* Tier label + 4-tier legend tooltip, centered below the arc.
+            The (?) icon hover surfaces all four tiers with their ranges +
+            labels + descriptions, like the visibility tracker does. */}
+        <div className="flex items-center justify-center gap-1.5 mt-1 relative group">
           <span
             className="font-semibold uppercase"
             style={{
@@ -667,12 +663,86 @@ function ResultStatStrip({ result }: { result: ScanResult }) {
           >
             {tierLabel}
           </span>
-          <HoverHint hint={tierDescription}>
-            <Info
-              className="h-3.5 w-3.5 text-[var(--color-fg-muted)] hover:text-[var(--color-fg-secondary)] cursor-help transition-colors"
-              aria-label="Score tier explanation"
+          <Info
+            className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help group-hover:text-[var(--color-fg-secondary)] transition-colors"
+            aria-label="How readability is scored"
+            tabIndex={0}
+          />
+          {/* Legend popover */}
+          <div
+            role="tooltip"
+            className="pointer-events-none absolute left-1/2 bottom-full z-50 mb-2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-lg p-4"
+            style={{ width: 320 }}
+          >
+            <p
+              className="uppercase tracking-wider text-[var(--color-fg-muted)] font-semibold mb-2.5"
+              style={{ fontSize: 10.5, letterSpacing: "0.12em" }}
+            >
+              How readability is scored
+            </p>
+            <div className="space-y-2.5">
+              {[
+                {
+                  range: "0–25%",
+                  label: "Low",
+                  color: "#B54631",
+                  desc: "AI engines struggle to read the page. Biggest growth lever sits here.",
+                },
+                {
+                  range: "26–55%",
+                  label: "Fair",
+                  color: "#C97B45",
+                  desc: "AI picks up parts of your site but misses key signals.",
+                },
+                {
+                  range: "56–80%",
+                  label: "Great",
+                  color: "#96A283",
+                  desc: "Solid foundation. A few targeted fixes will lift the score.",
+                },
+                {
+                  range: "81–100%",
+                  label: "Excellent",
+                  color: "#7D8E6C",
+                  desc: "AI reads your site cleanly. Protect this position.",
+                },
+              ].map((t) => (
+                <div key={t.label} className="flex items-baseline gap-2.5">
+                  <span
+                    className="tabular-nums shrink-0 text-right"
+                    style={{
+                      fontSize: 11.5,
+                      color: t.color,
+                      fontWeight: 600,
+                      width: 60,
+                    }}
+                  >
+                    {t.range}
+                  </span>
+                  <p
+                    className="text-[var(--color-fg-secondary)] flex-1"
+                    style={{ fontSize: 12.5, lineHeight: 1.4 }}
+                  >
+                    <span className="font-semibold" style={{ color: t.color }}>
+                      {t.label}.
+                    </span>{" "}
+                    {t.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+            {/* Arrow tip */}
+            <span
+              className="absolute left-1/2 top-full -translate-x-1/2 -mt-px"
+              style={{
+                width: 0,
+                height: 0,
+                borderLeft: "6px solid transparent",
+                borderRight: "6px solid transparent",
+                borderTop: "6px solid var(--color-border)",
+              }}
             />
-          </HoverHint>
+          </div>
         </div>
       </div>
 
@@ -1034,13 +1104,12 @@ function PillarBarRow({
 
   return (
     <div className="space-y-2.5">
+      {/* Header row — static; hover surfaces the pillar blurb but no
+          longer toggles expand. The dedicated toggle lives below. */}
       <HoverHint hint={PILLAR_BLURBS[score.pillar]} display="block">
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
-          className="w-full flex items-center gap-3 flex-wrap text-left rounded-[var(--radius-sm)] -m-1 p-1 transition-colors hover:bg-[var(--color-surface-alt)]/40"
-          style={{ cursor: "pointer" }}
+        <div
+          className="flex items-center gap-3 flex-wrap"
+          style={{ cursor: "help" }}
         >
           <div
             className="h-10 w-10 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
@@ -1092,13 +1161,7 @@ function PillarBarRow({
               /{score.max}
             </span>
           </span>
-          <ChevronDown
-            className={
-              "h-5 w-5 text-[var(--color-fg-muted)] transition-transform shrink-0 " +
-              (open ? "rotate-180" : "")
-            }
-          />
-        </button>
+        </div>
       </HoverHint>
       {/* Stacked segment bar: pass / partial / critical. */}
       <div className="h-3 rounded-full overflow-hidden flex bg-[var(--color-surface-alt)]">
@@ -1166,8 +1229,30 @@ function PillarBarRow({
         </span>
       </div>
 
-      {/* Per-pillar check list — collapsed by default. Click anywhere on
-          the pillar header above to toggle. */}
+      {/* Dedicated toggle tab below the bar. Separate from the header so
+          the visualization stays static and the expand action is its own
+          surface. */}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="w-full mt-1 inline-flex items-center justify-between gap-2 px-3 py-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 hover:bg-[var(--color-surface-alt)] transition-colors"
+        style={{ fontSize: 13, fontWeight: 600, color: "var(--color-fg-secondary)" }}
+      >
+        <span className="inline-flex items-center gap-2">
+          <ListChecks className="h-3.5 w-3.5 text-[var(--color-fg-muted)]" />
+          {open ? "Hide" : "View"} {checks.length} check
+          {checks.length === 1 ? "" : "s"}
+        </span>
+        <ChevronDown
+          className={
+            "h-4 w-4 text-[var(--color-fg-muted)] transition-transform " +
+            (open ? "rotate-180" : "")
+          }
+        />
+      </button>
+
+      {/* Per-pillar check list — collapsed by default. */}
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
