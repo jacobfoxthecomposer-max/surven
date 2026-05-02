@@ -116,6 +116,7 @@ export default function App() {
   const [siteUrl, setSiteUrl] = useState<string | null>(null);
   const [heatmapActive, setHeatmapActive] = useState(false);
   const [schemaActive, setSchemaActive] = useState(false);
+  const [detectedPlatform, setDetectedPlatform] = useState<CmsPlatform>("unknown");
 
   async function toggleHeatmap() {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
