@@ -2190,23 +2190,23 @@ function CheckRow({ check }: { check: CheckResult }) {
                   >
                     {check.recommendation}
                   </p>
+                  {/* Compact CTA, sits under just the fix column. Pass rows
+                      don't get the button. */}
+                  {check.status !== "pass" && (
+                    <a
+                      href="/audit"
+                      className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] font-semibold transition-opacity hover:opacity-90 text-white"
+                      style={{
+                        fontSize: 13,
+                        backgroundColor: tok.color,
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Fix
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </a>
+                  )}
                 </div>
-              )}
-              {/* Big CTA — only on non-passing checks. Links to the in-app
-                  Website Audit so the user can act on the recommendation. */}
-              {check.status !== "pass" && (
-                <a
-                  href="/audit"
-                  className="md:col-span-2 mt-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-[var(--radius-md)] font-semibold shadow-md transition-colors text-white"
-                  style={{
-                    fontSize: 14.5,
-                    backgroundColor: tok.color,
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  Fix that
-                  <ArrowRight className="h-4 w-4" />
-                </a>
               )}
             </div>
           </motion.div>
