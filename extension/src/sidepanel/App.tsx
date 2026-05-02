@@ -549,6 +549,14 @@ export default function App() {
         return;
       }
 
+      if (isAmbiguousPageResponse(data as { error?: string; reasons?: string[] })) {
+        setFixStates((s) => ({
+          ...s,
+          [finding.id]: { status: "ambiguous", reasons: (data as { reasons?: string[] }).reasons ?? [] },
+        }));
+        return;
+      }
+
       if (!res.ok || !data.pairs || !data.snippet) {
         setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: data.message ?? data.error ?? `Generation failed (status ${res.status})` } }));
         return;
