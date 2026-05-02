@@ -1064,13 +1064,22 @@ function PriorityFixCards({ checks }: { checks: CheckResult[] }) {
       </div>
 
       <ul className="divide-y divide-[var(--color-border)] flex-1">
-        {visible.map(({ check, gain }) => {
+        {visible.map(({ check, gain }, idx) => {
           const tok = STATUS_TOK[check.status];
           const Icon = tok.Icon;
           const eff = effortBadge(check.effortMin);
           return (
-            <li
-              key={check.id}
+            <motion.li
+              // Re-key on startIndex so paging through retriggers the
+              // stagger entrance for each row.
+              key={`${startIndex}-${check.id}`}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.45,
+                ease: EASE,
+                delay: idx * 0.06,
+              }}
               className="px-5 py-5 flex items-start gap-4 hover:bg-[var(--color-surface-alt)]/30 transition-colors"
             >
               <span
@@ -1162,7 +1171,7 @@ function PriorityFixCards({ checks }: { checks: CheckResult[] }) {
                   </a>
                 </div>
               </div>
-            </li>
+            </motion.li>
           );
         })}
       </ul>
