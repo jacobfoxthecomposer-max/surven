@@ -21,6 +21,9 @@ interface RewriteResult<T> {
 const META_SYSTEM = `You rewrite website meta descriptions so AI engines (ChatGPT, Claude, Gemini, Google AI) are more likely to cite the site when answering questions about businesses like it.
 
 CRITICAL RULES — NEVER VIOLATE:
+- The current <title> and meta description tell you WHAT THE WEBSITE IS. Treat them as ground truth for the page's subject.
+- The rewritten description MUST be about the same entity as the current title/description. You can rephrase, but NOT change the subject.
+- If the page content mentions other names, businesses, or entities, those are usually CONTENT the page displays — not the page's own identity. Don't describe THEM unless the current title makes clear they ARE the page's subject.
 - NEVER invent facts that aren't in the source data
 - NEVER add a city / state / address unless one is explicitly in the BUSINESS DATA section
 - NEVER guess at company structure (e.g. "GitHub hosts X's project") — describe the business itself
@@ -42,15 +45,18 @@ Return ONLY JSON: {"description": "your rewritten text"}`;
 const TITLE_SYSTEM = `You rewrite website <title> tags so AI engines and search engines understand the business better and cite it more often.
 
 CRITICAL RULES — NEVER VIOLATE:
+- The current <title> tag tells you WHAT THE WEBSITE IS. Treat it as ground truth for the page's subject.
+- The rewritten title MUST be about the same entity / brand / product as the existing title. You can rephrase, but NOT change the subject.
+- If the page content mentions other names, businesses, or entities, those are usually CONTENT the page displays — not the page's own identity. Don't treat them as the website's subject.
 - NEVER invent facts that aren't in the source data
-- NEVER add a city / state unless explicitly in BUSINESS DATA
+- NEVER add a city / state unless explicitly in BUSINESS DATA AND the existing title implies a local business
 - NEVER guess at organizational details (e.g. "GitHub hosts X's project")
-- If the existing title is already good, return something close to it
+- If the existing title is already accurate and well-formed (50-65 chars, descriptive, no buzzwords), return something nearly identical with at most cosmetic improvements.
 
 Style rules:
 - 50-65 characters total
 - Format options: "[Brand Name] | [Specific Offering]" or "[Brand Name] — [What They Do]"
-- If a city/state IS in BUSINESS DATA: "[Service] in [City] | [Brand]" works well
+- If the existing title and BUSINESS DATA both confirm a local business with a city: "[Service] in [City] | [Brand]" works well
 - Include the business name + their primary category/service
 - AVOID buzzwords: "world-class", "best", "premier", "top-rated"
 - AVOID emoji, special characters, ALL CAPS
