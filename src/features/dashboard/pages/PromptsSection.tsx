@@ -1050,45 +1050,6 @@ function EngineChips({
   );
 }
 
-// ─── PAGE-LEVEL AI SUMMARY ─────────────────────────────────────────────────
-
-function PageAISummary({ data }: { data: PromptsData }) {
-  return (
-    <div
-      className="rounded-[var(--radius-md)] px-4 py-3"
-      style={{
-        borderLeft: `3px solid ${COLORS.primary}`,
-        backgroundColor: TOK.primarySoftBg,
-      }}
-    >
-      <div className="flex items-center gap-2.5 mb-1.5">
-        <Sparkles className="h-3.5 w-3.5 shrink-0" style={{ color: COLORS.primary }} />
-        <p
-          className="uppercase tracking-wider text-[var(--color-fg-secondary)] font-semibold"
-          style={{ fontSize: 11, letterSpacing: "0.12em" }}
-        >
-          AI summary
-        </p>
-      </div>
-      <p
-        className="text-[var(--color-fg)]"
-        style={{ fontSize: 13, lineHeight: 1.55, fontFamily: "var(--font-sans)" }}
-      >
-        {data.pageSummaryGood}{" "}
-        <span style={{ color: TOK.loseText }}>{data.pageSummaryFix}</span>{" "}
-        <a
-          href={data.pageSummaryCta.href}
-          className="inline-flex items-center gap-1 font-semibold transition-opacity hover:opacity-80 whitespace-nowrap"
-          style={{ color: COLORS.primaryHover }}
-        >
-          {data.pageSummaryCta.label}
-          <ArrowRight className="h-3 w-3" />
-        </a>
-      </p>
-    </div>
-  );
-}
-
 // ─── STAT CARDS ────────────────────────────────────────────────────────────
 
 type DeltaSpec =
@@ -4623,11 +4584,6 @@ export function PromptsSection() {
       {/* Stat strip — clean 4-card grid (brand-sentiment style) */}
       <motion.div {...reveal}>
         <CleanStatStrip data={data} />
-      </motion.div>
-
-      {/* Page-level AI summary — sits between stats and prompts table */}
-      <motion.div {...reveal}>
-        <PageAISummary data={data} />
       </motion.div>
 
       {/* Chunk 2 — Prompts table (with branded callout inside) + Coverage by intent + Citation/Sentiment */}
