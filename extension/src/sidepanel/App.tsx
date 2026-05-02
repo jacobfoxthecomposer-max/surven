@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Search, ChevronDown, X, Settings, ArrowLeft, Wrench, ExternalLink, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import type { AuditFinding, ApplyFixResponse } from "../shared/types";
+import { computeVisibilityScore } from "../shared/scoring";
 import "./styles.css";
 
 type FixState =
@@ -46,6 +47,7 @@ interface CachedAudit {
 interface Settings {
   apiUrl: string;
   apiKey: string;
+  showBadge?: boolean;
 }
 
 interface AuditState {
@@ -130,10 +132,26 @@ export default function App() {
   }, []);
 
   function saveSettings() {
-    const trimmed = { apiUrl: draftSettings.apiUrl.trim(), apiKey: draftSettings.apiKey.trim() };
+    const trimmed: Settings = {
+      apiUrl: draftSettings.apiUrl.trim(),
+      apiKey: draftSettings.apiKey.trim(),
+      showBadge: draftSettings.showBadge ?? true,
+    };
     chrome.storage.local.set({ surven_settings: trimmed });
     setSettings(trimmed);
     setSettingsOpen(false);
+  }
+
+  async function broadcastBadge(findings: AuditFinding[]) {
+    const showBadge = settings?.showBadge ?? true;
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) return;
+    if (!showBadge) {
+      chrome.tabs.sendMessage(tab.id, { type: "BADGE_HIDE" }).catch(() => {});
+      return;
+    }
+    const score = computeVisibilityScore(findings);
+    chrome.tabs.sendMessage(tab.id, { type: "BADGE_UPDATE", score }).catch(() => {});
   }
 
   async function runAudit() {
@@ -156,6 +174,7 @@ export default function App() {
       const cached = stored[cacheKey] as CachedAudit | undefined;
       if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
         setState({ loading: false, findings: cached.findings, fromCache: true });
+        broadcastBadge(cached.findings);
         return;
       }
 
@@ -199,6 +218,7 @@ export default function App() {
       await chrome.storage.local.set({ [cacheKey]: { findings, timestamp: Date.now() } as CachedAudit });
 
       setState({ loading: false, findings, crawlStats: data.crawlStats, fromCache: false });
+      broadcastBadge(findings);
     } catch (err) {
       setState({ loading: false, findings: [], error: String(err), fromCache: false });
     }
@@ -299,6 +319,20 @@ export default function App() {
               Get this from your Surven dashboard: Settings → API Keys → Generate API Key
             </p>
           </div>
+          <label style={{ display: "flex", alignItems: "flex-start", gap: "10px", cursor: "pointer", padding: "10px 12px", background: "#FAF8F2", border: "1px solid #E5E1D5", borderRadius: "6px" }}>
+            <input
+              type="checkbox"
+              checked={draftSettings.showBadge ?? true}
+              onChange={(e) => setDraftSettings((s) => ({ ...s, showBadge: e.target.checked }))}
+              style={{ marginTop: "2px", accentColor: "#96A283" }}
+            />
+            <div>
+              <div style={{ fontSize: "13px", fontWeight: 600, color: "#3D3F3D" }}>Show floating GEO score</div>
+              <div style={{ fontSize: "11px", color: "#6B6D6B", marginTop: "2px" }}>
+                Display your visibility score on each audited page (bottom-right corner).
+              </div>
+            </div>
+          </label>
           <button
             onClick={saveSettings}
             disabled={!draftSettings.apiUrl || !draftSettings.apiKey}
