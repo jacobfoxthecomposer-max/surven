@@ -399,11 +399,7 @@ export async function applyHtmlInject(options: HtmlInjectOptions): Promise<HtmlI
 
   const isNext = await isNextJsRepo(repo, branch, token);
   if (isNext) {
-    return {
-      ok: false,
-      manualSnippet: payload.kind === "schema_org" ? payload.jsonLd : undefined,
-      manualNote: "Next.js auto-commit isn't wired yet — copy the snippet and paste it into your <head>, layout.tsx, or page metadata. Auto-commit support coming in Sprint 1.5.",
-    };
+    return await applyNextJsInject(repo, branch, token, payload, findingId, findingTitle);
   }
 
   const file = await findHtmlFile(repo, branch, token);
