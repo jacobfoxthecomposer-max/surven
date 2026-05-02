@@ -224,6 +224,100 @@ function effortBadge(min: number): { label: string; color: string; bg: string } 
   return { label: "Dev work", color: "#7A8FA6", bg: "rgba(122,143,166,0.18)" };
 }
 
+// Sage-bordered AI summary callout — good text in default fg, fix text
+// in rust. Matches the AISummaryStrip pattern from the prompts page.
+function AeoAISummary({ result }: { result: ScanResult }) {
+  const { good, fix } = buildPageSummaryParts(result);
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.1, ease: EASE }}
+      className="rounded-[var(--radius-md)] px-4 py-3.5"
+      style={{
+        borderLeft: `3px solid ${COLORS.primary}`,
+        backgroundColor: "rgba(150,162,131,0.10)",
+      }}
+    >
+      <div className="flex items-center gap-2.5 mb-1.5">
+        <Sparkles
+          className="h-3.5 w-3.5 shrink-0"
+          style={{ color: COLORS.primary }}
+        />
+        <p
+          className="uppercase tracking-wider text-[var(--color-fg-secondary)] font-semibold"
+          style={{ fontSize: 11, letterSpacing: "0.12em" }}
+        >
+          AI summary
+        </p>
+      </div>
+      <p
+        className="text-[var(--color-fg)]"
+        style={{
+          fontSize: 14,
+          lineHeight: 1.6,
+          fontFamily: "var(--font-sans)",
+        }}
+      >
+        {good}
+        {fix && (
+          <>
+            {" "}
+            <span style={{ color: "#B54631" }}>{fix}</span>
+          </>
+        )}
+      </p>
+    </motion.div>
+  );
+}
+
+function buildPageSummaryParts(result: ScanResult): { good: string; fix: string } {
+  const checks = result.checks;
+  const fails = checks.filter((c) => c.status === "critical");
+  const partials = checks.filter((c) => c.status === "partial");
+  const passing = checks.filter((c) => c.status === "pass");
+
+  const sorted = [...result.pillars].sort(
+    (a, b) => b.earned / b.max - a.earned / a.max,
+  );
+  const strongest = sorted[0];
+  const weakest = sorted[sorted.length - 1];
+  const strongPct = Math.round((strongest.earned / strongest.max) * 100);
+  const weakPct = Math.round((weakest.earned / weakest.max) * 100);
+
+  const recoverable = [...fails, ...partials].reduce(
+    (s, c) => s + (c.max - c.earned),
+    0,
+  );
+  const totalEffort = [...fails, ...partials].reduce(
+    (s, c) => s + c.effortMin,
+    0,
+  );
+  const effortLabel =
+    totalEffort < 60
+      ? "under an hour"
+      : totalEffort < 240
+      ? `${Math.round(totalEffort / 60)} hours of focused work`
+      : "a focused day of work";
+
+  if (fails.length === 0 && partials.length === 0) {
+    return {
+      good: `${result.score}/100 across all 25 readability checks — your site reads cleanly to AI engines from front to back.`,
+      fix: "",
+    };
+  }
+  if (fails.length === 0) {
+    return {
+      good: `${result.score}/100 across 25 checks. ${PILLAR_LABELS[strongest.pillar]} is your strongest pillar at ${strongPct}%, and ${passing.length} checks are already passing.`,
+      fix: `${partials.length} partial issue${partials.length === 1 ? "" : "s"} ${partials.length === 1 ? "is" : "are"} sitting between you and a higher score — roughly ${Math.round(recoverable)} points are recoverable in ${effortLabel}.`,
+    };
+  }
+  return {
+    good: `${PILLAR_LABELS[strongest.pillar]} is your strongest pillar at ${strongPct}%, and ${passing.length} of the easy wins are already locked in.`,
+    fix: `${PILLAR_LABELS[weakest.pillar]} is the weakest at ${weakPct}% — ${fails.length} critical check${fails.length === 1 ? "" : "s"} ${fails.length === 1 ? "is" : "are"} blocking AI from reading parts of your site, plus ${partials.length} partial issue${partials.length === 1 ? "" : "s"}. Roughly ${Math.round(recoverable)} points are recoverable in ${effortLabel}.`,
+  };
+}
+
 function buildPageSummary(result: ScanResult): string {
   const checks = result.checks;
   const fails = checks.filter((c) => c.status === "critical");
@@ -426,14 +520,9 @@ export function AeoAuditSection({
       {/* Stat strip — quick anchor under the hero */}
       {result && <ResultStatStrip result={result} />}
 
-      {/* AIOverview callout — short headline */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1, ease: EASE }}
-      >
-        <AIOverview text={aiOverviewText} />
-      </motion.div>
+      {/* AI summary — sage-bordered callout with the bad parts highlighted in
+          rust (matches the prompts page AISummaryStrip pattern). */}
+      {result && <AeoAISummary result={result} />}
 
 
       {/* Inline error banner if the auto-scan blew up. */}
