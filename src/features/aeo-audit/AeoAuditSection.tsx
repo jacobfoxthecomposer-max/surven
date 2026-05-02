@@ -480,15 +480,13 @@ export function AeoAuditSection({
             transition={{ duration: 0.45, ease: EASE }}
             className="space-y-5"
           >
-            {/* Priority fix cards — full-width, no fix steps (Chrome ext takes that),
-                effort + impact pills front-and-center. */}
-            <motion.div {...reveal}>
-              <PriorityFixCards checks={result.checks} />
-            </motion.div>
-
-            {/* Pillar progress bars — horizontal, scan-friendly. */}
-            <motion.div {...reveal}>
+            {/* Pillar bars (70%, left) + Priority fixes (30%, right). */}
+            <motion.div
+              {...reveal}
+              className="grid grid-cols-1 lg:grid-cols-[7fr_3fr] gap-5 items-start"
+            >
               <PillarBars pillars={result.pillars} checks={result.checks} />
+              <PriorityFixCards checks={result.checks} />
             </motion.div>
 
             {/* Full audit detail — collapsed by default. */}
@@ -1007,52 +1005,63 @@ function PillarBars({
           const failPct = (failCount / total) * 100;
           return (
             <div key={p.pillar} className="space-y-2.5">
-              <div className="flex items-center gap-3 flex-wrap">
+              <HoverHint hint={PILLAR_BLURBS[p.pillar]} display="block">
                 <div
-                  className="h-10 w-10 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: `${tok.color}22` }}
+                  className="flex items-center gap-3 flex-wrap"
+                  style={{ cursor: "help" }}
                 >
-                  <Icon className="h-5 w-5" style={{ color: tok.color }} />
+                  <div
+                    className="h-10 w-10 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: `${tok.color}22` }}
+                  >
+                    <Icon className="h-5 w-5" style={{ color: tok.color }} />
+                  </div>
+                  <div className="inline-flex items-center gap-1.5">
+                    <p
+                      style={{
+                        fontFamily: "var(--font-display)",
+                        fontSize: 24,
+                        fontWeight: 600,
+                        letterSpacing: "-0.01em",
+                        color: "var(--color-fg)",
+                        lineHeight: 1.1,
+                      }}
+                    >
+                      {PILLAR_LABELS[p.pillar]}
+                    </p>
+                    <Info
+                      className="h-3.5 w-3.5 text-[var(--color-fg-muted)]"
+                      aria-label={`What ${PILLAR_LABELS[p.pillar]} measures`}
+                    />
+                  </div>
+                  <span
+                    className="font-semibold uppercase"
+                    style={{ fontSize: 11.5, letterSpacing: "0.12em", color: tok.color }}
+                  >
+                    {tok.label}
+                  </span>
+                  <span className="inline-flex items-baseline tabular-nums ml-auto">
+                    <span
+                      style={{
+                        fontFamily: "var(--font-display)",
+                        fontSize: 30,
+                        fontWeight: 600,
+                        color: tok.color,
+                        letterSpacing: "-0.01em",
+                        lineHeight: 1,
+                      }}
+                    >
+                      {p.earned}
+                    </span>
+                    <span
+                      className="text-[var(--color-fg-muted)]"
+                      style={{ fontSize: 16, fontFamily: "var(--font-display)" }}
+                    >
+                      /{p.max}
+                    </span>
+                  </span>
                 </div>
-                <p
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: 24,
-                    fontWeight: 600,
-                    letterSpacing: "-0.01em",
-                    color: "var(--color-fg)",
-                    lineHeight: 1.1,
-                  }}
-                >
-                  {PILLAR_LABELS[p.pillar]}
-                </p>
-                <span
-                  className="font-semibold uppercase"
-                  style={{ fontSize: 11.5, letterSpacing: "0.12em", color: tok.color }}
-                >
-                  {tok.label}
-                </span>
-                <span className="inline-flex items-baseline tabular-nums ml-auto">
-                  <span
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: 30,
-                      fontWeight: 600,
-                      color: tok.color,
-                      letterSpacing: "-0.01em",
-                      lineHeight: 1,
-                    }}
-                  >
-                    {p.earned}
-                  </span>
-                  <span
-                    className="text-[var(--color-fg-muted)]"
-                    style={{ fontSize: 16, fontFamily: "var(--font-display)" }}
-                  >
-                    /{p.max}
-                  </span>
-                </span>
-              </div>
+              </HoverHint>
               {/* Stacked segment bar: pass / partial / fail. Modeled on the
                   SentimentByPlatform pattern — each segment animates in with
                   its own staggered transition. */}
