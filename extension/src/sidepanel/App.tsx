@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, ChevronDown, X, Settings, ArrowLeft, Wrench, ExternalLink, CheckCircle2, AlertCircle, Loader2, Flame } from "lucide-react";
+import { Search, ChevronDown, X, Settings, ArrowLeft, Wrench, ExternalLink, CheckCircle2, AlertCircle, Loader2, Flame, Code2 } from "lucide-react";
 import type { AuditFinding, ApplyFixResponse } from "../shared/types";
 import { computeVisibilityScore } from "../shared/scoring";
 import "./styles.css";
@@ -7,8 +7,20 @@ import "./styles.css";
 type FixState =
   | { status: "idle" }
   | { status: "applying" }
-  | { status: "success"; commitUrl?: string; filePath?: string }
-  | { status: "error"; message: string; connectUrl?: string };
+  | { status: "success"; commitUrl?: string; filePath?: string; snippet?: string; manualNote?: string }
+  | { status: "manual"; snippet: string; manualNote: string }
+  | { status: "error"; message: string; connectUrl?: string; snippet?: string };
+
+const FINDING_TO_SCHEMA_TYPE: Record<string, string> = {
+  org_schema_missing: "Organization",
+  local_business_schema_missing: "LocalBusiness",
+  faq_schema_missing: "FAQPage",
+  faq_schema_insufficient: "FAQPage",
+};
+
+function getGenerateUrl(auditUrl: string): string {
+  return auditUrl.replace(/\/api\/audit\/run\/?$/, "/api/audit/generate");
+}
 
 const WHAT_IS_IT: Record<string, string> = {
   org_schema_missing: "Schema markup is invisible code added to your website's <head> that acts like a structured business card only AI and search engines can read. Organization schema specifically tells AI systems your business name, website URL, phone number, logo, and service area — in a format they can understand without guessing.",
@@ -74,6 +86,7 @@ export default function App() {
   const [fixStates, setFixStates] = useState<Record<string, FixState>>({});
   const [siteUrl, setSiteUrl] = useState<string | null>(null);
   const [heatmapActive, setHeatmapActive] = useState(false);
+  const [schemaActive, setSchemaActive] = useState(false);
 
   async function toggleHeatmap() {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -84,6 +97,18 @@ export default function App() {
     } else {
       chrome.tabs.sendMessage(tab.id, { type: "HEATMAP_SHOW" }).catch(() => {});
       setHeatmapActive(true);
+    }
+  }
+
+  async function toggleSchema() {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id || !isInjectable(tab.url)) return;
+    if (schemaActive) {
+      chrome.tabs.sendMessage(tab.id, { type: "SCHEMA_HIDE" }).catch(() => {});
+      setSchemaActive(false);
+    } else {
+      chrome.tabs.sendMessage(tab.id, { type: "SCHEMA_SHOW" }).catch(() => {});
+      setSchemaActive(true);
     }
   }
 
@@ -445,6 +470,30 @@ export default function App() {
         >
           <Flame size={14} />
           {heatmapActive ? "Hide Heatmap" : "Show Quote-ability Heatmap"}
+        </button>
+        <button
+          onClick={toggleSchema}
+          style={{
+            width: "100%",
+            marginTop: "6px",
+            padding: "9px 12px",
+            background: schemaActive ? "#3D3F3D" : "white",
+            color: schemaActive ? "white" : "#3D3F3D",
+            border: `1px solid ${schemaActive ? "#3D3F3D" : "#d1d5db"}`,
+            borderRadius: "6px",
+            fontSize: "13px",
+            fontWeight: 500,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            transition: "all 0.15s ease",
+          }}
+          title="Outline elements with structured data and flag patterns missing schema"
+        >
+          <Code2 size={14} />
+          {schemaActive ? "Hide Schema Overlay" : "Show Schema Overlay"}
         </button>
         {state.loading && (
           <p style={{ fontSize: "12px", color: "#6b7280", marginTop: "6px", textAlign: "center" }}>
