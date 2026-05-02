@@ -38,6 +38,13 @@ export async function getUser() {
   return data.user;
 }
 
+export async function requestPasswordReset(email: string) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+  });
+  if (error) throw error;
+}
+
 export async function updatePassword(password: string) {
   const { error } = await supabase.auth.updateUser({ password });
   if (error) throw error;

@@ -10,18 +10,18 @@ import { Input } from "@/components/atoms/Input";
 import { Button } from "@/components/atoms/Button";
 import { useToast } from "@/components/molecules/Toast";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { loginSchema, type LoginInput } from "@/types/auth";
+import { updatePassword } from "@/features/auth/services/authService";
+import { resetPasswordSchema, type ResetPasswordInput } from "@/types/auth";
 
-export default function LoginPage() {
+export default function ResetPasswordPage() {
   const router = useRouter();
-  const { signIn, user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  // If user is already authenticated, redirect to dashboard
   useEffect(() => {
-    if (user && !authLoading) {
-      router.push("/dashboard");
+    if (!authLoading && !user) {
+      router.replace("/forgot-password");
     }
   }, [user, authLoading, router]);
 
@@ -29,20 +29,22 @@ export default function LoginPage() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginInput>({
-    resolver: zodResolver(loginSchema),
+  } = useForm<ResetPasswordInput>({
+    resolver: zodResolver(resetPasswordSchema),
     mode: "onBlur",
   });
 
-  async function onSubmit(data: LoginInput) {
+  async function onSubmit(data: ResetPasswordInput) {
     setLoading(true);
     try {
-      await signIn(data.email, data.password);
-      toast("Welcome back!", "success");
-      // navigation handled by useEffect once user state commits
+      await updatePassword(data.password);
+      toast("Password updated. You're signed in.", "success");
+      router.push("/dashboard");
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : "Login failed. Please try again.";
+        err instanceof Error
+          ? err.message
+          : "Couldn't update password. Please try again.";
       toast(message, "error");
     } finally {
       setLoading(false);
@@ -50,46 +52,39 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthLayout title="Welcome back" subtitle="Sign in to your Surven account">
+    <AuthLayout
+      title="Set a new password"
+      subtitle="Choose a strong password to finish resetting your account."
+    >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Input
-          label="Email"
-          type="email"
-          placeholder="you@example.com"
-          autoComplete="email"
-          error={errors.email?.message}
-          {...register("email")}
-        />
-        <Input
-          label="Password"
+          label="New password"
           type="password"
-          placeholder="Enter your password"
-          autoComplete="current-password"
+          placeholder="At least 8 characters"
+          autoComplete="new-password"
           error={errors.password?.message}
           {...register("password")}
         />
-
-        <div className="flex justify-end -mt-1">
-          <Link
-            href="/forgot-password"
-            className="text-sm text-[var(--color-primary)] hover:underline font-medium"
-          >
-            Forgot password?
-          </Link>
-        </div>
+        <Input
+          label="Confirm new password"
+          type="password"
+          placeholder="Re-enter your password"
+          autoComplete="new-password"
+          error={errors.confirmPassword?.message}
+          {...register("confirmPassword")}
+        />
 
         <Button type="submit" loading={loading} fullWidth size="lg">
-          Sign In
+          Update password
         </Button>
       </form>
 
       <p className="mt-6 text-center text-sm text-[var(--color-fg-muted)]">
-        Don&apos;t have an account?{" "}
         <Link
-          href="/signup"
+          href="/login"
           className="text-[var(--color-primary)] hover:underline font-medium"
         >
-          Sign up
+          Back to sign in
         </Link>
       </p>
     </AuthLayout>
