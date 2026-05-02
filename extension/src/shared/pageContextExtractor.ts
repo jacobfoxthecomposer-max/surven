@@ -17,6 +17,14 @@ export interface ExtractedPageContext {
   businessName?: string;
   bodyContent?: string;
   platform?: CmsPlatform;
+  /**
+   * True when the page looks like a dashboard, admin panel, directory, or any UI
+   * that displays content ABOUT other entities. On these pages we deliberately skip
+   * extracting business-identity fields from body text (phone, address, hours, etc.)
+   * because they probably belong to a featured entity, not the site itself.
+   */
+  ambiguousPage?: boolean;
+  ambiguousReasons?: string[];
   phone?: string;
   address?: {
     street?: string;
@@ -77,29 +85,127 @@ export function extractPageContext(): ExtractedPageContext {
   ctx.bodyContent = extractBodyContent();
   ctx.platform = detectPlatform();
 
-  ctx.businessName = extractBusinessName();
-  ctx.logo = extractLogo();
-  ctx.phone = extractPhone();
-  ctx.address = extractAddress();
-  ctx.hours = extractHours();
-  ctx.socials = extractSocials();
-  ctx.faqItems = extractFaqItems();
-  ctx.reviewItems = extractReviewItems();
-  ctx.productItems = extractProductItems();
-  ctx.serviceItems = extractServiceItems();
-  ctx.videoItems = extractVideoItems();
-  ctx.personItems = extractPersonItems();
-  ctx.breadcrumbItems = extractBreadcrumbItems();
+  const ambiguity = detectPageAmbiguity();
+  ctx.ambiguousPage = ambiguity.ambiguous;
+  ctx.ambiguousReasons = ambiguity.reasons.length > 0 ? ambiguity.reasons : undefined;
 
-  const article = extractArticleMeta();
-  if (article) {
-    ctx.articleHeadline = article.headline;
-    ctx.articleAuthor = article.author;
-    ctx.articleDate = article.datePublished;
+  ctx.businessName = extractBusinessName(ambiguity.ambiguous);
+  ctx.logo = extractLogo();
+  ctx.phone = extractPhone(ambiguity.ambiguous);
+  ctx.address = extractAddress(ambiguity.ambiguous);
+  ctx.hours = extractHours(ambiguity.ambiguous);
+  ctx.socials = extractSocials();
+
+  // Content-feature extractors (FAQ, reviews, products, etc.) describe what the page DISPLAYS.
+  // On ambiguous pages, displayed content probably belongs to OTHER entities, so skip these
+  // entirely — better to return nothing than to mark up another business's reviews as the
+  // current site's reviews.
+  if (!ambiguity.ambiguous) {
+    ctx.faqItems = extractFaqItems();
+    ctx.reviewItems = extractReviewItems();
+    ctx.productItems = extractProductItems();
+    ctx.serviceItems = extractServiceItems();
+    ctx.videoItems = extractVideoItems();
+    ctx.personItems = extractPersonItems();
+    ctx.breadcrumbItems = extractBreadcrumbItems();
+
+    const article = extractArticleMeta();
+    if (article) {
+      ctx.articleHeadline = article.headline;
+      ctx.articleAuthor = article.author;
+      ctx.articleDate = article.datePublished;
+    }
   }
 
   return ctx;
 }
+
+interface AmbiguityResult {
+  ambiguous: boolean;
+  reasons: string[];
+}
+
+/**
+ * Detect when a page is likely a dashboard, admin panel, directory, or feed showing data ABOUT
+ * other entities. On these pages, body-text signals (phone numbers, addresses, business names)
+ * usually belong to a FEATURED entity, not the site itself — so we should skip those.
+ *
+ * Triggers (any 1 = ambiguous):
+ *   - URL contains /dashboard, /admin, /portal, /clients, /properties
+ *   - Document title contains "Dashboard", "Admin", "Portal"
+ *   - 3+ phone numbers visible on page (likely a directory)
+ *   - 3+ street addresses visible on page (likely a directory)
+ *   - Auth UI present (sign-out button, user avatar dropdown)
+ *   - Multiple JSON-LD entities with different @type/name (likely a CMS rendering 3rd-party data)
+ */
+function detectPageAmbiguity(): AmbiguityResult {
+  const reasons: string[] = [];
+
+  const url = window.location.href.toLowerCase();
+  if (/\/(dashboard|admin|portal|clients?|properties|members?|users?|directory)\b/.test(url)) {
+    reasons.push("URL suggests admin / directory page");
+  }
+
+  const title = (document.title ?? "").toLowerCase();
+  if (/\b(dashboard|admin|portal|control panel)\b/.test(title)) {
+    reasons.push("Page title contains 'dashboard' / 'admin' / 'portal'");
+  }
+
+  const bodyText = document.body?.innerText ?? "";
+  const phoneRe = /\b(\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g;
+  const phones = new Set((bodyText.match(phoneRe) ?? []).map((p) => p.replace(/\D/g, "")));
+  if (phones.size >= 3) {
+    reasons.push(`${phones.size} different phone numbers on this page — looks like a directory`);
+  }
+
+  const addressRe = new RegExp(`\\b\\d{1,5}\\s+\\w+(\\s+\\w+){0,4}\\s+${STREET_SUFFIX.source}\\b`, "gi");
+  const addressCount = (bodyText.match(addressRe) ?? []).length;
+  if (addressCount >= 3) {
+    reasons.push(`${addressCount} different street addresses on this page — looks like a directory`);
+  }
+
+  // Auth chrome
+  const authButtons = Array.from(document.querySelectorAll("button, a")).filter((el) => {
+    const text = (el as HTMLElement).innerText?.trim().toLowerCase() ?? "";
+    return /^(sign\s*out|log\s*out|logout|signout)$/i.test(text);
+  });
+  if (authButtons.length > 0) {
+    reasons.push("Page has a sign-out button — looks like an authenticated app");
+  }
+
+  // Multiple distinct JSON-LD entities
+  const ldNames = new Set<string>();
+  const scripts = document.querySelectorAll<HTMLScriptElement>('script[type="application/ld+json"]');
+  for (const s of Array.from(scripts)) {
+    try {
+      const parsed = JSON.parse(s.textContent ?? "");
+      collectNamesFromJsonLd(parsed, ldNames);
+    } catch {
+      // skip
+    }
+  }
+  if (ldNames.size >= 3) {
+    reasons.push("Multiple distinct JSON-LD entities on the page");
+  }
+
+  return { ambiguous: reasons.length > 0, reasons };
+}
+
+function collectNamesFromJsonLd(node: unknown, out: Set<string>): void {
+  if (!node || typeof node !== "object") return;
+  if (Array.isArray(node)) {
+    for (const item of node) collectNamesFromJsonLd(item, out);
+    return;
+  }
+  const obj = node as Record<string, unknown>;
+  if (typeof obj.name === "string" && obj.name.length > 0 && obj.name.length < 100) {
+    out.add(obj.name);
+  }
+  if (obj["@graph"]) collectNamesFromJsonLd(obj["@graph"], out);
+  if (obj["mainEntity"]) collectNamesFromJsonLd(obj["mainEntity"], out);
+  if (obj["itemListElement"]) collectNamesFromJsonLd(obj["itemListElement"], out);
+}
+
 
 /**
  * Returns the canonical URL for the page, preferring (in order):
@@ -155,20 +261,34 @@ function extractBodyContent(): string | undefined {
   return text.slice(0, 3000);
 }
 
-function extractBusinessName(): string | undefined {
+function extractBusinessName(ambiguous = false): string | undefined {
+  // Highest-confidence signal: og:site_name is explicitly the SITE'S name (set by the developer).
   const ogSite = (document.querySelector('meta[property="og:site_name"]') as HTMLMetaElement | null)?.content?.trim();
   if (ogSite) return ogSite;
 
-  const ldName = readJsonLdValue(["name"]);
-  if (ldName) return ldName;
+  // Second: WebSite-typed JSON-LD. WebSite specifically describes the SITE, unlike Organization/LocalBusiness
+  // which might describe a featured entity on the page.
+  const websiteName = readJsonLdValueByType(["name"], ["WebSite"]);
+  if (websiteName) return websiteName;
 
+  // Third: <title> split before separator. Title is a site-level signal in <head>.
+  const title = document.title?.split(/[|–—-]/)[0]?.trim();
+  if (title && title.length > 0 && title.length < 60) return title;
+
+  // Below this point: lower-confidence signals that can pick up DISPLAYED content on
+  // dashboards, directories, etc. Skip them when ambiguous.
+  if (ambiguous) return undefined;
+
+  // Organization/LocalBusiness JSON-LD (lower confidence — could be the site's identity OR
+  // a featured entity, but on non-ambiguous pages it's almost always the site's identity).
+  const orgName = readJsonLdValueByType(["name"], ["Organization", "LocalBusiness", "Restaurant", "Store", "Corporation"]);
+  if (orgName) return orgName;
+
+  // H1 — weakest signal. Could be page-content title rather than site title.
   const h1 = document.querySelector("h1");
   if (h1 && h1.innerText.trim().length > 0 && h1.innerText.trim().length < 60) {
     return h1.innerText.trim();
   }
-
-  const title = document.title?.split(/[|–—-]/)[0]?.trim();
-  if (title && title.length > 0 && title.length < 60) return title;
 
   return undefined;
 }
@@ -192,27 +312,71 @@ function extractLogo(): string | undefined {
   return undefined;
 }
 
-function extractPhone(): string | undefined {
-  const telLink = document.querySelector('a[href^="tel:"]') as HTMLAnchorElement | null;
-  if (telLink) {
-    const tel = telLink.getAttribute("href")?.replace(/^tel:/, "").trim();
+function extractPhone(ambiguous = false): string | undefined {
+  // tel: links are intentional contact links on the page — strongest signal.
+  // Prefer ones in header/footer (site chrome) over main content.
+  const allTelLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href^="tel:"]'));
+  if (allTelLinks.length > 0) {
+    const chromeFirst = allTelLinks.find((el) => el.closest("header, footer, [role='banner'], [role='contentinfo']"));
+    const chosen = chromeFirst ?? allTelLinks[0];
+    const tel = chosen.getAttribute("href")?.replace(/^tel:/, "").trim();
     if (tel) return tel;
   }
 
+  // No tel: link found. On ambiguous pages, refuse to pull a phone from body text
+  // (it probably belongs to a featured entity, not this site).
+  if (ambiguous) return undefined;
+
+  // Try footer / header / contact-section text first — these are usually site chrome.
+  const sectionText =
+    (document.querySelector("footer") as HTMLElement | null)?.innerText ??
+    (document.querySelector("address") as HTMLElement | null)?.innerText ??
+    (document.querySelector("[class*='contact' i], [id*='contact' i]") as HTMLElement | null)?.innerText ??
+    "";
+  const phoneRe = /(\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/;
+  const sectionMatch = sectionText.match(phoneRe);
+  if (sectionMatch) return sectionMatch[0]?.trim();
+
+  // Last resort: body text. Risky on directories/listings even when not flagged as ambiguous,
+  // so we double-check there's only one match.
   const bodyText = document.body.innerText;
-  const phoneMatch = bodyText.match(/(\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/);
-  return phoneMatch?.[0]?.trim();
+  const allMatches = bodyText.match(/(\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g) ?? [];
+  if (allMatches.length === 1) return allMatches[0].trim();
+
+  // Multiple phones in body — too ambiguous.
+  return undefined;
 }
 
-function extractAddress(): ExtractedPageContext["address"] {
-  const bodyText = document.body.innerText;
+function extractAddress(ambiguous = false): ExtractedPageContext["address"] {
+  // On ambiguous pages, don't pull an address from body text — it might belong to a
+  // featured entity, not the site itself.
+  if (ambiguous) return undefined;
 
-  const streetMatch = bodyText.match(new RegExp(`\\b\\d{1,5}\\s+\\w+(\\s+\\w+){0,4}\\s+${STREET_SUFFIX.source}\\b`, "i"));
+  // Prefer footer / address element / contact section (site chrome).
+  const sectionEl =
+    (document.querySelector("address") as HTMLElement | null) ??
+    (document.querySelector("footer") as HTMLElement | null) ??
+    (document.querySelector("[class*='contact' i], [id*='contact' i]") as HTMLElement | null);
+  const sectionText = sectionEl?.innerText ?? "";
+
+  const streetRe = new RegExp(`\\b\\d{1,5}\\s+\\w+(\\s+\\w+){0,4}\\s+${STREET_SUFFIX.source}\\b`, "i");
+
+  let streetMatch = sectionText.match(streetRe);
+  let sourceText = sectionText;
+
+  // Fall back to body text only if no chrome match AND there's exactly one address overall.
+  if (!streetMatch) {
+    const bodyText = document.body.innerText;
+    const allMatches = bodyText.match(new RegExp(`\\b\\d{1,5}\\s+\\w+(\\s+\\w+){0,4}\\s+${STREET_SUFFIX.source}\\b`, "gi")) ?? [];
+    if (allMatches.length !== 1) return undefined;
+    streetMatch = bodyText.match(streetRe);
+    sourceText = bodyText;
+  }
+
   if (!streetMatch) return undefined;
-
   const street = streetMatch[0].trim();
   const startIdx = (streetMatch.index ?? 0) + street.length;
-  const tail = bodyText.slice(startIdx, startIdx + 200);
+  const tail = sourceText.slice(startIdx, startIdx + 200);
 
   const cityStateZip = tail.match(/[\s,]*([A-Z][a-zA-Z .]+?)[\s,]+([A-Z]{2})\s+(\d{5}(?:-\d{4})?)/);
   if (cityStateZip) {
@@ -265,7 +429,10 @@ function expandDayLabel(label: string): string[] {
   return days;
 }
 
-function extractHours(): ExtractedPageContext["hours"] {
+function extractHours(ambiguous = false): ExtractedPageContext["hours"] {
+  // On ambiguous pages, don't extract hours — they could belong to a featured entity.
+  if (ambiguous) return undefined;
+
   const bodyText = document.body.innerText;
   const lines = bodyText.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
 
@@ -567,6 +734,62 @@ function readJsonLdValue(path: string[]): string | undefined {
       // skip malformed
     }
   }
+  return undefined;
+}
+
+/**
+ * Find a value at `path` from a JSON-LD entity matching one of the given @type values.
+ *
+ * Used to safely extract site-identity data: WebSite-typed schemas describe the SITE,
+ * while Organization/LocalBusiness typed schemas might describe a FEATURED entity on the
+ * page. Calling code can pick which types it considers safe.
+ */
+function readJsonLdValueByType(path: string[], allowedTypes: string[]): string | undefined {
+  const lowerAllowed = new Set(allowedTypes.map((t) => t.toLowerCase()));
+  const scripts = document.querySelectorAll<HTMLScriptElement>('script[type="application/ld+json"]');
+  for (const script of Array.from(scripts)) {
+    try {
+      const parsed = JSON.parse(script.textContent ?? "");
+      const found = findValueInTypedNode(parsed, path, lowerAllowed);
+      if (typeof found === "string") return found;
+    } catch {
+      // skip malformed
+    }
+  }
+  return undefined;
+}
+
+function findValueInTypedNode(node: unknown, path: string[], allowedTypes: Set<string>): unknown {
+  if (!node) return undefined;
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      const v = findValueInTypedNode(item, path, allowedTypes);
+      if (v !== undefined) return v;
+    }
+    return undefined;
+  }
+  if (typeof node !== "object") return undefined;
+  const obj = node as Record<string, unknown>;
+
+  const typeField = obj["@type"];
+  const types: string[] = typeof typeField === "string"
+    ? [typeField]
+    : Array.isArray(typeField) ? typeField.filter((t) => typeof t === "string") as string[] : [];
+
+  if (types.some((t) => allowedTypes.has(t.toLowerCase()))) {
+    const v = walk(obj, path);
+    if (typeof v === "string" && v.length > 0) return v;
+  }
+
+  if (obj["@graph"]) {
+    const v = findValueInTypedNode(obj["@graph"], path, allowedTypes);
+    if (v !== undefined) return v;
+  }
+  if (obj["mainEntity"]) {
+    const v = findValueInTypedNode(obj["mainEntity"], path, allowedTypes);
+    if (v !== undefined) return v;
+  }
+
   return undefined;
 }
 
