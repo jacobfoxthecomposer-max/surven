@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, ChevronDown, X, Settings, ArrowLeft, Wrench, ExternalLink, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Search, ChevronDown, X, Settings, ArrowLeft, Wrench, ExternalLink, CheckCircle2, AlertCircle, Loader2, Flame } from "lucide-react";
 import type { AuditFinding, ApplyFixResponse } from "../shared/types";
 import { computeVisibilityScore } from "../shared/scoring";
 import "./styles.css";
@@ -153,10 +153,15 @@ export default function App() {
     }
   }
 
+  function isInjectable(url?: string): boolean {
+    if (!url) return false;
+    return url.startsWith("http://") || url.startsWith("https://");
+  }
+
   async function broadcastBadge(findings: AuditFinding[]) {
     const showBadge = settings?.showBadge ?? true;
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) return;
+    if (!tab?.id || !isInjectable(tab.url)) return;
     if (!showBadge) {
       chrome.tabs.sendMessage(tab.id, { type: "BADGE_HIDE" }).catch(() => {});
       return;
@@ -239,7 +244,7 @@ export default function App() {
     setHighlightedFinding(finding.id);
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tab?.id) {
-      chrome.tabs.sendMessage(tab.id, { type: "HIGHLIGHT", findingId: finding.id, severity: finding.severity });
+      chrome.tabs.sendMessage(tab.id, { type: "HIGHLIGHT", findingId: finding.id, severity: finding.severity }).catch(() => {});
     }
   }
 
@@ -247,7 +252,7 @@ export default function App() {
     setHighlightedFinding(null);
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tab?.id) {
-      chrome.tabs.sendMessage(tab.id, { type: "CLEAR_HIGHLIGHTS" });
+      chrome.tabs.sendMessage(tab.id, { type: "CLEAR_HIGHLIGHTS" }).catch(() => {});
     }
   }
 
@@ -338,9 +343,9 @@ export default function App() {
               style={{ marginTop: "2px", accentColor: "#96A283" }}
             />
             <div>
-              <div style={{ fontSize: "13px", fontWeight: 600, color: "#3D3F3D" }}>Show floating GEO score</div>
+              <div style={{ fontSize: "13px", fontWeight: 600, color: "#3D3F3D" }}>Show floating Page Health score</div>
               <div style={{ fontSize: "11px", color: "#6B6D6B", marginTop: "2px" }}>
-                Display your visibility score on each audited page (bottom-right corner).
+                Display the technical health score on each audited page (bottom-right corner). Separate from your AI Visibility score.
               </div>
             </div>
           </label>
