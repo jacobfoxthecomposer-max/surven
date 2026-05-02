@@ -390,13 +390,13 @@ export function AeoAuditSection({
             <>
               Scanning your site&apos;s{" "}
               <span style={{ color: "var(--color-fg-muted)", fontStyle: "italic" }}>
-                readability
+                AI readability
               </span>
               …
             </>
           ) : result ? (
             <>
-              Your site&apos;s readability is{" "}
+              Your site&apos;s AI readability is{" "}
               <span style={{ color: scoreColor!, fontStyle: "italic" }}>
                 {scoreWord}
               </span>
@@ -404,7 +404,7 @@ export function AeoAuditSection({
             </>
           ) : (
             <>
-              Your site&apos;s readability is{" "}
+              Your site&apos;s AI readability is{" "}
               <span style={{ color: "var(--color-fg-muted)", fontStyle: "italic" }}>
                 loading
               </span>
