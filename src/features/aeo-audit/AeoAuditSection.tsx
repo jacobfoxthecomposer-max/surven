@@ -974,9 +974,9 @@ function PillarBars({
   checks: CheckResult[];
 }) {
   return (
-    <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden flex flex-col h-full">
+    <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col h-full">
       <div
-        className="px-5 py-3.5 border-b border-[var(--color-border)] flex items-center gap-2.5"
+        className="rounded-t-[var(--radius-lg)] px-5 py-3.5 border-b border-[var(--color-border)] flex items-center gap-2.5"
         style={{
           background:
             "linear-gradient(135deg, rgba(150,162,131,0.18) 0%, rgba(150,162,131,0.04) 100%)",
@@ -994,149 +994,200 @@ function PillarBars({
         />
       </div>
       <div className="px-5 py-5 flex-1 flex flex-col justify-around gap-5">
-        {pillars.map((p, i) => {
-          const Icon = PILLAR_ICON[p.pillar];
-          const tok = GRADE_TOK[p.grade];
-          const rows = checks.filter((c) => c.pillar === p.pillar);
-          const passCount = rows.filter((c) => c.status === "pass").length;
-          const partialCount = rows.filter((c) => c.status === "partial").length;
-          const failCount = rows.filter((c) => c.status === "critical").length;
-          const total = rows.length || 1;
-          const passPct = (passCount / total) * 100;
-          const partialPct = (partialCount / total) * 100;
-          const failPct = (failCount / total) * 100;
-          return (
-            <div key={p.pillar} className="space-y-2.5">
-              <HoverHint hint={PILLAR_BLURBS[p.pillar]} display="block">
-                <div
-                  className="flex items-center gap-3 flex-wrap"
-                  style={{ cursor: "help" }}
-                >
-                  <div
-                    className="h-10 w-10 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: `${tok.color}22` }}
-                  >
-                    <Icon className="h-5 w-5" style={{ color: tok.color }} />
-                  </div>
-                  <div className="inline-flex items-center gap-1.5">
-                    <p
-                      style={{
-                        fontFamily: "var(--font-display)",
-                        fontSize: 24,
-                        fontWeight: 600,
-                        letterSpacing: "-0.01em",
-                        color: "var(--color-fg)",
-                        lineHeight: 1.1,
-                      }}
-                    >
-                      {PILLAR_LABELS[p.pillar]}
-                    </p>
-                    <Info
-                      className="h-3.5 w-3.5 text-[var(--color-fg-muted)]"
-                      aria-label={`What ${PILLAR_LABELS[p.pillar]} measures`}
-                    />
-                  </div>
-                  <span
-                    className="font-semibold uppercase"
-                    style={{ fontSize: 11.5, letterSpacing: "0.12em", color: tok.color }}
-                  >
-                    {tok.label}
-                  </span>
-                  <span className="inline-flex items-baseline tabular-nums ml-auto">
-                    <span
-                      style={{
-                        fontFamily: "var(--font-display)",
-                        fontSize: 30,
-                        fontWeight: 600,
-                        color: tok.color,
-                        letterSpacing: "-0.01em",
-                        lineHeight: 1,
-                      }}
-                    >
-                      {p.earned}
-                    </span>
-                    <span
-                      className="text-[var(--color-fg-muted)]"
-                      style={{ fontSize: 16, fontFamily: "var(--font-display)" }}
-                    >
-                      /{p.max}
-                    </span>
-                  </span>
-                </div>
-              </HoverHint>
-              {/* Stacked segment bar: pass / partial / fail. Modeled on the
-                  SentimentByPlatform pattern — each segment animates in with
-                  its own staggered transition. */}
-              <div
-                className="h-3 rounded-full overflow-hidden flex bg-[var(--color-surface-alt)]"
-              >
-                {passPct > 0 && (
-                  <motion.div
-                    className="h-full"
-                    style={{ backgroundColor: STATUS_TOK.pass.color }}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${passPct}%` }}
-                    transition={{ duration: 0.6, delay: i * 0.08, ease: EASE }}
-                  />
-                )}
-                {partialPct > 0 && (
-                  <motion.div
-                    className="h-full"
-                    style={{ backgroundColor: STATUS_TOK.partial.color }}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${partialPct}%` }}
-                    transition={{ duration: 0.6, delay: i * 0.08 + 0.05, ease: EASE }}
-                  />
-                )}
-                {failPct > 0 && (
-                  <motion.div
-                    className="h-full"
-                    style={{ backgroundColor: STATUS_TOK.critical.color }}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${failPct}%` }}
-                    transition={{ duration: 0.6, delay: i * 0.08 + 0.1, ease: EASE }}
-                  />
-                )}
-              </div>
-              <div
-                className="flex items-center gap-3 text-[var(--color-fg-secondary)]"
-                style={{ fontSize: 13 }}
-              >
-                <span className="inline-flex items-center gap-1.5">
-                  <span
-                    className="rounded-full"
-                    style={{ width: 9, height: 9, backgroundColor: STATUS_TOK.pass.color }}
-                  />
-                  <span className="tabular-nums font-semibold text-[var(--color-fg)]">
-                    {passCount}
-                  </span>{" "}
-                  pass
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <span
-                    className="rounded-full"
-                    style={{ width: 9, height: 9, backgroundColor: STATUS_TOK.partial.color }}
-                  />
-                  <span className="tabular-nums font-semibold text-[var(--color-fg)]">
-                    {partialCount}
-                  </span>{" "}
-                  partial
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <span
-                    className="rounded-full"
-                    style={{ width: 9, height: 9, backgroundColor: STATUS_TOK.critical.color }}
-                  />
-                  <span className="tabular-nums font-semibold text-[var(--color-fg)]">
-                    {failCount}
-                  </span>{" "}
-                  critical
-                </span>
-              </div>
-            </div>
-          );
-        })}
+        {pillars.map((p, i) => (
+          <PillarBarRow
+            key={p.pillar}
+            score={p}
+            checks={checks.filter((c) => c.pillar === p.pillar)}
+            staggerIndex={i}
+          />
+        ))}
       </div>
+    </div>
+  );
+}
+
+function PillarBarRow({
+  score,
+  checks,
+  staggerIndex,
+}: {
+  score: PillarScore;
+  checks: CheckResult[];
+  staggerIndex: number;
+}) {
+  const [open, setOpen] = useState(false);
+  const Icon = PILLAR_ICON[score.pillar];
+  const tok = GRADE_TOK[score.grade];
+  const passCount = checks.filter((c) => c.status === "pass").length;
+  const partialCount = checks.filter((c) => c.status === "partial").length;
+  const failCount = checks.filter((c) => c.status === "critical").length;
+  const total = checks.length || 1;
+  const passPct = (passCount / total) * 100;
+  const partialPct = (partialCount / total) * 100;
+  const failPct = (failCount / total) * 100;
+
+  // Sort the per-pillar check list: critical → partial → pass.
+  const sortedChecks = [...checks].sort(
+    (a, b) => STATUS_RANK[a.status] - STATUS_RANK[b.status],
+  );
+
+  return (
+    <div className="space-y-2.5">
+      <HoverHint hint={PILLAR_BLURBS[score.pillar]} display="block">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className="w-full flex items-center gap-3 flex-wrap text-left rounded-[var(--radius-sm)] -m-1 p-1 transition-colors hover:bg-[var(--color-surface-alt)]/40"
+          style={{ cursor: "pointer" }}
+        >
+          <div
+            className="h-10 w-10 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
+            style={{ backgroundColor: `${tok.color}22` }}
+          >
+            <Icon className="h-5 w-5" style={{ color: tok.color }} />
+          </div>
+          <div className="inline-flex items-center gap-1.5">
+            <p
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 24,
+                fontWeight: 600,
+                letterSpacing: "-0.01em",
+                color: "var(--color-fg)",
+                lineHeight: 1.1,
+              }}
+            >
+              {PILLAR_LABELS[score.pillar]}
+            </p>
+            <Info
+              className="h-3.5 w-3.5 text-[var(--color-fg-muted)]"
+              aria-label={`What ${PILLAR_LABELS[score.pillar]} measures`}
+            />
+          </div>
+          <span
+            className="font-semibold uppercase"
+            style={{ fontSize: 11.5, letterSpacing: "0.12em", color: tok.color }}
+          >
+            {tok.label}
+          </span>
+          <span className="inline-flex items-baseline tabular-nums ml-auto">
+            <span
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 30,
+                fontWeight: 600,
+                color: tok.color,
+                letterSpacing: "-0.01em",
+                lineHeight: 1,
+              }}
+            >
+              {score.earned}
+            </span>
+            <span
+              className="text-[var(--color-fg-muted)]"
+              style={{ fontSize: 16, fontFamily: "var(--font-display)" }}
+            >
+              /{score.max}
+            </span>
+          </span>
+          <ChevronDown
+            className={
+              "h-5 w-5 text-[var(--color-fg-muted)] transition-transform shrink-0 " +
+              (open ? "rotate-180" : "")
+            }
+          />
+        </button>
+      </HoverHint>
+      {/* Stacked segment bar: pass / partial / critical. */}
+      <div className="h-3 rounded-full overflow-hidden flex bg-[var(--color-surface-alt)]">
+        {passPct > 0 && (
+          <motion.div
+            className="h-full"
+            style={{ backgroundColor: STATUS_TOK.pass.color }}
+            initial={{ width: 0 }}
+            animate={{ width: `${passPct}%` }}
+            transition={{ duration: 0.6, delay: staggerIndex * 0.08, ease: EASE }}
+          />
+        )}
+        {partialPct > 0 && (
+          <motion.div
+            className="h-full"
+            style={{ backgroundColor: STATUS_TOK.partial.color }}
+            initial={{ width: 0 }}
+            animate={{ width: `${partialPct}%` }}
+            transition={{ duration: 0.6, delay: staggerIndex * 0.08 + 0.05, ease: EASE }}
+          />
+        )}
+        {failPct > 0 && (
+          <motion.div
+            className="h-full"
+            style={{ backgroundColor: STATUS_TOK.critical.color }}
+            initial={{ width: 0 }}
+            animate={{ width: `${failPct}%` }}
+            transition={{ duration: 0.6, delay: staggerIndex * 0.08 + 0.1, ease: EASE }}
+          />
+        )}
+      </div>
+      <div
+        className="flex items-center gap-3 text-[var(--color-fg-secondary)]"
+        style={{ fontSize: 13 }}
+      >
+        <span className="inline-flex items-center gap-1.5">
+          <span
+            className="rounded-full"
+            style={{ width: 9, height: 9, backgroundColor: STATUS_TOK.pass.color }}
+          />
+          <span className="tabular-nums font-semibold text-[var(--color-fg)]">
+            {passCount}
+          </span>{" "}
+          pass
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span
+            className="rounded-full"
+            style={{ width: 9, height: 9, backgroundColor: STATUS_TOK.partial.color }}
+          />
+          <span className="tabular-nums font-semibold text-[var(--color-fg)]">
+            {partialCount}
+          </span>{" "}
+          partial
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span
+            className="rounded-full"
+            style={{ width: 9, height: 9, backgroundColor: STATUS_TOK.critical.color }}
+          />
+          <span className="tabular-nums font-semibold text-[var(--color-fg)]">
+            {failCount}
+          </span>{" "}
+          critical
+        </span>
+      </div>
+
+      {/* Per-pillar check list — collapsed by default. Click anywhere on
+          the pillar header above to toggle. */}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="pillar-checks"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: EASE }}
+            className="overflow-hidden"
+          >
+            <ul
+              className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] divide-y divide-[var(--color-border)] mt-2"
+            >
+              {sortedChecks.map((c) => (
+                <CheckRow key={c.id} check={c} />
+              ))}
+            </ul>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -1154,9 +1205,9 @@ function ScoreCard({ result }: { result: ScanResult }) {
       : "poor";
   const tok = GRADE_TOK[tier];
   return (
-    <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden flex flex-col h-full">
+    <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col h-full">
       <div
-        className="px-5 py-3.5 border-b border-[var(--color-border)] flex items-center gap-2.5"
+        className="rounded-t-[var(--radius-lg)] px-5 py-3.5 border-b border-[var(--color-border)] flex items-center gap-2.5"
         style={{
           background:
             "linear-gradient(135deg, rgba(150,162,131,0.18) 0%, rgba(150,162,131,0.04) 100%)",
@@ -1403,11 +1454,11 @@ function TopFixesPanel({ checks }: { checks: CheckResult[] }) {
 
   return (
     <div
-      className="rounded-[var(--radius-lg)] border bg-[var(--color-surface)] overflow-hidden flex flex-col h-full"
+      className="rounded-[var(--radius-lg)] border bg-[var(--color-surface)] flex flex-col h-full"
       style={{ borderColor: "rgba(150,162,131,0.45)" }}
     >
       <div
-        className="px-5 py-3.5 border-b border-[var(--color-border)] flex items-center justify-between flex-wrap gap-3"
+        className="rounded-t-[var(--radius-lg)] px-5 py-3.5 border-b border-[var(--color-border)] flex items-center justify-between flex-wrap gap-3"
         style={{
           background:
             "linear-gradient(135deg, rgba(150,162,131,0.28) 0%, rgba(184,160,48,0.14) 50%, rgba(201,123,69,0.14) 100%)",
@@ -1525,13 +1576,13 @@ function ChecksList({ checks }: { checks: CheckResult[] }) {
   const totalPassing = checks.filter((c) => c.status === "pass").length;
 
   return (
-    <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
+    <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)]">
       {/* Header band — clickable to toggle the full list. */}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="w-full px-5 py-3.5 border-b border-[var(--color-border)] flex items-center gap-2.5 text-left transition-colors hover:bg-[var(--color-surface-alt)]/30"
+        className="w-full rounded-t-[var(--radius-lg)] px-5 py-3.5 border-b border-[var(--color-border)] flex items-center gap-2.5 text-left transition-colors hover:bg-[var(--color-surface-alt)]/30"
         style={{
           background:
             "linear-gradient(135deg, rgba(150,162,131,0.18) 0%, rgba(150,162,131,0.04) 100%)",
