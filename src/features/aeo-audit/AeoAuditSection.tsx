@@ -168,6 +168,7 @@ import {
   PILLAR_BLURBS,
   PILLAR_LABELS,
   type CheckResult,
+  type CheckStatus,
   type Pillar,
   type PillarScore,
   type ScanResult,
@@ -601,6 +602,184 @@ function halfArc(cx: number, cy: number, r: number, a: number, b: number) {
   return `M ${s.x} ${s.y} A ${r} ${r} 0 ${b - a > 180 ? 1 : 0} 1 ${e.x} ${e.y}`;
 }
 
+// Skinny per-status list with a points-impact sum at the bottom.
+// Pass rows show "+N pts" earned. Partial / Critical rows show "−N pts"
+// deducted (max - earned). Sum at the bottom mirrors the row direction.
+function StatusListPanel({
+  status,
+  checks,
+}: {
+  status: CheckStatus;
+  checks: CheckResult[];
+}) {
+  const [open, setOpen] = useState(true);
+  const stok = STATUS_TOK[status];
+  const SIcon = stok.Icon;
+  const isPass = status === "pass";
+  const totalDelta = checks.reduce(
+    (s, c) => s + (isPass ? c.earned : c.max - c.earned),
+    0,
+  );
+  const round1 = (n: number) => Math.round(n * 10) / 10;
+  return (
+    <div
+      className="rounded-[var(--radius-md)] border flex flex-col"
+      style={{
+        borderColor: `${stok.color}40`,
+        backgroundColor: `${stok.color}0d`,
+      }}
+    >
+      {/* Header — clickable to toggle */}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="px-3 py-2.5 flex items-center gap-2.5 text-left transition-opacity hover:opacity-90"
+      >
+        <span
+          className="inline-flex items-center justify-center rounded-[var(--radius-sm)] shrink-0"
+          style={{
+            width: 30,
+            height: 30,
+            backgroundColor: stok.bg,
+            color: stok.color,
+          }}
+          aria-hidden
+        >
+          <SIcon className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p
+            className="uppercase font-semibold"
+            style={{
+              fontSize: 10.5,
+              letterSpacing: "0.12em",
+              color: stok.color,
+              lineHeight: 1.1,
+            }}
+          >
+            {stok.label}
+          </p>
+          <p
+            className="tabular-nums"
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: 22,
+              fontWeight: 600,
+              color: "var(--color-fg)",
+              letterSpacing: "-0.01em",
+              lineHeight: 1.1,
+            }}
+          >
+            {checks.length}
+          </p>
+        </div>
+        <ChevronDown
+          className={
+            "h-4 w-4 shrink-0 transition-transform " +
+            (open ? "rotate-180" : "")
+          }
+          style={{ color: stok.color }}
+        />
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="list"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: EASE }}
+            className="overflow-hidden"
+          >
+            {checks.length === 0 ? (
+              <p
+                className="px-3 pb-3 pt-1 text-[var(--color-fg-muted)] italic"
+                style={{ fontSize: 12 }}
+              >
+                None
+              </p>
+            ) : (
+              <>
+                <ul
+                  className="divide-y border-t"
+                  style={{
+                    borderColor: `${stok.color}30`,
+                  }}
+                >
+                  {checks.map((c) => {
+                    const delta = isPass ? c.earned : c.max - c.earned;
+                    return (
+                      <li
+                        key={c.id}
+                        className="px-3 py-1.5 flex items-center gap-2"
+                        style={{ fontSize: 12.5 }}
+                      >
+                        <span
+                          className="text-[var(--color-fg)] truncate flex-1"
+                          title={c.label}
+                        >
+                          {c.label}
+                        </span>
+                        <span
+                          className="tabular-nums font-semibold shrink-0"
+                          style={{ color: stok.color }}
+                        >
+                          {isPass ? "+" : "−"}
+                          {round1(delta)}
+                          <span
+                            className="font-normal"
+                            style={{ opacity: 0.7, marginLeft: 2 }}
+                          >
+                            pts
+                          </span>
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {/* Sum row */}
+                <div
+                  className="px-3 py-2 flex items-center justify-between border-t"
+                  style={{
+                    borderColor: `${stok.color}30`,
+                    backgroundColor: `${stok.color}14`,
+                  }}
+                >
+                  <span
+                    className="uppercase font-semibold"
+                    style={{
+                      fontSize: 10,
+                      letterSpacing: "0.12em",
+                      color: stok.color,
+                    }}
+                  >
+                    Total
+                  </span>
+                  <span
+                    className="tabular-nums font-semibold"
+                    style={{ fontSize: 13.5, color: stok.color }}
+                  >
+                    {isPass ? "+" : "−"}
+                    {round1(totalDelta)}
+                    <span
+                      className="font-normal"
+                      style={{ opacity: 0.7, marginLeft: 2 }}
+                    >
+                      pts
+                    </span>
+                  </span>
+                </div>
+              </>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function ResultStatStrip({ result }: { result: ScanResult }) {
   const tier =
     result.score >= 81
@@ -828,69 +1007,18 @@ function ResultStatStrip({ result }: { result: ScanResult }) {
           AI readability across 25 checks.
         </p>
 
-        {/* Status legend — three side-by-side pill cards (Pass / Partial /
-            Critical) tinted with each status color. Fills the empty space
-            to the right of the gauge with at-a-glance counts. */}
-        <div className="grid grid-cols-3 gap-2.5">
-          {(
-            [
-              { id: "pass" as const, count: passCount },
-              { id: "partial" as const, count: partialCount },
-              { id: "critical" as const, count: criticalCount },
-            ]
-          ).map(({ id, count }) => {
-            const stok = STATUS_TOK[id];
-            const SIcon = stok.Icon;
-            return (
-              <div
-                key={id}
-                className="rounded-[var(--radius-md)] border px-3 py-2.5 flex items-center gap-2.5"
-                style={{
-                  borderColor: `${stok.color}40`,
-                  backgroundColor: `${stok.color}0d`,
-                }}
-              >
-                <span
-                  className="inline-flex items-center justify-center rounded-[var(--radius-sm)] shrink-0"
-                  style={{
-                    width: 30,
-                    height: 30,
-                    backgroundColor: stok.bg,
-                    color: stok.color,
-                  }}
-                  aria-hidden
-                >
-                  <SIcon className="h-4 w-4" />
-                </span>
-                <div className="min-w-0">
-                  <p
-                    className="uppercase font-semibold"
-                    style={{
-                      fontSize: 10.5,
-                      letterSpacing: "0.12em",
-                      color: stok.color,
-                      lineHeight: 1.1,
-                    }}
-                  >
-                    {stok.label}
-                  </p>
-                  <p
-                    className="tabular-nums"
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: 22,
-                      fontWeight: 600,
-                      color: "var(--color-fg)",
-                      letterSpacing: "-0.01em",
-                      lineHeight: 1.1,
-                    }}
-                  >
-                    {count}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
+        {/* Status legend — three collapsible cards. Each card is a header
+            (icon + label + count + chevron) with a list of the checks of
+            that status underneath, plus a points-impact sum at the bottom.
+            Default open. */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-start">
+          {(["pass", "partial", "critical"] as const).map((id) => (
+            <StatusListPanel
+              key={id}
+              status={id}
+              checks={result.checks.filter((c) => c.status === id)}
+            />
+          ))}
         </div>
 
         <div
