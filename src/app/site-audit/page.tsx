@@ -39,7 +39,13 @@ export default function SiteAuditPage() {
 
   return (
     <DashboardLayout>
-      <AeoAuditSection plan={plan} businessName={business.name} />
+      <AeoAuditSection
+        plan={plan}
+        businessName={business.name}
+        // TODO: thread the website URL through from the Business record
+        // once onboarding captures it. Until then the section auto-loads
+        // the mock result.
+      />
     </DashboardLayout>
   );
 }

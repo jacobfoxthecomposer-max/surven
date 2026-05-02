@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Search,
   Sparkles,
   ArrowRight,
   Check,
@@ -100,8 +99,6 @@ function ChromeExtCallout() {
   );
 }
 import { Card } from "@/components/atoms/Card";
-import { Button } from "@/components/atoms/Button";
-import { Input } from "@/components/atoms/Input";
 import { AIOverview } from "@/components/atoms/AIOverview";
 import { SectionHeading } from "@/components/atoms/SectionHeading";
 import { COLORS } from "@/utils/constants";
@@ -151,59 +148,68 @@ const GRADE_TOK = {
 } as const;
 
 interface AeoAuditSectionProps {
-  /** "free" gates behind a Plus paywall; "plus"/"premium"/"admin" unlocks. */
+  /** Plan kept for future soft-gating; no longer hard-paywalls anything. */
   plan?: "free" | "plus" | "premium" | "admin";
   /** Display name of the business in subtitle copy. */
   businessName?: string;
+  /**
+   * The site URL to scan. Captured during onboarding and passed in by the
+   * route. When omitted (preview / dev), the page falls back to the mock
+   * result so the layout still renders.
+   */
+  siteUrl?: string;
 }
 
 export function AeoAuditSection({
-  plan = "plus",
+  plan: _plan = "plus",
   businessName = "your site",
+  siteUrl,
 }: AeoAuditSectionProps) {
-  const [input, setInput] = useState("");
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ScanResult | null>(null);
-  async function handleScan(e: React.FormEvent) {
-    e.preventDefault();
-    if (!input.trim() || scanning) return;
-    setScanning(true);
-    setError(null);
-    setResult(null);
-    try {
-      const res = await fetch("/api/aeo-scan", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ url: input.trim() }),
-      });
-      const json = (await res.json()) as ScanResult & { error?: string };
-      if (!res.ok) {
-        setError(json.error || "Scan failed.");
-      } else if (json.error) {
-        setError(json.error);
-        setResult(json);
-      } else {
-        setResult(json);
+
+  // Auto-scan on mount. If a real siteUrl was provided, hit the live
+  // scan endpoint; otherwise drop in the mock so the page renders for
+  // QA / unsigned-in / no-URL-yet states.
+  useEffect(() => {
+    let cancelled = false;
+    async function run() {
+      if (!siteUrl) {
+        setResult(buildMockScanResult());
+        return;
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error.");
-    } finally {
-      setScanning(false);
+      setScanning(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/aeo-scan", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ url: siteUrl }),
+        });
+        const json = (await res.json()) as ScanResult & { error?: string };
+        if (cancelled) return;
+        if (!res.ok) {
+          setError(json.error || "Scan failed.");
+        } else if (json.error) {
+          setError(json.error);
+          setResult(json);
+        } else {
+          setResult(json);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Network error.");
+        }
+      } finally {
+        if (!cancelled) setScanning(false);
+      }
     }
-  }
-
-  function handleLoadExample() {
-    setError(null);
-    setResult(buildMockScanResult());
-    setInput("");
-  }
-
-  function handleNewScan() {
-    setResult(null);
-    setError(null);
-    setInput("");
-  }
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [siteUrl]);
 
   // Score-derived headline word + color (mirrors crawlability page).
   const scoreWord = result
@@ -231,7 +237,7 @@ export function AeoAuditSection({
   const partialCount =
     result?.checks.filter((c) => c.status === "partial").length ?? 0;
   const aiOverviewText = !result
-    ? "Scan your site to see exactly what AI engines can and can't read on your pages — and where to tighten things up so you get cited more."
+    ? "Reading your site through every AI engine's lens to identify what's clear and what's getting missed."
     : failCount > 0
     ? `${failCount} readability gap${failCount === 1 ? "" : "s"} are blocking AI from reading parts of your site, plus ${partialCount} partial issue${partialCount === 1 ? "" : "s"}. Tackle the failures first.`
     : partialCount > 0
@@ -256,21 +262,29 @@ export function AeoAuditSection({
             color: "var(--color-fg)",
           }}
         >
-          {!result ? (
+          {scanning && !result ? (
             <>
-              Your site&apos;s readability is{" "}
+              Scanning your site&apos;s{" "}
               <span style={{ color: "var(--color-fg-muted)", fontStyle: "italic" }}>
-                unknown
+                readability
               </span>
-              .
+              …
             </>
-          ) : (
+          ) : result ? (
             <>
               Your site&apos;s readability is{" "}
               <span style={{ color: scoreColor!, fontStyle: "italic" }}>
                 {scoreWord}
               </span>
               .
+            </>
+          ) : (
+            <>
+              Your site&apos;s readability is{" "}
+              <span style={{ color: "var(--color-fg-muted)", fontStyle: "italic" }}>
+                loading
+              </span>
+              …
             </>
           )}
         </h1>
@@ -293,66 +307,18 @@ export function AeoAuditSection({
         <AIOverview text={aiOverviewText} />
       </motion.div>
 
-      {/* ── Scan form ── */}
-      {!result && !scanning && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.2, ease: EASE }}
+      {/* Inline error banner if the auto-scan blew up. */}
+      {error && (
+        <div
+          className="text-sm rounded-[var(--radius-md)] p-3 border-l-4"
+          style={{
+            color: "#B54631",
+            borderLeftColor: "#B54631",
+            backgroundColor: "rgba(181,70,49,0.06)",
+          }}
         >
-          <Card>
-            <form onSubmit={handleScan} className="space-y-4">
-              <Input
-                label="Website URL"
-                type="url"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="https://example.com"
-                required
-                disabled={scanning}
-              />
-              <div className="flex items-center gap-3 flex-wrap">
-                <Button
-                  type="submit"
-                  loading={scanning}
-                  disabled={scanning || !input.trim()}
-                >
-                  <Search className="h-4 w-4" />
-                  Run code scan
-                </Button>
-                <button
-                  type="button"
-                  onClick={handleLoadExample}
-                  className="inline-flex items-center gap-1.5 text-xs text-[var(--color-fg-muted)] hover:text-[var(--color-primary)] transition-colors"
-                >
-                  <Sparkles className="h-3.5 w-3.5" style={{ color: "var(--color-primary)" }} />
-                  Or load an example audit
-                </button>
-                <span
-                  className="text-[var(--color-fg-muted)] hidden sm:inline"
-                  style={{ fontSize: 12 }}
-                >
-                  ·
-                </span>
-                <span style={{ fontSize: 12.5 }}>
-                  <ChromeExtLink>Skip the URL — scan from your browser</ChromeExtLink>
-                </span>
-              </div>
-              {error && (
-                <div
-                  className="text-sm rounded-[var(--radius-md)] p-3 border-l-4"
-                  style={{
-                    color: "#B54631",
-                    borderLeftColor: "#B54631",
-                    backgroundColor: "rgba(181,70,49,0.06)",
-                  }}
-                >
-                  {error}
-                </div>
-              )}
-            </form>
-          </Card>
-        </motion.div>
+          {error}
+        </div>
       )}
 
       {/* ── Loading ── */}
@@ -387,11 +353,9 @@ export function AeoAuditSection({
             transition={{ duration: 0.45, ease: EASE }}
             className="space-y-5"
           >
-            {/* Action bar — matches crawlability */}
-            <motion.div
-              {...reveal}
-              className="flex items-center justify-between flex-wrap gap-3"
-            >
+            {/* Scanned-URL link — small, no rescan affordance (the URL
+                comes from onboarding; one source of truth). */}
+            <motion.div {...reveal}>
               <a
                 href={result.url}
                 target="_blank"
@@ -401,11 +365,6 @@ export function AeoAuditSection({
                 <ExternalLink className="h-4 w-4" />
                 {result.url}
               </a>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={handleNewScan}>
-                  Scan a different URL
-                </Button>
-              </div>
             </motion.div>
 
             <motion.div
