@@ -1,0 +1,304 @@
+/**
+ * /api/audit/generate
+ *
+ * Sprint 1 unified generator endpoint. Called by the Chrome extension to:
+ *   - Build JSON-LD schemas from page data (deterministic, no LLM)
+ *   - Rewrite meta descriptions and title tags (GPT-4o-mini)
+ *   - Generate alt text for images (GPT-4o-mini vision)
+ *   - Generate FAQPage schema from existing Q&A content
+ *
+ * Auth: x-api-key header (extension API key, validated against extension_api_keys).
+ * Auto-commits via htmlInjectHandler. If the repo isn't supported (Next.js, etc.),
+ * returns a manual snippet so the extension can show copy-to-clipboard.
+ */
+
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { supabase } from "@/services/supabase";
+import { createServerClient } from "@/services/supabaseServer";
+import { decryptCredentials } from "@/utils/credentialsEncryption";
+import { applyHtmlInject } from "@/features/crawlability/services/applyFix/htmlInjectHandler";
+import { generateSchema, type SchemaKind, type PageContext } from "@/services/schemaGenerator";
+import { writeAuditLog, ipFromRequest } from "@/services/auditLog";
+
+export const maxDuration = 30;
+
+const PAID_PLANS = ["plus", "premium", "admin"];
+
+const PageContextSchema = z.object({
+  url: z.string().url(),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  businessName: z.string().optional(),
+  phone: z.string().optional(),
+  address: z
+    .object({
+      street: z.string().optional(),
+      city: z.string().optional(),
+      region: z.string().optional(),
+      postalCode: z.string().optional(),
+      country: z.string().optional(),
+    })
+    .optional(),
+  hours: z.array(z.object({ days: z.string(), opens: z.string(), closes: z.string() })).optional(),
+  socials: z.array(z.string()).optional(),
+  faqItems: z.array(z.object({ question: z.string(), answer: z.string() })).optional(),
+  reviewItems: z
+    .array(z.object({ author: z.string().optional(), rating: z.number().optional(), text: z.string().optional() }))
+    .optional(),
+  productItems: z
+    .array(z.object({ name: z.string(), price: z.string().optional(), image: z.string().optional(), description: z.string().optional() }))
+    .optional(),
+  serviceItems: z.array(z.object({ name: z.string(), description: z.string().optional() })).optional(),
+  videoItems: z
+    .array(z.object({ name: z.string().optional(), description: z.string().optional(), thumbnailUrl: z.string().optional(), embedUrl: z.string().optional() }))
+    .optional(),
+  personItems: z
+    .array(z.object({ name: z.string(), jobTitle: z.string().optional(), image: z.string().optional(), bio: z.string().optional() }))
+    .optional(),
+  breadcrumbItems: z.array(z.object({ name: z.string(), url: z.string() })).optional(),
+  articleHeadline: z.string().optional(),
+  articleAuthor: z.string().optional(),
+  articleDate: z.string().optional(),
+  logo: z.string().optional(),
+});
+
+const BodySchema = z.object({
+  kind: z.enum(["schema_org", "meta_desc", "title_tag", "faq_page", "alt_text", "llms_txt"]),
+  schemaType: z
+    .enum([
+      "Organization",
+      "LocalBusiness",
+      "WebSite",
+      "BreadcrumbList",
+      "FAQPage",
+      "Article",
+      "Review",
+      "Product",
+      "Service",
+      "VideoObject",
+      "Event",
+      "Recipe",
+      "Person",
+    ])
+    .optional(),
+  pageContext: PageContextSchema,
+  commit: z.boolean().default(true),
+  findingId: z.string().min(1),
+  findingTitle: z.string().min(1),
+});
+
+interface ConnectionRow {
+  id: string;
+  user_id: string;
+  business_id: string;
+  platform: string;
+  credentials: { iv: string; ciphertext: string; tag: string };
+  repo: string | null;
+  branch: string | null;
+  site_url: string | null;
+  status: string;
+}
+
+export async function POST(request: NextRequest) {
+  const apiKey = request.headers.get("x-api-key");
+  if (!apiKey) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { data: keyRows, error: keyErr } = await supabase.rpc("validate_extension_api_key", { p_key: apiKey });
+  if (keyErr || !keyRows || keyRows.length === 0) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const [keyData] = keyRows;
+  if (!keyData.valid || !PAID_PLANS.includes(keyData.plan)) {
+    return NextResponse.json({ error: "Premium plan required" }, { status: 403 });
+  }
+
+  const userId = keyData.user_id as string;
+
+  const body = await request.json().catch(() => null);
+  const parse = BodySchema.safeParse(body);
+  if (!parse.success) {
+    return NextResponse.json({ error: "Invalid request", details: parse.error.flatten() }, { status: 400 });
+  }
+
+  const { kind, pageContext, commit, findingId, findingTitle, schemaType } = parse.data;
+
+  if (kind === "schema_org") {
+    if (!schemaType) {
+      return NextResponse.json({ error: "schemaType is required for schema_org" }, { status: 400 });
+    }
+    const result = generateSchema(schemaType as SchemaKind, pageContext as PageContext);
+    if (!result.ok || !result.jsonLd) {
+      return NextResponse.json({ error: result.error ?? "schema_build_failed" }, { status: 422 });
+    }
+
+    if (!commit) {
+      return NextResponse.json({ ok: true, snippet: result.jsonLd, kind: "schema_org", schemaType });
+    }
+
+    const commitResult = await commitToConnectedRepo({
+      userId,
+      siteUrl: pageContext.url,
+      kind: "schema_org",
+      payload: { kind: "schema_org", jsonLd: result.jsonLd, schemaType },
+      findingId,
+      findingTitle,
+      origin: request.nextUrl.origin,
+      ipAddress: ipFromRequest(request),
+    });
+    return NextResponse.json({ ...commitResult, snippet: result.jsonLd, schemaType });
+  }
+
+  return NextResponse.json(
+    { error: "kind_not_implemented", message: `${kind} ships in a later step of Sprint 1.` },
+    { status: 501 },
+  );
+}
+
+interface CommitArgs {
+  userId: string;
+  siteUrl: string;
+  kind: "schema_org" | "meta_desc" | "title_tag" | "alt_text";
+  payload: Parameters<typeof applyHtmlInject>[0]["payload"];
+  findingId: string;
+  findingTitle: string;
+  origin: string;
+  ipAddress: string | null;
+}
+
+async function commitToConnectedRepo(args: CommitArgs) {
+  const supabaseAdmin = createServerClient();
+  const hostname = (() => {
+    try {
+      return new URL(args.siteUrl).hostname.replace(/^www\./, "");
+    } catch {
+      return null;
+    }
+  })();
+
+  const { data: connections } = await supabaseAdmin
+    .from("site_connections")
+    .select("id, user_id, business_id, platform, credentials, repo, branch, site_url, status")
+    .eq("user_id", args.userId)
+    .eq("platform", "github")
+    .eq("status", "active")
+    .returns<ConnectionRow[]>();
+
+  if (!connections || connections.length === 0) {
+    return {
+      ok: false,
+      error: "no_connection",
+      message: "Connect GitHub to your Surven account to enable auto-commit.",
+      connectUrl: `${args.origin}/onboarding/connect`,
+      manualNote: "No GitHub connection — copy the snippet below and paste it into your site manually.",
+    };
+  }
+
+  let connection: ConnectionRow | null = null;
+  if (hostname) {
+    connection =
+      connections.find((c) => {
+        if (!c.site_url) return false;
+        try {
+          return new URL(c.site_url).hostname.replace(/^www\./, "") === hostname;
+        } catch {
+          return false;
+        }
+      }) ?? null;
+  }
+  connection = connection ?? connections[0];
+
+  if (!connection.repo) {
+    return { ok: false, error: "Connection missing repo" };
+  }
+
+  let token: string;
+  try {
+    const creds = decryptCredentials<{ token: string }>(connection.credentials);
+    token = creds.token;
+  } catch {
+    return { ok: false, error: "encryption_unavailable", message: "Stored credentials couldn't be decrypted. Reconnect GitHub." };
+  }
+
+  const { data: pendingRow } = await supabaseAdmin
+    .from("applied_fixes")
+    .insert({
+      business_id: connection.business_id,
+      audit_id: null,
+      finding_id: args.findingId,
+      fix_type: args.kind,
+      platform: "github",
+      status: "pending",
+    })
+    .select("id")
+    .single();
+
+  const result = await applyHtmlInject({
+    token,
+    repo: connection.repo,
+    branch: connection.branch ?? "main",
+    kind: args.kind,
+    payload: args.payload,
+    findingId: args.findingId,
+    findingTitle: args.findingTitle,
+  });
+
+  if (!result.ok) {
+    if (pendingRow) {
+      await supabaseAdmin
+        .from("applied_fixes")
+        .update({ status: result.manualSnippet ? "skipped" : "failed", error_message: result.error ?? result.manualNote ?? null })
+        .eq("id", pendingRow.id);
+    }
+    return {
+      ok: false,
+      error: result.error,
+      manualNote: result.manualNote,
+    };
+  }
+
+  if (pendingRow) {
+    await supabaseAdmin
+      .from("applied_fixes")
+      .update({
+        status: "applied",
+        committed_sha: result.committedSha,
+        commit_url: result.commitUrl,
+        file_path: result.filePath,
+      })
+      .eq("id", pendingRow.id);
+  }
+
+  await writeAuditLog({
+    eventType: "fix_applied",
+    source: "api/audit/generate",
+    userId: args.userId,
+    businessId: connection.business_id,
+    connectionId: connection.id,
+    payload: {
+      findingId: args.findingId,
+      kind: args.kind,
+      filePath: result.filePath,
+      commitSha: result.committedSha,
+      commitUrl: result.commitUrl,
+      source: "extension",
+    },
+    ipAddress: args.ipAddress,
+  });
+
+  return {
+    ok: true,
+    committedSha: result.committedSha,
+    commitUrl: result.commitUrl,
+    filePath: result.filePath,
+  };
+}
+
+export async function GET() {
+  return NextResponse.json(
+    { error: "POST only", hint: "Send {kind, schemaType?, pageContext, commit, findingId, findingTitle}" },
+    { status: 405 },
+  );
+}
