@@ -904,6 +904,174 @@ export default function App() {
                             </button>
                           );
                         })()}
+
+                        {FINDING_TO_SCHEMA_TYPE[finding.id] && (() => {
+                          const fixState = fixStates[finding.id] ?? { status: "idle" as const };
+                          const schemaType = FINDING_TO_SCHEMA_TYPE[finding.id];
+
+                          if (fixState.status === "success") {
+                            return (
+                              <div
+                                style={{
+                                  padding: "10px",
+                                  background: "#F0FDF4",
+                                  border: "1px solid #96A283",
+                                  borderRadius: "4px",
+                                  fontSize: "12px",
+                                  color: "#3D3F3D",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "4px" }}>
+                                  <CheckCircle2 size={14} style={{ color: "#96A283" }} /> {schemaType} schema committed
+                                </div>
+                                {fixState.filePath && (
+                                  <div style={{ marginBottom: "4px" }}>
+                                    File: <code style={{ background: "#EDE8DC", padding: "1px 4px", borderRadius: "2px" }}>{fixState.filePath}</code>
+                                  </div>
+                                )}
+                                {fixState.commitUrl && (
+                                  <a
+                                    href={fixState.commitUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#96A283", textDecoration: "none" }}
+                                  >
+                                    View commit on GitHub <ExternalLink size={11} />
+                                  </a>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          if (fixState.status === "manual") {
+                            return (
+                              <div
+                                style={{
+                                  padding: "10px",
+                                  background: "#FEF3C7",
+                                  border: "1px solid #C97B45",
+                                  borderRadius: "4px",
+                                  fontSize: "12px",
+                                  color: "#3D3F3D",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "6px", color: "#C97B45" }}>
+                                  <AlertCircle size={14} /> Auto-commit not available
+                                </div>
+                                <div style={{ marginBottom: "8px", lineHeight: "1.4" }}>{fixState.manualNote}</div>
+                                <details style={{ marginBottom: "8px" }}>
+                                  <summary style={{ cursor: "pointer", fontWeight: 500, color: "#3D3F3D", fontSize: "11px" }}>Show generated snippet</summary>
+                                  <pre style={{
+                                    marginTop: "6px",
+                                    padding: "8px",
+                                    background: "#1A1C1A",
+                                    color: "#F2EEE3",
+                                    borderRadius: "4px",
+                                    fontSize: "10px",
+                                    overflow: "auto",
+                                    maxHeight: "200px",
+                                    whiteSpace: "pre-wrap",
+                                    wordBreak: "break-all",
+                                  }}>{fixState.snippet}</pre>
+                                </details>
+                                <button
+                                  onClick={() => copyToClipboard(fixState.snippet)}
+                                  style={{
+                                    padding: "6px 10px",
+                                    background: "#C97B45",
+                                    border: "none",
+                                    color: "white",
+                                    borderRadius: "4px",
+                                    fontSize: "11px",
+                                    cursor: "pointer",
+                                    fontWeight: 500,
+                                    width: "100%",
+                                  }}
+                                >
+                                  📋 Copy snippet to clipboard
+                                </button>
+                              </div>
+                            );
+                          }
+
+                          if (fixState.status === "error") {
+                            return (
+                              <div
+                                style={{
+                                  padding: "10px",
+                                  background: "#FEE2E2",
+                                  border: "1px solid #B54631",
+                                  borderRadius: "4px",
+                                  fontSize: "12px",
+                                  color: "#3D3F3D",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "4px", color: "#B54631" }}>
+                                  <AlertCircle size={14} /> Generation failed
+                                </div>
+                                <div style={{ marginBottom: "6px" }}>{fixState.message}</div>
+                                {fixState.connectUrl && (
+                                  <a
+                                    href={fixState.connectUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#B54631", textDecoration: "none", fontWeight: 500 }}
+                                  >
+                                    Connect GitHub <ExternalLink size={11} />
+                                  </a>
+                                )}
+                                <button
+                                  onClick={() => generateSchemaFix(finding)}
+                                  style={{
+                                    marginTop: "6px",
+                                    padding: "6px 10px",
+                                    background: "transparent",
+                                    border: "1px solid #B54631",
+                                    color: "#B54631",
+                                    borderRadius: "4px",
+                                    fontSize: "11px",
+                                    cursor: "pointer",
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  Retry
+                                </button>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <button
+                              onClick={() => generateSchemaFix(finding)}
+                              disabled={fixState.status === "applying"}
+                              style={{
+                                width: "100%",
+                                padding: "8px 12px",
+                                background: fixState.status === "applying" ? "#d1d5db" : "#96A283",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "4px",
+                                fontSize: "13px",
+                                fontWeight: 500,
+                                cursor: fixState.status === "applying" ? "default" : "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "6px",
+                              }}
+                            >
+                              {fixState.status === "applying" ? (
+                                <>
+                                  <Loader2 size={14} className="surven-spin" /> Generating {schemaType}…
+                                </>
+                              ) : (
+                                <>
+                                  ✨ Generate &amp; Commit {schemaType} Schema
+                                </>
+                              )}
+                            </button>
+                          );
+                        })()}
                       </div>
                     </div>
                   )}
