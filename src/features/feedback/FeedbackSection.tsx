@@ -225,8 +225,8 @@ export function FeedbackSection() {
                   className="text-[var(--color-fg-muted)]"
                   style={{ fontSize: 12.5, lineHeight: 1.45 }}
                 >
-                  Read directly by Joey + Jake. Usually responded to within
-                  the week.
+                  Read directly by Joey + Jake. We personally respond in
+                  1–3 days.
                 </p>
                 <Button
                   type="submit"
