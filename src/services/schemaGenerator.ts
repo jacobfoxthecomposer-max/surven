@@ -27,6 +27,7 @@ export interface PageContext {
   title?: string;
   description?: string;
   businessName?: string;
+  bodyContent?: string;
   phone?: string;
   address?: {
     street?: string;
