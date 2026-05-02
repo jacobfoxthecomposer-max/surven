@@ -16,6 +16,10 @@ import {
   RefreshCw,
   Loader2,
   ExternalLink,
+  Compass,
+  Layers,
+  Quote,
+  ShieldCheck,
 } from "lucide-react";
 import { Card } from "@/components/atoms/Card";
 import { Button } from "@/components/atoms/Button";
@@ -365,7 +369,7 @@ export function AeoAuditSection({
               <ScoreCard result={result} />
             </motion.div>
             <motion.div {...reveal}>
-              <PillarGrid pillars={result.pillars} />
+              <PillarGrid pillars={result.pillars} checks={result.checks} />
             </motion.div>
             <motion.div {...reveal}>
               <ChecksList checks={result.checks} />
@@ -451,77 +455,160 @@ function ScoreCard({ result }: { result: ScanResult }) {
 
 // ─── Pillar grid ──────────────────────────────────────────────────────────
 
-function PillarGrid({ pillars }: { pillars: PillarScore[] }) {
+const PILLAR_ICON: Record<Pillar, typeof Compass> = {
+  discoverable: Compass,
+  structured: Layers,
+  quotable: Quote,
+  trustworthy: ShieldCheck,
+};
+
+function PillarGrid({
+  pillars,
+  checks,
+}: {
+  pillars: PillarScore[];
+  checks: CheckResult[];
+}) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {pillars.map((p) => (
-        <PillarCard key={p.pillar} score={p} />
+        <PillarCard
+          key={p.pillar}
+          score={p}
+          checks={checks.filter((c) => c.pillar === p.pillar)}
+        />
       ))}
     </div>
   );
 }
 
-function PillarCard({ score }: { score: PillarScore }) {
+function PillarCard({
+  score,
+  checks,
+}: {
+  score: PillarScore;
+  checks: CheckResult[];
+}) {
   const tok = GRADE_TOK[score.grade];
   const pct = score.max === 0 ? 0 : (score.earned / score.max) * 100;
+  const Icon = PILLAR_ICON[score.pillar];
+
+  const passCount = checks.filter((c) => c.status === "pass").length;
+  const partialCount = checks.filter((c) => c.status === "partial").length;
+  const failCount = checks.filter((c) => c.status === "fail").length;
+
   return (
-    <Card className="!p-5 flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <p
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: 18,
-            fontWeight: 500,
-            letterSpacing: "-0.01em",
-            color: "var(--color-fg)",
-          }}
-        >
-          {PILLAR_LABELS[score.pillar]}
-        </p>
-        <span
-          className="font-semibold"
-          style={{ fontSize: 11, color: tok.color, letterSpacing: "0.04em" }}
-        >
-          {tok.label}
-        </span>
-      </div>
-      <div className="flex items-baseline gap-1">
-        <span
-          className="tabular-nums"
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: 30,
-            fontWeight: 500,
-            color: "var(--color-fg)",
-            letterSpacing: "-0.01em",
-            lineHeight: 1,
-          }}
-        >
-          {score.earned}
-        </span>
-        <span
-          className="tabular-nums text-[var(--color-fg-muted)]"
-          style={{ fontSize: 14, fontFamily: "var(--font-display)" }}
-        >
-          /{score.max}
-        </span>
-      </div>
+    <motion.div
+      whileHover={{ y: -2, boxShadow: "var(--shadow-lg)" }}
+      transition={{ duration: 0.2 }}
+      className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] overflow-hidden flex flex-col"
+    >
+      {/* Top header band — gradient tinted by grade color */}
       <div
-        className="rounded-full bg-[var(--color-surface-alt)] overflow-hidden"
-        style={{ height: 6 }}
+        className="px-5 pt-4 pb-4 flex items-start justify-between gap-3"
+        style={{
+          background: `linear-gradient(135deg, ${tok.color}1c 0%, ${tok.color}08 100%)`,
+        }}
       >
-        <div
-          className="h-full rounded-full transition-all"
-          style={{ width: `${pct}%`, backgroundColor: tok.color }}
-        />
+        <div className="flex items-center gap-3 min-w-0">
+          <div
+            className="h-11 w-11 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
+            style={{ backgroundColor: `${tok.color}22` }}
+          >
+            <Icon className="h-5 w-5" style={{ color: tok.color }} />
+          </div>
+          <div className="min-w-0">
+            <p
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 22,
+                fontWeight: 500,
+                letterSpacing: "-0.01em",
+                color: "var(--color-fg)",
+                lineHeight: 1.1,
+              }}
+            >
+              {PILLAR_LABELS[score.pillar]}
+            </p>
+            <p
+              className="uppercase tracking-wider font-semibold mt-0.5"
+              style={{ fontSize: 10.5, letterSpacing: "0.10em", color: tok.color }}
+            >
+              {tok.label}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-baseline gap-1 shrink-0">
+          <span
+            className="tabular-nums"
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: 36,
+              fontWeight: 500,
+              color: tok.color,
+              letterSpacing: "-0.02em",
+              lineHeight: 1,
+            }}
+          >
+            {score.earned}
+          </span>
+          <span
+            className="tabular-nums text-[var(--color-fg-muted)]"
+            style={{ fontSize: 16, fontFamily: "var(--font-display)" }}
+          >
+            /{score.max}
+          </span>
+        </div>
       </div>
-      <p
-        className="text-[var(--color-fg-secondary)]"
-        style={{ fontSize: 12.5, lineHeight: 1.4 }}
-      >
-        {PILLAR_BLURBS[score.pillar]}
-      </p>
-    </Card>
+
+      {/* Body */}
+      <div className="px-5 py-4 flex flex-col gap-3 flex-1">
+        <div
+          className="rounded-full bg-[var(--color-surface-alt)] overflow-hidden"
+          style={{ height: 8 }}
+        >
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${pct}%` }}
+            transition={{ duration: 0.7, ease: EASE, delay: 0.1 }}
+            className="h-full rounded-full"
+            style={{ backgroundColor: tok.color }}
+          />
+        </div>
+
+        {/* Pass / partial / fail breakdown */}
+        <div className="flex items-center gap-3 text-[var(--color-fg-secondary)]" style={{ fontSize: 12 }}>
+          <span className="inline-flex items-center gap-1">
+            <span
+              className="rounded-full"
+              style={{ width: 8, height: 8, backgroundColor: STATUS_TOK.pass.color }}
+            />
+            <span className="tabular-nums font-semibold">{passCount}</span> pass
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span
+              className="rounded-full"
+              style={{ width: 8, height: 8, backgroundColor: STATUS_TOK.partial.color }}
+            />
+            <span className="tabular-nums font-semibold">{partialCount}</span> partial
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span
+              className="rounded-full"
+              style={{ width: 8, height: 8, backgroundColor: STATUS_TOK.fail.color }}
+            />
+            <span className="tabular-nums font-semibold">{failCount}</span> fail
+          </span>
+        </div>
+
+        <p
+          className="text-[var(--color-fg-secondary)]"
+          style={{ fontSize: 13, lineHeight: 1.5 }}
+        >
+          {PILLAR_BLURBS[score.pillar]}
+        </p>
+      </div>
+    </motion.div>
   );
 }
 
