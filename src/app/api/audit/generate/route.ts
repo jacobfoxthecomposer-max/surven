@@ -144,18 +144,21 @@ export async function POST(request: NextRequest) {
 
   const { kind, pageContext, commit, findingId, findingTitle, schemaType, approvedContent, images, replacements } = parse.data;
 
-  // Refuse to generate on ambiguous pages (dashboards, directories, agency portfolios, etc.)
-  // unless the user has explicitly approved content from a prior preview. The risk:
-  // body-text signals on these pages belong to a featured entity, not the site itself,
-  // and we'd commit a description / schema for the wrong business.
-  // The exception (commit + approvedContent) lets users force commit when they really
-  // want to — but they'd have had to bypass the preview UX, which already shows the warning.
-  if (pageContext.ambiguousPage && !(commit && approvedContent)) {
+  // Block LLM-driven generators on ambiguous pages (dashboards, directories, agency portfolios)
+  // because the LLM might describe a featured entity instead of the site itself.
+  // Deterministic schema generation (schema_org) is safe — the extractor uses only head-level
+  // signals on ambiguous pages, so businessName / address come from og:site_name / footer, not
+  // displayed customer data.
+  // alt_text is also safe — it describes images, not site identity.
+  // The escape hatch (commit + approvedContent) lets the user force a commit if they really
+  // know what they're doing, since they'd have already seen the warning in the preview UX.
+  const LLM_DRIVEN_KINDS = new Set(["meta_desc", "title_tag", "faq_page"]);
+  if (pageContext.ambiguousPage && LLM_DRIVEN_KINDS.has(kind) && !(commit && approvedContent)) {
     const reasons = pageContext.ambiguousReasons ?? [];
     return NextResponse.json(
       {
         error: "ambiguous_page",
-        message: "This page looks like a dashboard, directory, or admin panel showing data about other entities — generating schema/meta for it would likely describe the wrong business. Try this on a real business homepage instead.",
+        message: "This page looks like a dashboard, directory, or admin panel that displays data about other entities. AI-generated descriptions on these pages tend to describe the wrong business. Try this on a real business homepage (your client's actual site) instead.",
         reasons,
       },
       { status: 422 },
