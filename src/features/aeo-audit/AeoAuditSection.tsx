@@ -417,9 +417,6 @@ export function AeoAuditSection({
           understand, and quote {businessName}. 25 checks across discoverability,
           structure, quotability, and trust signals.
         </p>
-        <p className="mt-2.5" style={{ fontSize: 14 }}>
-          <ChromeExtLink>Run scans without leaving the page you&apos;re on</ChromeExtLink>
-        </p>
       </motion.div>
 
       {/* Stat strip — quick anchor under the hero */}
