@@ -9,8 +9,10 @@ type FixState =
   | { status: "idle" }
   | { status: "applying" }
   | { status: "preview"; current: string | null; suggested: string; rewriteKind: "meta_desc" | "title_tag" }
+  | { status: "preview-faq"; pairs: Array<{ question: string; answer: string }>; snippet: string }
+  | { status: "preview-alt"; suggestions: Array<{ src: string; alt: string | null; error: string | null }> }
   | { status: "success"; commitUrl?: string; filePath?: string; snippet?: string; manualNote?: string; suggested?: string }
-  | { status: "manual"; snippet?: string; suggested?: string; manualNote: string; rewriteKind?: "meta_desc" | "title_tag" }
+  | { status: "manual"; snippet?: string; suggested?: string; manualNote: string; rewriteKind?: "meta_desc" | "title_tag" | "faq_page" | "alt_text" }
   | { status: "error"; message: string; connectUrl?: string; snippet?: string };
 
 const FINDING_TO_SCHEMA_TYPE: Record<string, string> = {
