@@ -214,6 +214,8 @@ export default function App() {
         return;
       }
       pageContext = ctxResp.context;
+      const platform = (ctxResp.context as { platform?: CmsPlatform })?.platform;
+      if (platform) setDetectedPlatform(platform);
     } catch (err) {
       setFixStates((s) => ({
         ...s,
@@ -345,6 +347,8 @@ export default function App() {
         return;
       }
       pageContext = ctxResp.context;
+      const platform = (ctxResp.context as { platform?: CmsPlatform })?.platform;
+      if (platform) setDetectedPlatform(platform);
     } catch (err) {
       setFixStates((s) => ({
         ...s,
