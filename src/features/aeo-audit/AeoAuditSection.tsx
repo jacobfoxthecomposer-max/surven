@@ -13,13 +13,14 @@ import {
   AlertTriangle,
   X as XIcon,
   ChevronDown,
-  RefreshCw,
   Loader2,
   ExternalLink,
   Compass,
   Layers,
   Quote,
   ShieldCheck,
+  Gauge,
+  ListChecks,
 } from "lucide-react";
 import { Card } from "@/components/atoms/Card";
 import { Button } from "@/components/atoms/Button";
@@ -359,7 +360,6 @@ export function AeoAuditSection({
               </a>
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm" onClick={handleNewScan}>
-                  <RefreshCw className="h-3.5 w-3.5" />
                   Scan a different URL
                 </Button>
               </div>
@@ -397,20 +397,32 @@ function ScoreCard({ result }: { result: ScanResult }) {
       : "poor";
   const tok = GRADE_TOK[tier];
   return (
-    <Card className="!p-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
+      <div
+        className="px-5 py-3.5 border-b border-[var(--color-border)] flex items-center gap-2.5"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(150,162,131,0.18) 0%, rgba(150,162,131,0.04) 100%)",
+        }}
+      >
+        <div
+          className="h-8 w-8 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
+          style={{ backgroundColor: "rgba(150,162,131,0.22)" }}
+        >
+          <Gauge className="h-4 w-4" style={{ color: COLORS.primary }} />
+        </div>
+        <SectionHeading
+          text="Readability score"
+          info="Overall grade across 25 checks of how clearly AI engines can read your site."
+        />
+      </div>
+      <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0">
-          <p
-            className="uppercase tracking-wider text-[var(--color-fg-muted)] font-semibold mb-1"
-            style={{ fontSize: 12, letterSpacing: "0.12em" }}
-          >
-            Readability score
-          </p>
           <p
             className="text-[var(--color-fg-secondary)]"
             style={{ fontSize: 15 }}
           >
-            How clearly AI can read your site, across 25 checks
+            How clearly AI can read your site, across 25 checks.
           </p>
           <p
             className="text-[var(--color-fg-muted)] mt-1"
@@ -426,7 +438,7 @@ function ScoreCard({ result }: { result: ScanResult }) {
             style={{
               fontFamily: "var(--font-display)",
               fontSize: 84,
-              fontWeight: 500,
+              fontWeight: 600,
               color: tok.color,
               lineHeight: 1,
               letterSpacing: "-0.02em",
@@ -452,7 +464,7 @@ function ScoreCard({ result }: { result: ScanResult }) {
           </span>
         </div>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -506,11 +518,13 @@ function PillarCard({
       transition={{ duration: 0.2 }}
       className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] overflow-hidden flex flex-col"
     >
-      {/* Top header band — gradient tinted by grade color */}
+      {/* Top header band — canonical mono-sage gradient (tier color stays
+          on the number, eyebrow, and progress bar). */}
       <div
         className="px-5 pt-4 pb-4 flex items-start justify-between gap-3"
         style={{
-          background: `linear-gradient(135deg, ${tok.color}1c 0%, ${tok.color}08 100%)`,
+          background:
+            "linear-gradient(135deg, rgba(150,162,131,0.18) 0%, rgba(150,162,131,0.04) 100%)",
         }}
       >
         <div className="flex items-center gap-3 min-w-0">
@@ -524,18 +538,18 @@ function PillarCard({
             <p
               style={{
                 fontFamily: "var(--font-display)",
-                fontSize: 24,
-                fontWeight: 500,
+                fontSize: 28,
+                fontWeight: 600,
                 letterSpacing: "-0.01em",
                 color: "var(--color-fg)",
-                lineHeight: 1.1,
+                lineHeight: 1.15,
               }}
             >
               {PILLAR_LABELS[score.pillar]}
             </p>
             <p
-              className="uppercase tracking-wider font-semibold mt-1"
-              style={{ fontSize: 11, letterSpacing: "0.10em", color: tok.color }}
+              className="uppercase font-semibold mt-1"
+              style={{ fontSize: 11, letterSpacing: "0.12em", color: tok.color }}
             >
               {tok.label}
             </p>
@@ -547,7 +561,7 @@ function PillarCard({
             style={{
               fontFamily: "var(--font-display)",
               fontSize: 40,
-              fontWeight: 500,
+              fontWeight: 600,
               color: tok.color,
               letterSpacing: "-0.02em",
               lineHeight: 1,
@@ -636,41 +650,37 @@ function TopFixesPanel({ checks }: { checks: CheckResult[] }) {
       style={{ borderColor: "rgba(150,162,131,0.45)" }}
     >
       <div
-        className="px-5 py-4 border-b border-[var(--color-border)]"
+        className="px-5 py-3.5 border-b border-[var(--color-border)] flex items-center justify-between flex-wrap gap-3"
         style={{
           background:
-            "linear-gradient(135deg, rgba(150,162,131,0.20) 0%, rgba(150,162,131,0.05) 100%)",
+            "linear-gradient(135deg, rgba(150,162,131,0.28) 0%, rgba(184,160,48,0.14) 50%, rgba(201,123,69,0.14) 100%)",
         }}
       >
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2.5">
-            <Sparkles className="h-5 w-5" style={{ color: COLORS.primary }} />
-            <p
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: 22,
-                fontWeight: 500,
-                letterSpacing: "-0.01em",
-                color: "var(--color-fg)",
-              }}
-            >
-              Fix these first
-            </p>
-          </div>
-          <p
-            className="text-[var(--color-fg-secondary)]"
-            style={{ fontSize: 13.5 }}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div
+            className="h-8 w-8 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
+            style={{ backgroundColor: "rgba(150,162,131,0.22)" }}
           >
-            Recover ~
-            <span
-              className="font-semibold tabular-nums"
-              style={{ color: COLORS.primary }}
-            >
-              {Math.round(totalGain)}
-            </span>{" "}
-            points by tackling these 3.
-          </p>
+            <Sparkles className="h-4 w-4" style={{ color: COLORS.primary }} />
+          </div>
+          <SectionHeading
+            text="Fix these first"
+            info="The three highest-impact failures across all pillars, ranked by points recoverable."
+          />
         </div>
+        <p
+          className="text-[var(--color-fg-secondary)]"
+          style={{ fontSize: 13.5 }}
+        >
+          Recover ~
+          <span
+            className="font-semibold tabular-nums"
+            style={{ color: COLORS.primary }}
+          >
+            {Math.round(totalGain)}
+          </span>{" "}
+          points by tackling these 3.
+        </p>
       </div>
       <ul className="divide-y divide-[var(--color-border)]">
         {fixable.map(({ check, gain }) => {
@@ -758,15 +768,28 @@ function ChecksList({ checks }: { checks: CheckResult[] }) {
 
   return (
     <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
-      {/* Header — filter chips */}
-      <div className="px-5 py-3.5 border-b border-[var(--color-border)] flex items-center justify-between gap-3 flex-wrap">
-        <p
-          className="uppercase tracking-wider text-[var(--color-fg-muted)] font-semibold"
-          style={{ fontSize: 11, letterSpacing: "0.12em" }}
+      {/* Header band — icon tile + SectionHeading (canonical card pattern). */}
+      <div
+        className="px-5 py-3.5 border-b border-[var(--color-border)] flex items-center gap-2.5"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(150,162,131,0.18) 0%, rgba(150,162,131,0.04) 100%)",
+        }}
+      >
+        <div
+          className="h-8 w-8 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
+          style={{ backgroundColor: "rgba(150,162,131,0.22)" }}
         >
-          All 25 checks
-        </p>
-        <div className="inline-flex items-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] p-1 gap-1">
+          <ListChecks className="h-4 w-4" style={{ color: COLORS.primary }} />
+        </div>
+        <SectionHeading
+          text="All 25 checks"
+          info="Every check across the four pillars. Filter to focus on what needs work or what's already passing."
+        />
+      </div>
+      {/* Filter chip cluster — sub-row directly under the band. */}
+      <div className="px-5 py-3 border-b border-[var(--color-border)] flex items-center justify-end">
+        <div className="inline-flex items-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-1 gap-1">
           {(
             [
               { id: "needs-work", label: `Needs work (${totalNeedsWork})` },
@@ -861,16 +884,16 @@ function PillarGroup({
       {/* Thin pillar eyebrow */}
       <div className="px-5 py-3 flex items-center gap-2.5 bg-[var(--color-surface-alt)]/30">
         <div
-          className="h-7 w-7 rounded-[var(--radius-sm)] flex items-center justify-center shrink-0"
-          style={{ backgroundColor: "rgba(150,162,131,0.20)" }}
+          className="h-8 w-8 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
+          style={{ backgroundColor: "rgba(150,162,131,0.22)" }}
         >
           <Icon className="h-4 w-4" style={{ color: COLORS.primary }} />
         </div>
         <p
-          className="uppercase tracking-wider font-semibold"
+          className="uppercase font-semibold"
           style={{
             fontSize: 12,
-            letterSpacing: "0.10em",
+            letterSpacing: "0.12em",
             color: "var(--color-fg-secondary)",
           }}
         >
@@ -994,7 +1017,7 @@ function CheckRow({ check }: { check: CheckResult }) {
               className="rounded-full px-2 py-0.5 font-semibold uppercase"
               style={{
                 fontSize: 10.5,
-                letterSpacing: "0.08em",
+                letterSpacing: "0.12em",
                 backgroundColor: tok.bg,
                 color: tok.color,
               }}
@@ -1018,7 +1041,7 @@ function CheckRow({ check }: { check: CheckResult }) {
                 fontFamily: "var(--font-display)",
                 fontSize: 22,
                 color: tok.color,
-                fontWeight: 500,
+                fontWeight: 600,
                 letterSpacing: "-0.01em",
                 lineHeight: 1,
               }}
@@ -1074,7 +1097,7 @@ function CheckRow({ check }: { check: CheckResult }) {
                 <div>
                   <p
                     className="uppercase tracking-wider text-[var(--color-fg-muted)] font-semibold mb-1.5"
-                    style={{ fontSize: 11.5, letterSpacing: "0.10em" }}
+                    style={{ fontSize: 12, letterSpacing: "0.12em" }}
                   >
                     How this affects readability
                   </p>
@@ -1091,8 +1114,8 @@ function CheckRow({ check }: { check: CheckResult }) {
                   <p
                     className="uppercase tracking-wider font-semibold mb-1.5 inline-flex items-center gap-1"
                     style={{
-                      fontSize: 11.5,
-                      letterSpacing: "0.10em",
+                      fontSize: 12,
+                      letterSpacing: "0.12em",
                       color: tok.color,
                     }}
                   >
