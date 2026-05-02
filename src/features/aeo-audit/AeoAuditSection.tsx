@@ -21,7 +21,87 @@ import {
   ShieldCheck,
   Gauge,
   ListChecks,
+  Puzzle,
 } from "lucide-react";
+
+const CHROME_EXT_URL = "https://chromewebstore.google.com/detail/surven-auditor/";
+
+// Small inline link surfaced in low-key spots (hero subtitle, scan form
+// helper text, loading state tip).
+function ChromeExtLink({ children }: { children?: React.ReactNode }) {
+  return (
+    <a
+      href={CHROME_EXT_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1 font-medium hover:underline transition-colors"
+      style={{ color: "var(--color-primary-hover)" }}
+    >
+      <Puzzle className="h-3.5 w-3.5" />
+      {children ?? "Get the Chrome extension"}
+      <ArrowRight className="h-3 w-3" />
+    </a>
+  );
+}
+
+// Bigger CTA card — used at the bottom of the results cascade.
+function ChromeExtCallout() {
+  return (
+    <div
+      className="rounded-[var(--radius-lg)] border bg-[var(--color-surface)] overflow-hidden"
+      style={{ borderColor: "rgba(150,162,131,0.45)" }}
+    >
+      <div
+        className="px-5 py-4 flex flex-wrap items-center justify-between gap-4"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(150,162,131,0.18) 0%, rgba(150,162,131,0.04) 100%)",
+        }}
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div
+            className="h-11 w-11 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
+            style={{ backgroundColor: "rgba(150,162,131,0.22)" }}
+          >
+            <Puzzle className="h-5 w-5" style={{ color: COLORS.primary }} />
+          </div>
+          <div className="min-w-0">
+            <p
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 22,
+                fontWeight: 600,
+                letterSpacing: "-0.01em",
+                color: "var(--color-fg)",
+                lineHeight: 1.2,
+              }}
+            >
+              Audit any page in one click
+            </p>
+            <p
+              className="text-[var(--color-fg-secondary)] mt-0.5"
+              style={{ fontSize: 14, lineHeight: 1.5 }}
+            >
+              The Surven Chrome extension runs this same readability scan on
+              whichever page you&apos;re visiting — no copy-paste needed.
+            </p>
+          </div>
+        </div>
+        <a
+          href={CHROME_EXT_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium shadow-md transition-colors shrink-0"
+          style={{ fontSize: 14 }}
+        >
+          <Puzzle className="h-4 w-4" />
+          Install extension
+          <ArrowRight className="h-4 w-4" />
+        </a>
+      </div>
+    </div>
+  );
+}
 import { Card } from "@/components/atoms/Card";
 import { Button } from "@/components/atoms/Button";
 import { Input } from "@/components/atoms/Input";
@@ -204,6 +284,9 @@ export function AeoAuditSection({
           understand, and quote {businessName}. 25 checks across discoverability,
           structure, quotability, and trust signals.
         </p>
+        <p className="mt-2" style={{ fontSize: 13 }}>
+          <ChromeExtLink>Run scans without leaving the page you&apos;re on</ChromeExtLink>
+        </p>
       </motion.div>
 
       {/* AIOverview callout */}
@@ -255,14 +338,20 @@ export function AeoAuditSection({
                 Upgrade to Plus
                 <ArrowRight className="h-4 w-4" />
               </Link>
-              <button
-                type="button"
-                onClick={handleLoadExample}
-                className="inline-flex items-center gap-1.5 text-xs text-[var(--color-fg-muted)] hover:text-[var(--color-primary)] transition-colors"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                Or view an example audit
-              </button>
+              <div className="flex items-center gap-3 flex-wrap justify-center">
+                <button
+                  type="button"
+                  onClick={handleLoadExample}
+                  className="inline-flex items-center gap-1.5 text-xs text-[var(--color-fg-muted)] hover:text-[var(--color-primary)] transition-colors"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Or view an example audit
+                </button>
+                <span className="text-[var(--color-fg-muted)]" style={{ fontSize: 12 }}>·</span>
+                <span style={{ fontSize: 12 }}>
+                  <ChromeExtLink>Try the Chrome extension free</ChromeExtLink>
+                </span>
+              </div>
             </div>
           </Card>
         </motion.div>
@@ -303,6 +392,15 @@ export function AeoAuditSection({
                   <Sparkles className="h-3.5 w-3.5" style={{ color: "var(--color-primary)" }} />
                   Or load an example audit
                 </button>
+                <span
+                  className="text-[var(--color-fg-muted)] hidden sm:inline"
+                  style={{ fontSize: 12 }}
+                >
+                  ·
+                </span>
+                <span style={{ fontSize: 12.5 }}>
+                  <ChromeExtLink>Skip the URL — scan from your browser</ChromeExtLink>
+                </span>
               </div>
               {error && (
                 <div
@@ -324,11 +422,20 @@ export function AeoAuditSection({
       {/* ── Loading ── */}
       {scanning && (
         <Card className="!p-6">
-          <div className="flex items-center justify-center gap-3 py-6 text-[var(--color-fg-secondary)]">
-            <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--color-primary)" }} />
-            <span style={{ fontSize: 14, fontWeight: 500 }}>
-              Running 25 checks across 4 pillars…
-            </span>
+          <div className="flex flex-col items-center gap-3 py-6 text-[var(--color-fg-secondary)]">
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--color-primary)" }} />
+              <span style={{ fontSize: 14, fontWeight: 500 }}>
+                Running 25 checks across 4 pillars…
+              </span>
+            </div>
+            <p
+              className="text-[var(--color-fg-muted)] text-center"
+              style={{ fontSize: 12.5 }}
+            >
+              Tip: <ChromeExtLink>install the Chrome extension</ChromeExtLink>{" "}
+              to scan any page without leaving it.
+            </p>
           </div>
         </Card>
       )}
@@ -376,6 +483,9 @@ export function AeoAuditSection({
             </motion.div>
             <motion.div {...reveal}>
               <ChecksList checks={result.checks} />
+            </motion.div>
+            <motion.div {...reveal}>
+              <ChromeExtCallout />
             </motion.div>
           </motion.div>
         )}
