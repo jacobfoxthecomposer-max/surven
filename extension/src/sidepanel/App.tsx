@@ -73,6 +73,19 @@ export default function App() {
   const [highlightedFinding, setHighlightedFinding] = useState<string | null>(null);
   const [fixStates, setFixStates] = useState<Record<string, FixState>>({});
   const [siteUrl, setSiteUrl] = useState<string | null>(null);
+  const [heatmapActive, setHeatmapActive] = useState(false);
+
+  async function toggleHeatmap() {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id || !isInjectable(tab.url)) return;
+    if (heatmapActive) {
+      chrome.tabs.sendMessage(tab.id, { type: "HEATMAP_HIDE" }).catch(() => {});
+      setHeatmapActive(false);
+    } else {
+      chrome.tabs.sendMessage(tab.id, { type: "HEATMAP_SHOW" }).catch(() => {});
+      setHeatmapActive(true);
+    }
+  }
 
   async function applyFix(finding: AuditFinding) {
     if (!settings?.apiUrl || !settings?.apiKey || !finding.fixCode || !finding.fixType) return;
