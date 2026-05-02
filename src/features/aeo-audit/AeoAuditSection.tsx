@@ -1273,20 +1273,17 @@ function PillarBarRow({
 
   return (
     <div className="space-y-2.5">
-      {/* Header row — static; hover surfaces the pillar blurb but no
-          longer toggles expand. The dedicated toggle lives below. */}
-      <HoverHint hint={PILLAR_BLURBS[score.pillar]} display="block">
+      {/* Header row — icon on the left, name + description stacked in the
+          middle column, tier + score on the right. */}
+      <div className="flex items-start gap-3">
         <div
-          className="flex items-center gap-3 flex-wrap"
-          style={{ cursor: "help" }}
+          className="h-10 w-10 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
+          style={{ backgroundColor: `${tok.color}22` }}
         >
-          <div
-            className="h-10 w-10 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
-            style={{ backgroundColor: `${tok.color}22` }}
-          >
-            <Icon className="h-5 w-5" style={{ color: tok.color }} />
-          </div>
-          <div className="inline-flex items-center gap-1.5">
+          <Icon className="h-5 w-5" style={{ color: tok.color }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
             <p
               style={{
                 fontFamily: "var(--font-display)",
@@ -1299,18 +1296,22 @@ function PillarBarRow({
             >
               {PILLAR_LABELS[score.pillar]}
             </p>
-            <Info
-              className="h-3.5 w-3.5 text-[var(--color-fg-muted)]"
-              aria-label={`What ${PILLAR_LABELS[score.pillar]} measures`}
-            />
+            <span
+              className="font-semibold uppercase"
+              style={{ fontSize: 11.5, letterSpacing: "0.12em", color: tok.color }}
+            >
+              {tok.label}
+            </span>
           </div>
-          <span
-            className="font-semibold uppercase"
-            style={{ fontSize: 11.5, letterSpacing: "0.12em", color: tok.color }}
+          <p
+            className="text-[var(--color-fg-secondary)] mt-1.5"
+            style={{ fontSize: 13, lineHeight: 1.5 }}
           >
-            {tok.label}
-          </span>
-          <span className="inline-flex items-baseline tabular-nums ml-auto">
+            {PILLAR_BLURBS[score.pillar]}
+          </p>
+        </div>
+        <div className="shrink-0 ml-auto">
+          <span className="inline-flex items-baseline tabular-nums">
             <span
               style={{
                 fontFamily: "var(--font-display)",
@@ -1331,7 +1332,7 @@ function PillarBarRow({
             </span>
           </span>
         </div>
-      </HoverHint>
+      </div>
       {/* Stacked segment bar: pass / partial / critical. */}
       <div className="h-3 rounded-full overflow-hidden flex bg-[var(--color-surface-alt)]">
         {passPct > 0 && (

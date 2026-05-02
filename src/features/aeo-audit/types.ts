@@ -13,13 +13,13 @@ export const PILLAR_LABELS: Record<Pillar, string> = {
 
 export const PILLAR_BLURBS: Record<Pillar, string> = {
   discoverable:
-    "AI crawlers can find and reach your site, and the major bots are welcome.",
+    "Whether AI crawlers like GPTBot, ClaudeBot, and PerplexityBot can actually reach and index your site. Covers HTTPS, robots.txt rules, sitemaps, canonical URLs, and indexability — if this fails, nothing else in the audit matters because AI never sees the page.",
   structured:
-    "Headings, schema, and metadata are organized so AI can parse the page.",
+    "How parseable your page is once a crawler arrives. Covers the title tag, meta description, heading hierarchy, JSON-LD schema coverage, Open Graph tags, viewport, and image alt text — the markup that turns a page into something a model can confidently understand.",
   quotable:
-    "Substantial, fresh, answer-shaped content AI can lift into responses.",
+    "Whether your content is substantial and answer-shaped enough for AI engines to lift into responses. Covers body word count, freshness signals (dateModified, Last-Modified headers, sitemap lastmod), and FAQ-style markup. Sparse or stale content gets skipped in favor of richer sources.",
   trustworthy:
-    "Authoritative links, citations, and the modern AI well-known files.",
+    "The trust signals AI weighs when picking which source to cite. Covers internal link density, outbound citations to credible sources, the modern AI well-known files (llms.txt, ai.txt), and a favicon. Pages with weak credibility signals lose ground to authoritative competitors.",
 };
 
 export interface CheckResult {
