@@ -15,6 +15,8 @@ interface AuthState {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  /** True when local-dev placeholder Supabase env is detected. */
+  unconfigured: boolean;
   signUp: (email: string, password: string) => Promise<{ user: User | null; session: Session | null }>;
   signIn: (email: string, password: string) => Promise<{ user: User | null; session: Session | null }>;
   signOut: () => Promise<void>;
@@ -27,7 +29,7 @@ const SUPABASE_UNCONFIGURED =
   process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder");
 
 const UNCONFIGURED_MESSAGE =
-  "Auth isn't configured for local dev. Use /prompts-preview to view the dashboard without signing in.";
+  "Auth isn't configured for local dev. Use /dashboard-preview, /prompts-preview, or /visibility-preview to view pages without signing in.";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -84,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext value={{ user, session, loading, signUp, signIn, signOut }}>
+    <AuthContext value={{ user, session, loading, unconfigured: SUPABASE_UNCONFIGURED, signUp, signIn, signOut }}>
       {children}
     </AuthContext>
   );

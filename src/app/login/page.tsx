@@ -14,7 +14,7 @@ import { loginSchema, type LoginInput } from "@/types/auth";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { signIn, user, loading: authLoading } = useAuth();
+  const { signIn, user, loading: authLoading, unconfigured } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -51,6 +51,36 @@ export default function LoginPage() {
 
   return (
     <AuthLayout title="Welcome back" subtitle="Sign in to your Surven account">
+      {unconfigured && (
+        <div
+          role="status"
+          className="mb-4 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-4 py-3"
+          style={{ fontSize: 13, lineHeight: 1.5 }}
+        >
+          <p
+            className="text-[var(--color-fg-secondary)] font-semibold mb-1"
+            style={{ fontSize: 12, letterSpacing: "0.04em" }}
+          >
+            Local dev — auth not configured
+          </p>
+          <p className="text-[var(--color-fg-secondary)]">
+            Sign-in requires Supabase credentials. View pages without signing
+            in:{" "}
+            <Link href="/dashboard-preview" className="text-[var(--color-primary)] hover:underline font-medium">
+              /dashboard-preview
+            </Link>
+            {" · "}
+            <Link href="/prompts-preview" className="text-[var(--color-primary)] hover:underline font-medium">
+              /prompts-preview
+            </Link>
+            {" · "}
+            <Link href="/visibility-preview" className="text-[var(--color-primary)] hover:underline font-medium">
+              /visibility-preview
+            </Link>
+            .
+          </p>
+        </div>
+      )}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Input
           label="Email"
