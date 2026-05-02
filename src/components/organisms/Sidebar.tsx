@@ -62,7 +62,7 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
       { label: "Tracked Prompts", href: "/prompts", icon: MessageSquare },
       { label: "Citation Insights", href: "/citation-insights", icon: Eye },
       { label: "Prompt Research", href: "/prompt-research", icon: BookOpen },
-      { label: "Code Scanner", href: "/site-audit", icon: Search },
+      { label: "AI Readability", href: "/site-audit", icon: Search },
     ],
   },
   {
