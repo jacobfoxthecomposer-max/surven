@@ -2502,7 +2502,7 @@ function PromptsTable({
               lineHeight: 1,
             }}
           >
-            Prompts
+            Tracked Prompts
           </h2>
           <InfoTooltip hint="Every prompt we run on your behalf, ranked by monthly search volume." />
         </div>
