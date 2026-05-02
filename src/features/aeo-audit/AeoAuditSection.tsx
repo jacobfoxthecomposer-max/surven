@@ -590,18 +590,39 @@ function ResultStatStrip({ result }: { result: ScanResult }) {
       <div className="relative shrink-0" style={{ width: gaugeWidth }}>
         <svg viewBox="0 0 260 150" width="100%" style={{ display: "block" }}>
           <defs>
-            {/* Soft gradient for the inactive track */}
-            <linearGradient id="aeoGaugeTrack" x1="0" y1="0" x2="1" y2="0">
+            {/*
+              Both gradients anchored to user-space coordinates spanning the
+              full arc (x=30 left tip → x=230 right tip), NOT the active
+              path's bounding box. Without userSpaceOnUse the active arc
+              compresses all four color stops into whatever portion is
+              filled — so a 51% score would still show sage/deep at the end.
+              With userSpaceOnUse, a 51% arc only shows the rust → amber
+              section of the gradient, which is what the tier actually is.
+            */}
+            <linearGradient
+              id="aeoGaugeTrack"
+              gradientUnits="userSpaceOnUse"
+              x1="30"
+              y1="0"
+              x2="230"
+              y2="0"
+            >
               <stop offset="0%" stopColor="#B54631" stopOpacity="0.18" />
               <stop offset="33%" stopColor="#C97B45" stopOpacity="0.20" />
               <stop offset="66%" stopColor="#96A283" stopOpacity="0.26" />
               <stop offset="100%" stopColor="#7D8E6C" stopOpacity="0.30" />
             </linearGradient>
-            {/* Full-opacity gradient for the active filled arc */}
-            <linearGradient id="aeoGaugeActive" x1="0" y1="0" x2="1" y2="0">
+            <linearGradient
+              id="aeoGaugeActive"
+              gradientUnits="userSpaceOnUse"
+              x1="30"
+              y1="0"
+              x2="230"
+              y2="0"
+            >
               <stop offset="0%" stopColor="#B54631" />
-              <stop offset="40%" stopColor="#C97B45" />
-              <stop offset="72%" stopColor="#96A283" />
+              <stop offset="33%" stopColor="#C97B45" />
+              <stop offset="66%" stopColor="#96A283" />
               <stop offset="100%" stopColor="#7D8E6C" />
             </linearGradient>
           </defs>
