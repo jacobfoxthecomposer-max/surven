@@ -1899,6 +1899,27 @@ export default function App() {
                             );
                           }
 
+                          if (fixState.status === "ambiguous") {
+                            return (
+                              <div style={{ padding: "12px", background: "#FEF3C7", border: "1px solid #C97B45", borderRadius: "6px", fontSize: "12px", color: "#3D3F3D" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "6px", color: "#C97B45" }}>
+                                  <AlertCircle size={14} /> Wrong page for FAQ generation
+                                </div>
+                                <div style={{ marginBottom: "8px", lineHeight: "1.4" }}>
+                                  This page looks like a dashboard or directory. AI-generated FAQs would describe the wrong business. Open the actual website you want to optimize.
+                                </div>
+                                {fixState.reasons.length > 0 && (
+                                  <details style={{ fontSize: "11px" }}>
+                                    <summary style={{ cursor: "pointer", color: "#666", fontWeight: 500 }}>Why we think so</summary>
+                                    <ul style={{ margin: "4px 0 0 18px", padding: 0, color: "#666" }}>
+                                      {fixState.reasons.map((r, i) => <li key={i} style={{ marginBottom: "2px" }}>{r}</li>)}
+                                    </ul>
+                                  </details>
+                                )}
+                              </div>
+                            );
+                          }
+
                           if (fixState.status === "error") {
                             return (
                               <div style={{ padding: "10px", background: "#FEE2E2", border: "1px solid #B54631", borderRadius: "4px", fontSize: "12px", color: "#3D3F3D" }}>
