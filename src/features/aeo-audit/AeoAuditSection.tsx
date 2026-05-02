@@ -76,14 +76,15 @@ function ChromeExtCallout() {
                 lineHeight: 1.2,
               }}
             >
-              Audit any page in one click
+              Continue to a Website Audit
             </p>
             <p
               className="text-[var(--color-fg-secondary)] mt-1"
               style={{ fontSize: 14, lineHeight: 1.5 }}
             >
-              The Surven Chrome extension runs this same readability scan on
-              whichever page you&apos;re visiting — no copy-paste needed.
+              Take this readability snapshot deeper — severity-tagged findings
+              across schema, freshness, FAQ markup, and meta, with action plans
+              you can hand to a dev or apply directly.
             </p>
           </div>
         </div>
@@ -94,8 +95,8 @@ function ChromeExtCallout() {
           className="self-start inline-flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium shadow-md transition-colors shrink-0"
           style={{ fontSize: 14 }}
         >
-          <Puzzle className="h-4 w-4" />
-          Install extension
+          <ListChecks className="h-4 w-4" />
+          Open Website Audit
           <ArrowRight className="h-4 w-4" />
         </a>
       </div>
@@ -511,9 +512,11 @@ export function AeoAuditSection({
           )}
         </h1>
         <p className="text-[var(--color-fg-muted)] mt-2" style={{ fontSize: 15.5, lineHeight: 1.55 }}>
-          How well AI engines like ChatGPT, Claude, and Gemini can read,
-          understand, and quote {businessName}. 25 checks across discoverability,
-          structure, quotability, and trust signals.
+          <strong className="text-[var(--color-fg)] font-semibold">Why is this important?</strong>{" "}
+          AI engines like ChatGPT, Claude, and Gemini can only cite what they
+          can read. We run 25 checks on {businessName} across findability,
+          organization, citability, and authority — the four pillars that
+          decide whether AI surfaces your page or skips it for a competitor.
         </p>
       </motion.div>
 
