@@ -147,7 +147,6 @@ function scrollAndPulseFinding(el: HTMLElement, severity: FindingSeverity = "med
   setTimeout(() => {
     el.style.animation = prevAnimation;
   }, 4400);
-  void SEVERITY_PULSE_COLORS;
 }
 
 function highlightFinding(findingId: string, severity: FindingSeverity = "medium") {
