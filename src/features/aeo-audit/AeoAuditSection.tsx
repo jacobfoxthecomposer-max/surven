@@ -602,9 +602,8 @@ function halfArc(cx: number, cy: number, r: number, a: number, b: number) {
   return `M ${s.x} ${s.y} A ${r} ${r} 0 ${b - a > 180 ? 1 : 0} 1 ${e.x} ${e.y}`;
 }
 
-// Skinny per-status list with a points-impact sum at the bottom.
-// Pass rows show "+N pts" earned. Partial / Critical rows show "−N pts"
-// deducted (max - earned). Sum at the bottom mirrors the row direction.
+// Flat per-status card. Shows count + total point impact (positive
+// for pass, negative for partial / critical). No list.
 function StatusListPanel({
   status,
   checks,
@@ -612,7 +611,6 @@ function StatusListPanel({
   status: CheckStatus;
   checks: CheckResult[];
 }) {
-  const [open, setOpen] = useState(true);
   const stok = STATUS_TOK[status];
   const SIcon = stok.Icon;
   const isPass = status === "pass";
@@ -620,46 +618,40 @@ function StatusListPanel({
     (s, c) => s + (isPass ? c.earned : c.max - c.earned),
     0,
   );
-  const round1 = (n: number) => Math.round(n * 10) / 10;
+  const rounded = Math.round(totalDelta * 10) / 10;
   return (
     <div
-      className="rounded-[var(--radius-md)] border flex flex-col"
+      className="rounded-[var(--radius-md)] border px-3 py-2.5 flex items-center gap-2.5"
       style={{
         borderColor: `${stok.color}40`,
         backgroundColor: `${stok.color}0d`,
       }}
     >
-      {/* Header — clickable to toggle */}
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        className="px-3 py-2.5 flex items-center gap-2.5 text-left transition-opacity hover:opacity-90"
+      <span
+        className="inline-flex items-center justify-center rounded-[var(--radius-sm)] shrink-0"
+        style={{
+          width: 30,
+          height: 30,
+          backgroundColor: stok.bg,
+          color: stok.color,
+        }}
+        aria-hidden
       >
-        <span
-          className="inline-flex items-center justify-center rounded-[var(--radius-sm)] shrink-0"
+        <SIcon className="h-4 w-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p
+          className="uppercase font-semibold"
           style={{
-            width: 30,
-            height: 30,
-            backgroundColor: stok.bg,
+            fontSize: 10.5,
+            letterSpacing: "0.12em",
             color: stok.color,
+            lineHeight: 1.1,
           }}
-          aria-hidden
         >
-          <SIcon className="h-4 w-4" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p
-            className="uppercase font-semibold"
-            style={{
-              fontSize: 10.5,
-              letterSpacing: "0.12em",
-              color: stok.color,
-              lineHeight: 1.1,
-            }}
-          >
-            {stok.label}
-          </p>
+          {stok.label}
+        </p>
+        <div className="flex items-baseline gap-2 mt-0.5">
           <p
             className="tabular-nums"
             style={{
@@ -673,109 +665,21 @@ function StatusListPanel({
           >
             {checks.length}
           </p>
-        </div>
-        <ChevronDown
-          className={
-            "h-4 w-4 shrink-0 transition-transform " +
-            (open ? "rotate-180" : "")
-          }
-          style={{ color: stok.color }}
-        />
-      </button>
-
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            key="list"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: EASE }}
-            className="overflow-hidden"
+          <p
+            className="tabular-nums font-semibold"
+            style={{ fontSize: 12.5, color: stok.color }}
           >
-            {checks.length === 0 ? (
-              <p
-                className="px-3 pb-3 pt-1 text-[var(--color-fg-muted)] italic"
-                style={{ fontSize: 12 }}
-              >
-                None
-              </p>
-            ) : (
-              <>
-                <ul
-                  className="divide-y border-t"
-                  style={{
-                    borderColor: `${stok.color}30`,
-                  }}
-                >
-                  {checks.map((c) => {
-                    const delta = isPass ? c.earned : c.max - c.earned;
-                    return (
-                      <li
-                        key={c.id}
-                        className="px-3 py-1.5 flex items-center gap-2"
-                        style={{ fontSize: 12.5 }}
-                      >
-                        <span
-                          className="text-[var(--color-fg)] truncate flex-1"
-                          title={c.label}
-                        >
-                          {c.label}
-                        </span>
-                        <span
-                          className="tabular-nums font-semibold shrink-0"
-                          style={{ color: stok.color }}
-                        >
-                          {isPass ? "+" : "−"}
-                          {round1(delta)}
-                          <span
-                            className="font-normal"
-                            style={{ opacity: 0.7, marginLeft: 2 }}
-                          >
-                            pts
-                          </span>
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-                {/* Sum row */}
-                <div
-                  className="px-3 py-2 flex items-center justify-between border-t"
-                  style={{
-                    borderColor: `${stok.color}30`,
-                    backgroundColor: `${stok.color}14`,
-                  }}
-                >
-                  <span
-                    className="uppercase font-semibold"
-                    style={{
-                      fontSize: 10,
-                      letterSpacing: "0.12em",
-                      color: stok.color,
-                    }}
-                  >
-                    Total
-                  </span>
-                  <span
-                    className="tabular-nums font-semibold"
-                    style={{ fontSize: 13.5, color: stok.color }}
-                  >
-                    {isPass ? "+" : "−"}
-                    {round1(totalDelta)}
-                    <span
-                      className="font-normal"
-                      style={{ opacity: 0.7, marginLeft: 2 }}
-                    >
-                      pts
-                    </span>
-                  </span>
-                </div>
-              </>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+            {isPass ? "+" : "−"}
+            {rounded}
+            <span
+              className="font-normal"
+              style={{ opacity: 0.7, marginLeft: 2 }}
+            >
+              pts
+            </span>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
