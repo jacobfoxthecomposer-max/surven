@@ -1,7 +1,9 @@
 import { parseCurrentPage } from "../shared/domParser";
+import type { VisibilityScore } from "../shared/scoring";
 
 const SAGE = "rgba(150, 162, 131, 0.35)";
 const SAGE_BORDER = "3px solid rgba(107, 122, 89, 0.85)";
+const BADGE_HOST_ID = "surven-badge-host";
 
 interface SavedStyle {
   el: HTMLElement;
@@ -106,6 +108,139 @@ function highlightFinding(findingId: string) {
   }
 }
 
+function ensureBadgeHost(): ShadowRoot {
+  let host = document.getElementById(BADGE_HOST_ID);
+  if (host && host.shadowRoot) return host.shadowRoot;
+
+  host = document.createElement("div");
+  host.id = BADGE_HOST_ID;
+  host.style.cssText = "position: fixed !important; z-index: 2147483647 !important; bottom: 20px !important; right: 20px !important; margin: 0 !important; padding: 0 !important; display: block !important; pointer-events: auto !important;";
+  (document.body ?? document.documentElement).appendChild(host);
+  return host.attachShadow({ mode: "open" });
+}
+
+function renderBadge(score: VisibilityScore) {
+  const root = ensureBadgeHost();
+  const findingsHtml = score.topFindings
+    .map((f) => `<li><span class="dot ${f.severity}"></span>${escapeHtml(f.title)}</li>`)
+    .join("");
+
+  root.innerHTML = `
+    <style>
+      :host, * { box-sizing: border-box; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+      .pill {
+        display: flex; align-items: center; gap: 10px;
+        background: white; color: #1a1a1a;
+        padding: 10px 16px; border-radius: 999px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.1);
+        cursor: pointer; user-select: none;
+        border: 1.5px solid ${score.color};
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        font-size: 13px;
+        animation: surven-fade-in 0.3s ease;
+      }
+      .pill:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(0,0,0,0.22), 0 2px 4px rgba(0,0,0,0.1); }
+      .score-num {
+        font-weight: 700; font-size: 18px; color: ${score.color};
+        font-variant-numeric: tabular-nums;
+      }
+      .label { font-weight: 600; color: ${score.color}; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+      .divider { width: 1px; height: 18px; background: #e5e5e5; }
+      .geo-label { color: #666; font-size: 11px; font-weight: 500; }
+      .panel {
+        position: absolute; bottom: 56px; right: 0;
+        width: 320px;
+        background: white; border-radius: 12px;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08);
+        border: 1px solid #e5e5e5;
+        padding: 16px;
+        display: none;
+        animation: surven-fade-in 0.2s ease;
+      }
+      .panel.open { display: block; }
+      .panel-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+      .panel-score { font-size: 32px; font-weight: 700; color: ${score.color}; line-height: 1; font-variant-numeric: tabular-nums; }
+      .panel-tier { font-size: 13px; font-weight: 600; color: ${score.color}; text-transform: uppercase; letter-spacing: 0.5px; }
+      .panel-sub { font-size: 11px; color: #888; margin-top: 4px; }
+      .panel-title { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 14px; margin-bottom: 8px; }
+      ul { margin: 0; padding: 0; list-style: none; }
+      li { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; color: #333; border-bottom: 1px solid #f5f5f5; }
+      li:last-child { border-bottom: none; }
+      .dot { display: inline-block; width: 8px; height: 8px; border-radius: 999px; flex-shrink: 0; }
+      .dot.critical { background: #B54631; }
+      .dot.high { background: #C97B45; }
+      .dot.medium { background: #6BA3F5; }
+      .dot.low { background: #96A283; }
+      .empty { color: #888; font-size: 13px; text-align: center; padding: 12px 0; }
+      .close {
+        position: absolute; top: 8px; right: 8px;
+        background: transparent; border: none;
+        cursor: pointer; padding: 4px; color: #888;
+        font-size: 18px; line-height: 1;
+      }
+      .close:hover { color: #333; }
+      @keyframes surven-fade-in {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    </style>
+    <div class="panel" id="panel">
+      <button class="close" id="close-btn" aria-label="Close">×</button>
+      <div class="panel-header">
+        <div>
+          <div class="panel-score">${score.score}</div>
+          <div class="panel-tier">${escapeHtml(score.label)}</div>
+        </div>
+      </div>
+      <div class="panel-sub">${score.totalFindings} ${score.totalFindings === 1 ? "issue" : "issues"} found on this page</div>
+      ${score.topFindings.length > 0 ? `<div class="panel-title">Top Issues to Fix</div><ul>${findingsHtml}</ul>` : `<div class="empty">No issues — your page looks great.</div>`}
+    </div>
+    <div class="pill" id="pill">
+      <span class="geo-label">GEO</span>
+      <div class="divider"></div>
+      <span class="score-num">${score.score}</span>
+      <span class="label">${escapeHtml(score.label)}</span>
+    </div>
+  `;
+
+  const pill = root.getElementById("pill");
+  const panel = root.getElementById("panel");
+  const closeBtn = root.getElementById("close-btn");
+
+  pill?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    panel?.classList.toggle("open");
+  });
+  closeBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    panel?.classList.remove("open");
+  });
+  document.addEventListener("click", (e) => {
+    if (!panel?.classList.contains("open")) return;
+    const target = e.target as Node;
+    const host = document.getElementById(BADGE_HOST_ID);
+    if (host && !host.contains(target)) panel.classList.remove("open");
+  });
+}
+
+function hideBadge() {
+  const host = document.getElementById(BADGE_HOST_ID);
+  host?.remove();
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (ch) => {
+    switch (ch) {
+      case "&": return "&amp;";
+      case "<": return "&lt;";
+      case ">": return "&gt;";
+      case "\"": return "&quot;";
+      case "'": return "&#39;";
+      default: return ch;
+    }
+  });
+}
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "PARSE_PAGE") {
     try {
@@ -124,6 +259,18 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message.type === "CLEAR_HIGHLIGHTS") {
     clearAllHighlights();
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (message.type === "BADGE_UPDATE") {
+    renderBadge(message.score as VisibilityScore);
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (message.type === "BADGE_HIDE") {
+    hideBadge();
     sendResponse({ success: true });
     return true;
   }
