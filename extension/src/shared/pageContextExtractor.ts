@@ -97,6 +97,23 @@ export function extractPageContext(): ExtractedPageContext {
   return ctx;
 }
 
+function extractBodyContent(): string | undefined {
+  // Get visible main content, skipping nav/footer/aside chrome.
+  const main = document.querySelector("main, article, [role='main']") as HTMLElement | null;
+  const sourceEl = main ?? document.body;
+  if (!sourceEl) return undefined;
+
+  // Clone and strip nav/footer/script/style/aside before reading text.
+  const clone = sourceEl.cloneNode(true) as HTMLElement;
+  for (const sel of ["nav", "footer", "aside", "header", "script", "style", "noscript", "[role='navigation']", "[role='banner']", "[role='contentinfo']"]) {
+    for (const el of Array.from(clone.querySelectorAll(sel))) el.remove();
+  }
+
+  const text = (clone.innerText ?? "").replace(/\s+/g, " ").trim();
+  if (text.length < 50) return undefined;
+  return text.slice(0, 3000);
+}
+
 function extractBusinessName(): string | undefined {
   const ogSite = (document.querySelector('meta[property="og:site_name"]') as HTMLMetaElement | null)?.content?.trim();
   if (ogSite) return ogSite;
