@@ -151,12 +151,12 @@ export function AeoAuditSection({
   const partialCount =
     result?.checks.filter((c) => c.status === "partial").length ?? 0;
   const aiOverviewText = !result
-    ? "Scan your site to see exactly which AEO and SEO checks are passing — and which gaps are costing you AI citations."
+    ? "Scan your site to see exactly what AI engines can and can't read on your pages — and where to tighten things up so you get cited more."
     : failCount > 0
-    ? `${failCount} check${failCount === 1 ? "" : "s"} failed and ${partialCount} need partial fixes. Tackle the failures first to lift your score fast.`
+    ? `${failCount} readability gap${failCount === 1 ? "" : "s"} are blocking AI from reading parts of your site, plus ${partialCount} partial issue${partialCount === 1 ? "" : "s"}. Tackle the failures first.`
     : partialCount > 0
-    ? `Solid foundation — no failures, but ${partialCount} check${partialCount === 1 ? "" : "s"} could go from partial to pass with light edits.`
-    : "Site is well-tuned for AI visibility. Keep monitoring for content freshness and schema coverage.";
+    ? `No major readability blockers — ${partialCount} check${partialCount === 1 ? "" : "s"} could move from partial to pass with light edits.`
+    : "Site reads cleanly for AI engines. Keep monitoring content freshness and schema coverage.";
 
   return (
     <div className="space-y-5 w-full">
@@ -178,7 +178,7 @@ export function AeoAuditSection({
         >
           {!result ? (
             <>
-              Your site&apos;s AEO score is{" "}
+              Your site&apos;s readability is{" "}
               <span style={{ color: "var(--color-fg-muted)", fontStyle: "italic" }}>
                 unknown
               </span>
@@ -186,7 +186,7 @@ export function AeoAuditSection({
             </>
           ) : (
             <>
-              Your site&apos;s AEO score is{" "}
+              Your site&apos;s readability is{" "}
               <span style={{ color: scoreColor!, fontStyle: "italic" }}>
                 {scoreWord}
               </span>
@@ -195,8 +195,9 @@ export function AeoAuditSection({
           )}
         </h1>
         <p className="text-sm text-[var(--color-fg-muted)] mt-1.5">
-          How well {businessName} is set up to be discovered, parsed, quoted,
-          and trusted by AI engines like ChatGPT, Claude, and Gemini.
+          How well AI engines like ChatGPT, Claude, and Gemini can read,
+          understand, and quote {businessName}. 25 checks across discoverability,
+          structure, quotability, and trust signals.
         </p>
       </motion.div>
 
@@ -233,12 +234,12 @@ export function AeoAuditSection({
                     color: "var(--color-fg)",
                   }}
                 >
-                  Site Audit is a Plus feature
+                  Site Readability Audit is a Plus feature
                 </h2>
                 <p className="text-sm text-[var(--color-fg-secondary)] leading-relaxed">
-                  Run a 25-check AEO audit on any URL. See exactly which AI
-                  visibility levers your site is missing — schema, freshness,
-                  AI-bot access, citation links, and more.
+                  Scan any URL and see exactly what AI engines can and can&apos;t
+                  read on the page. 25 checks covering schema, freshness,
+                  AI-bot access, headings, citation links, and more.
                 </p>
               </div>
               <Link
@@ -287,7 +288,7 @@ export function AeoAuditSection({
                   disabled={scanning || !input.trim()}
                 >
                   <Search className="h-4 w-4" />
-                  Run Site Audit
+                  Run readability audit
                 </Button>
                 <button
                   type="button"
@@ -396,13 +397,13 @@ function ScoreCard({ result }: { result: ScanResult }) {
             className="uppercase tracking-wider text-[var(--color-fg-muted)] font-semibold mb-1"
             style={{ fontSize: 11, letterSpacing: "0.12em" }}
           >
-            Site audit score
+            Readability score
           </p>
           <p
             className="text-[var(--color-fg-secondary)]"
             style={{ fontSize: 14 }}
           >
-            Overall AEO grade across 25 checks
+            How clearly AI can read your site, across 25 checks
           </p>
           <p
             className="text-[var(--color-fg-muted)] mt-1"
@@ -569,7 +570,9 @@ function CheckRow({ check }: { check: CheckResult }) {
   const [open, setOpen] = useState(false);
   const tok = STATUS_TOK[check.status];
   const Icon = tok.Icon;
-  const expandable = check.recommendation.length > 0;
+  // Always expandable when there's a readability blurb (every check has one).
+  const expandable =
+    check.readabilityImpact.length > 0 || check.recommendation.length > 0;
 
   return (
     <li>
@@ -647,19 +650,49 @@ function CheckRow({ check }: { check: CheckResult }) {
             className="overflow-hidden"
           >
             <div
-              className="px-5 pb-4 pt-1 flex items-start gap-2"
-              style={{ borderLeft: `3px solid ${tok.color}` }}
+              className="ml-12 mr-5 mb-4 px-4 py-3 rounded-[var(--radius-md)] space-y-3"
+              style={{
+                borderLeft: `3px solid ${tok.color}`,
+                backgroundColor: "rgba(150,162,131,0.06)",
+              }}
             >
-              <ArrowRight
-                className="h-3.5 w-3.5 shrink-0 mt-1"
-                style={{ color: tok.color }}
-              />
-              <p
-                className="text-[var(--color-fg-secondary)]"
-                style={{ fontSize: 13, lineHeight: 1.5 }}
-              >
-                {check.recommendation}
-              </p>
+              {check.readabilityImpact && (
+                <div>
+                  <p
+                    className="uppercase tracking-wider text-[var(--color-fg-muted)] font-semibold mb-1"
+                    style={{ fontSize: 10.5, letterSpacing: "0.10em" }}
+                  >
+                    How this affects readability
+                  </p>
+                  <p
+                    className="text-[var(--color-fg-secondary)]"
+                    style={{ fontSize: 13, lineHeight: 1.5 }}
+                  >
+                    {check.readabilityImpact}
+                  </p>
+                </div>
+              )}
+              {check.recommendation && (
+                <div>
+                  <p
+                    className="uppercase tracking-wider font-semibold mb-1 inline-flex items-center gap-1"
+                    style={{
+                      fontSize: 10.5,
+                      letterSpacing: "0.10em",
+                      color: tok.color,
+                    }}
+                  >
+                    <ArrowRight className="h-3 w-3" />
+                    Recommended fix
+                  </p>
+                  <p
+                    className="text-[var(--color-fg-secondary)]"
+                    style={{ fontSize: 13, lineHeight: 1.5 }}
+                  >
+                    {check.recommendation}
+                  </p>
+                </div>
+              )}
             </div>
           </motion.div>
         )}

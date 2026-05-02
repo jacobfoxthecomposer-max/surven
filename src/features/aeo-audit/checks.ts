@@ -35,6 +35,60 @@ type Check = (ctx: ScanContext) => CheckResult;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
+// One sentence per check on how it affects whether AI engines can
+// read and understand the page. Surfaced under the row's expanded
+// "How this affects readability" section in the UI.
+export const READABILITY_IMPACT: Record<string, string> = {
+  https:
+    "AI engines and search crawlers downgrade or skip non-HTTPS pages — they may not even attempt to read your content over an unencrypted connection.",
+  "robots-txt":
+    "robots.txt is the first file every crawler reads. Without it, AI bots fall back to default behavior and lose any guidance about which pages matter.",
+  sitemap:
+    "Without a sitemap, AI crawlers have to discover your pages by following links — they often miss deep pages or fail to recrawl when content changes.",
+  canonical:
+    "Without a canonical URL, AI engines can't tell which version of a page is authoritative and may attribute content (or citations) to the wrong URL.",
+  "ai-bots":
+    "Blocking GPTBot, ClaudeBot, or PerplexityBot means those engines can't read your site at all — you become invisible in any answer they generate.",
+  "robots-meta":
+    "A noindex directive tells every engine to ignore the page entirely. AI tools won't read or cite it even if everything else is perfect.",
+  title:
+    "The title is the strongest single signal of what a page is about. AI engines weight it heavily when deciding whether to use the page in an answer.",
+  "meta-description":
+    "AI tools often quote the meta description verbatim when summarizing a page. A missing or weak one forces the model to generate its own — often inaccurately.",
+  h1: "AI uses the H1 as the page's primary topic anchor. Multiple H1s or a missing one confuses the model about what the page is actually about.",
+  "heading-hierarchy":
+    "Skipped heading levels break AI's outline of your content. The model loses track of which sections are subordinate to which, and may miss key sub-topics.",
+  "open-graph":
+    "AI engines and link-preview generators read Open Graph tags to label your content. Missing tags mean your page shows up as a bare URL with no context.",
+  "twitter-card":
+    "Twitter Card tags add another structured layer AI can pull from. Without them, fewer engines have a clean handle on the page's title, summary, and image.",
+  "html-lang":
+    "Without a lang attribute, AI may misidentify the language of your content — leading to mistranslation, mis-classification, or skipping the page in language-specific answers.",
+  viewport:
+    "AI crawlers run a mobile-first heuristic. A non-responsive page signals low quality and gets deprioritized in mobile-tilted answers.",
+  "json-ld":
+    "Without JSON-LD, AI engines have to infer your business identity, products, and articles from scattered visible text — they often guess wrong or skip you entirely.",
+  "schema-coverage":
+    "Each schema type tells AI a different story (Organization = who you are, Article = an opinion piece, Product = something to buy). Missing types means AI can only tell part of the story.",
+  "alt-text":
+    "AI can't see your images, but it can read alt text. Missing alt text means any meaning embedded in visuals is invisible to the model.",
+  "body-content":
+    "AI needs enough text to extract a confident answer. Sparse pages don't give the model anything to lift — even if the topic is a perfect match, it skips you for a longer source.",
+  freshness:
+    "AI engines actively prefer fresh content and downrank pages they think are stale. Without a freshness signal, the model assumes your page is dated and may pick a more recent competitor instead.",
+  faq: "Question-and-answer content in FAQPage schema is the single most quotable format for AI. Without it, the model has to extract Q&A patterns from prose — and often won't.",
+  "internal-links":
+    "Internal links tell AI how your content is organized and which pages relate. A site with no internal linking looks like a stack of orphan pages instead of a connected resource.",
+  "external-links":
+    "Linking to credible external sources is a trust signal. Pages that cite no one feel less authoritative, and AI tools weight them lower when picking citations.",
+  "llms-txt":
+    "llms.txt is the modern standard for telling AI systems how to read your site (similar to robots.txt for crawlers). Without it, you're relying on AI defaults instead of your own guidance.",
+  "ai-txt":
+    "ai.txt declares your AI training and use policies. It's emerging — having one is a small forward-looking signal that AI-mature engines may start preferring.",
+  favicon:
+    "A missing favicon is a freshness/professionalism signal. AI quality heuristics treat sites without one as lower-effort, all else being equal.",
+};
+
 function pass(
   id: string,
   pillar: Pillar,
@@ -50,6 +104,7 @@ function pass(
     earned: max,
     max,
     detail,
+    readabilityImpact: READABILITY_IMPACT[id] || "",
     recommendation: "",
   };
 }
@@ -70,6 +125,7 @@ function fail(
     earned: 0,
     max,
     detail,
+    readabilityImpact: READABILITY_IMPACT[id] || "",
     recommendation,
   };
 }
@@ -91,6 +147,7 @@ function partial(
     earned: Math.round(earned * 10) / 10,
     max,
     detail,
+    readabilityImpact: READABILITY_IMPACT[id] || "",
     recommendation,
   };
 }

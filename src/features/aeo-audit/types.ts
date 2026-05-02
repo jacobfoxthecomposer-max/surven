@@ -32,6 +32,8 @@ export interface CheckResult {
   max: number;
   /** Short explanation of what was found. */
   detail: string;
+  /** One sentence on how this check affects how AI reads the page. */
+  readabilityImpact: string;
   /** What to do if the check failed or partial. Empty when passed cleanly. */
   recommendation: string;
 }

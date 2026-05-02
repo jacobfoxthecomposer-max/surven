@@ -1,11 +1,12 @@
 // Realistic mock ScanResult used as the demo / preview state on the
-// Site Audit page. Mirrors the shape and check IDs returned by the
-// real /api/aeo-scan endpoint so the UI renders identically.
+// Site Readability Audit page. Mirrors the shape and check IDs returned
+// by the real /api/aeo-scan endpoint so the UI renders identically.
 
+import { READABILITY_IMPACT } from "./checks";
 import type { CheckResult, ScanResult } from "./types";
 
 export function buildMockScanResult(displayUrl = "thecurbskateshop.com"): ScanResult {
-  const checks: CheckResult[] = [
+  const rawChecks: Omit<CheckResult, "readabilityImpact">[] = [
     // ── Discoverable ──────────────────────────────────────────────
     {
       id: "https",
@@ -279,6 +280,11 @@ export function buildMockScanResult(displayUrl = "thecurbskateshop.com"): ScanRe
       recommendation: "",
     },
   ];
+
+  const checks: CheckResult[] = rawChecks.map((c) => ({
+    ...c,
+    readabilityImpact: READABILITY_IMPACT[c.id] || "",
+  }));
 
   const pillars = (["discoverable", "structured", "quotable", "trustworthy"] as const).map((p) => {
     const rows = checks.filter((c) => c.pillar === p);
