@@ -319,6 +319,169 @@ export default function App() {
     }
   }
 
+  async function generateRewritePreview(finding: AuditFinding) {
+    if (!settings?.apiUrl || !settings?.apiKey) return;
+    const rewriteKind = FINDING_TO_REWRITE_KIND[finding.id];
+    if (!rewriteKind) return;
+
+    setFixStates((s) => ({ ...s, [finding.id]: { status: "applying" } }));
+
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) {
+      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: "No active tab found" } }));
+      return;
+    }
+
+    let pageContext: unknown;
+    try {
+      const ctxResp = await chrome.tabs.sendMessage(tab.id, { type: "EXTRACT_PAGE_CONTEXT" });
+      if (!ctxResp?.success) {
+        setFixStates((s) => ({
+          ...s,
+          [finding.id]: { status: "error", message: ctxResp?.error ?? "Couldn't read page content. Refresh the tab." },
+        }));
+        return;
+      }
+      pageContext = ctxResp.context;
+    } catch (err) {
+      setFixStates((s) => ({
+        ...s,
+        [finding.id]: { status: "error", message: `Couldn't reach page: ${err instanceof Error ? err.message : "unknown"}. Refresh the tab.` },
+      }));
+      return;
+    }
+
+    try {
+      const res = await fetch(getGenerateUrl(settings.apiUrl), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": settings.apiKey },
+        body: JSON.stringify({
+          kind: rewriteKind,
+          pageContext,
+          commit: false,
+          findingId: finding.id,
+          findingTitle: finding.title,
+        }),
+      });
+
+      const rawText = await res.text();
+      let data: { ok?: boolean; suggested?: string; current?: string | null; error?: string; message?: string } = {};
+      try {
+        data = rawText ? JSON.parse(rawText) : {};
+      } catch {
+        setFixStates((s) => ({
+          ...s,
+          [finding.id]: { status: "error", message: `Server returned an unparseable response (status ${res.status}).` },
+        }));
+        return;
+      }
+
+      if (!res.ok || !data.suggested) {
+        setFixStates((s) => ({
+          ...s,
+          [finding.id]: { status: "error", message: data.message ?? data.error ?? `Generation failed (status ${res.status})` },
+        }));
+        return;
+      }
+
+      setFixStates((s) => ({
+        ...s,
+        [finding.id]: { status: "preview", current: data.current ?? null, suggested: data.suggested!, rewriteKind },
+      }));
+    } catch (err) {
+      setFixStates((s) => ({
+        ...s,
+        [finding.id]: { status: "error", message: err instanceof Error ? err.message : "Network error" },
+      }));
+    }
+  }
+
+  async function applyRewrite(finding: AuditFinding) {
+    const current = fixStates[finding.id];
+    if (!current || current.status !== "preview") return;
+    if (!settings?.apiUrl || !settings?.apiKey) return;
+
+    const { suggested, rewriteKind } = current;
+
+    setFixStates((s) => ({ ...s, [finding.id]: { status: "applying" } }));
+
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) {
+      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: "No active tab found" } }));
+      return;
+    }
+
+    let pageContext: unknown;
+    try {
+      const ctxResp = await chrome.tabs.sendMessage(tab.id, { type: "EXTRACT_PAGE_CONTEXT" });
+      pageContext = ctxResp?.success ? ctxResp.context : { url: tab.url };
+    } catch {
+      pageContext = { url: tab.url };
+    }
+
+    try {
+      const overrideField = rewriteKind === "meta_desc" ? "description" : "title";
+      const res = await fetch(getGenerateUrl(settings.apiUrl), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": settings.apiKey },
+        body: JSON.stringify({
+          kind: rewriteKind,
+          pageContext: { ...(pageContext as object), [overrideField === "description" ? "description" : "title"]: suggested, _override: { [overrideField]: suggested } },
+          commit: true,
+          findingId: finding.id,
+          findingTitle: finding.title,
+        }),
+      });
+
+      const rawText = await res.text();
+      let data: {
+        ok?: boolean;
+        commitUrl?: string;
+        filePath?: string;
+        suggested?: string;
+        manualNote?: string;
+        error?: string;
+        message?: string;
+        connectUrl?: string;
+      } = {};
+      try {
+        data = rawText ? JSON.parse(rawText) : {};
+      } catch {
+        setFixStates((s) => ({
+          ...s,
+          [finding.id]: { status: "error", message: `Server returned an unparseable response (status ${res.status}).` },
+        }));
+        return;
+      }
+
+      if (data.ok === false && data.manualNote) {
+        setFixStates((s) => ({
+          ...s,
+          [finding.id]: { status: "manual", snippet: suggested, suggested, manualNote: data.manualNote!, rewriteKind },
+        }));
+        return;
+      }
+
+      if (!res.ok || data.ok === false) {
+        setFixStates((s) => ({
+          ...s,
+          [finding.id]: { status: "error", message: data.message ?? data.error ?? "Commit failed", connectUrl: data.connectUrl },
+        }));
+        return;
+      }
+
+      setFixStates((s) => ({
+        ...s,
+        [finding.id]: { status: "success", commitUrl: data.commitUrl, filePath: data.filePath, suggested },
+      }));
+    } catch (err) {
+      setFixStates((s) => ({
+        ...s,
+        [finding.id]: { status: "error", message: err instanceof Error ? err.message : "Network error" },
+      }));
+    }
+  }
+
   useEffect(() => {
     chrome.storage.local.get("surven_settings", (data) => {
       if (data.surven_settings) {
