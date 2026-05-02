@@ -1,13 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
   Sparkles,
-  Lock,
-  Crown,
   ArrowRight,
   Check,
   AlertTriangle,
@@ -168,8 +165,6 @@ export function AeoAuditSection({
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ScanResult | null>(null);
-  const isFree = plan === "free";
-
   async function handleScan(e: React.FormEvent) {
     e.preventDefault();
     if (!input.trim() || scanning) return;
@@ -298,67 +293,8 @@ export function AeoAuditSection({
         <AIOverview text={aiOverviewText} />
       </motion.div>
 
-      {/* ── Free upgrade prompt ── */}
-      {isFree && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.2, ease: EASE }}
-        >
-          <Card>
-            <div className="flex flex-col items-center text-center py-8 gap-4">
-              <div
-                className="h-14 w-14 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: "rgba(150,162,131,0.15)" }}
-              >
-                <Lock className="h-7 w-7" style={{ color: "var(--color-primary)" }} />
-              </div>
-              <div className="space-y-1.5 max-w-md">
-                <h2
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: 26,
-                    fontWeight: 600,
-                    color: "var(--color-fg)",
-                  }}
-                >
-                  Code Scanner is a Plus feature
-                </h2>
-                <p className="text-sm text-[var(--color-fg-secondary)] leading-relaxed">
-                  Scan any URL and see exactly what AI engines can and can&apos;t
-                  read on the page. 25 checks covering schema, freshness,
-                  AI-bot access, headings, citation links, and more.
-                </p>
-              </div>
-              <Link
-                href="/pricing"
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-[var(--radius-md)] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium text-sm shadow-md transition-colors"
-              >
-                <Crown className="h-4 w-4" />
-                Upgrade to Plus
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <div className="flex items-center gap-3 flex-wrap justify-center">
-                <button
-                  type="button"
-                  onClick={handleLoadExample}
-                  className="inline-flex items-center gap-1.5 text-xs text-[var(--color-fg-muted)] hover:text-[var(--color-primary)] transition-colors"
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Or view an example audit
-                </button>
-                <span className="text-[var(--color-fg-muted)]" style={{ fontSize: 12 }}>·</span>
-                <span style={{ fontSize: 12 }}>
-                  <ChromeExtLink>Try the Chrome extension free</ChromeExtLink>
-                </span>
-              </div>
-            </div>
-          </Card>
-        </motion.div>
-      )}
-
-      {/* ── Scan form (paid users) ── */}
-      {!isFree && !result && !scanning && (
+      {/* ── Scan form ── */}
+      {!result && !scanning && (
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
