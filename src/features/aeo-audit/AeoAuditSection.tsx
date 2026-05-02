@@ -493,11 +493,6 @@ export function AeoAuditSection({
               <PriorityFixCards checks={result.checks} />
             </motion.div>
 
-            {/* Full audit detail — collapsed by default. */}
-            <motion.div {...reveal}>
-              <ChecksList checks={result.checks} />
-            </motion.div>
-
             <motion.div
               {...reveal}
               className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch"
