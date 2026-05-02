@@ -1,7 +1,13 @@
 import { useState, useEffect } from "react";
-import { Search, ChevronDown, X, Settings, ArrowLeft } from "lucide-react";
-import type { AuditFinding } from "../shared/types";
+import { Search, ChevronDown, X, Settings, ArrowLeft, Wrench, ExternalLink, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import type { AuditFinding, ApplyFixResponse } from "../shared/types";
 import "./styles.css";
+
+type FixState =
+  | { status: "idle" }
+  | { status: "applying" }
+  | { status: "success"; commitUrl?: string; filePath?: string }
+  | { status: "error"; message: string; connectUrl?: string };
 
 const WHAT_IS_IT: Record<string, string> = {
   org_schema_missing: "Schema markup is invisible code added to your website's <head> that acts like a structured business card only AI and search engines can read. Organization schema specifically tells AI systems your business name, website URL, phone number, logo, and service area — in a format they can understand without guessing.",
@@ -50,6 +56,11 @@ interface AuditState {
   fromCache: boolean;
 }
 
+function getApplyFixUrl(auditUrl: string): string {
+  // /api/audit/run → /api/audit/apply-fix
+  return auditUrl.replace(/\/api\/audit\/run\/?$/, "/api/audit/apply-fix");
+}
+
 export default function App() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -58,6 +69,56 @@ export default function App() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [whatIsItId, setWhatIsItId] = useState<string | null>(null);
   const [highlightedFinding, setHighlightedFinding] = useState<string | null>(null);
+  const [fixStates, setFixStates] = useState<Record<string, FixState>>({});
+  const [siteUrl, setSiteUrl] = useState<string | null>(null);
+
+  async function applyFix(finding: AuditFinding) {
+    if (!settings?.apiUrl || !settings?.apiKey || !finding.fixCode || !finding.fixType) return;
+    const targetUrl = siteUrl ?? (await chrome.tabs.query({ active: true, currentWindow: true }))[0]?.url;
+    if (!targetUrl) return;
+
+    setFixStates((s) => ({ ...s, [finding.id]: { status: "applying" } }));
+
+    try {
+      const res = await fetch(getApplyFixUrl(settings.apiUrl), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": settings.apiKey,
+        },
+        body: JSON.stringify({
+          siteUrl: targetUrl,
+          findingId: finding.id,
+          findingTitle: finding.title,
+          fixType: finding.fixType,
+          fixCode: finding.fixCode,
+        }),
+      });
+      const data = (await res.json()) as ApplyFixResponse;
+
+      if (!res.ok) {
+        setFixStates((s) => ({
+          ...s,
+          [finding.id]: {
+            status: "error",
+            message: data.message ?? data.error ?? "Apply failed",
+            connectUrl: data.connectUrl,
+          },
+        }));
+        return;
+      }
+
+      setFixStates((s) => ({
+        ...s,
+        [finding.id]: { status: "success", commitUrl: data.commitUrl, filePath: data.filePath },
+      }));
+    } catch (err) {
+      setFixStates((s) => ({
+        ...s,
+        [finding.id]: { status: "error", message: err instanceof Error ? err.message : "Network error" },
+      }));
+    }
+  }
 
   useEffect(() => {
     chrome.storage.local.get("surven_settings", (data) => {
@@ -86,6 +147,7 @@ export default function App() {
         return;
       }
 
+      setSiteUrl(tab.url);
       const hostname = new URL(tab.url).hostname;
       const cacheKey = `audit_${hostname}`;
 
@@ -427,23 +489,136 @@ export default function App() {
                         <h4 style={{ fontSize: "12px", fontWeight: 600, color: "#1A1C1A", marginBottom: "4px" }}>How to fix</h4>
                         <p style={{ fontSize: "13px", color: "#3D3F3D", lineHeight: "1.5", whiteSpace: "pre-wrap" }}>{finding.howToFix}</p>
                       </div>
-                      <button
-                        onClick={() => highlightFinding(finding)}
-                        disabled={highlightedFinding === finding.id}
-                        style={{
-                          width: "100%",
-                          padding: "8px 12px",
-                          background: highlightedFinding === finding.id ? "#e5e7eb" : SEVERITY_COLORS[finding.severity].border,
-                          color: highlightedFinding === finding.id ? "#6b7280" : "white",
-                          border: "none",
-                          borderRadius: "4px",
-                          fontSize: "13px",
-                          fontWeight: 500,
-                          cursor: highlightedFinding === finding.id ? "default" : "pointer",
-                        }}
-                      >
-                        {highlightedFinding === finding.id ? "Highlighting on page" : "Highlight on page"}
-                      </button>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                        <button
+                          onClick={() => highlightFinding(finding)}
+                          disabled={highlightedFinding === finding.id}
+                          style={{
+                            width: "100%",
+                            padding: "8px 12px",
+                            background: highlightedFinding === finding.id ? "#e5e7eb" : SEVERITY_COLORS[finding.severity].border,
+                            color: highlightedFinding === finding.id ? "#6b7280" : "white",
+                            border: "none",
+                            borderRadius: "4px",
+                            fontSize: "13px",
+                            fontWeight: 500,
+                            cursor: highlightedFinding === finding.id ? "default" : "pointer",
+                          }}
+                        >
+                          {highlightedFinding === finding.id ? "Highlighting on page" : "Highlight on page"}
+                        </button>
+
+                        {finding.fixCode && finding.fixType && (() => {
+                          const fixState = fixStates[finding.id] ?? { status: "idle" as const };
+                          if (fixState.status === "success") {
+                            return (
+                              <div
+                                style={{
+                                  padding: "10px",
+                                  background: "#F0FDF4",
+                                  border: "1px solid #96A283",
+                                  borderRadius: "4px",
+                                  fontSize: "12px",
+                                  color: "#3D3F3D",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "4px" }}>
+                                  <CheckCircle2 size={14} style={{ color: "#96A283" }} /> Committed
+                                </div>
+                                {fixState.filePath && (
+                                  <div style={{ marginBottom: "4px" }}>File: <code style={{ background: "#EDE8DC", padding: "1px 4px", borderRadius: "2px" }}>{fixState.filePath}</code></div>
+                                )}
+                                {fixState.commitUrl && (
+                                  <a
+                                    href={fixState.commitUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#96A283", textDecoration: "none" }}
+                                  >
+                                    View commit on GitHub <ExternalLink size={11} />
+                                  </a>
+                                )}
+                              </div>
+                            );
+                          }
+                          if (fixState.status === "error") {
+                            return (
+                              <div
+                                style={{
+                                  padding: "10px",
+                                  background: "#FEE2E2",
+                                  border: "1px solid #B54631",
+                                  borderRadius: "4px",
+                                  fontSize: "12px",
+                                  color: "#3D3F3D",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "4px", color: "#B54631" }}>
+                                  <AlertCircle size={14} /> Fix failed
+                                </div>
+                                <div style={{ marginBottom: "6px" }}>{fixState.message}</div>
+                                {fixState.connectUrl && (
+                                  <a
+                                    href={fixState.connectUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#B54631", textDecoration: "none", fontWeight: 500 }}
+                                  >
+                                    Connect GitHub <ExternalLink size={11} />
+                                  </a>
+                                )}
+                                <button
+                                  onClick={() => applyFix(finding)}
+                                  style={{
+                                    marginTop: "6px",
+                                    padding: "6px 10px",
+                                    background: "transparent",
+                                    border: "1px solid #B54631",
+                                    color: "#B54631",
+                                    borderRadius: "4px",
+                                    fontSize: "11px",
+                                    cursor: "pointer",
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  Retry
+                                </button>
+                              </div>
+                            );
+                          }
+                          return (
+                            <button
+                              onClick={() => applyFix(finding)}
+                              disabled={fixState.status === "applying"}
+                              style={{
+                                width: "100%",
+                                padding: "8px 12px",
+                                background: fixState.status === "applying" ? "#d1d5db" : "#6BA3F5",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "4px",
+                                fontSize: "13px",
+                                fontWeight: 500,
+                                cursor: fixState.status === "applying" ? "default" : "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "6px",
+                              }}
+                            >
+                              {fixState.status === "applying" ? (
+                                <>
+                                  <Loader2 size={14} className="surven-spin" /> Opening commit…
+                                </>
+                              ) : (
+                                <>
+                                  <Wrench size={14} /> Fix this for me
+                                </>
+                              )}
+                            </button>
+                          );
+                        })()}
+                      </div>
                     </div>
                   )}
                 </div>
