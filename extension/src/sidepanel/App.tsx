@@ -327,6 +327,10 @@ export default function App() {
     }
   }
 
+  function isAmbiguousPageResponse(data: { error?: string; reasons?: string[] }): boolean {
+    return data?.error === "ambiguous_page" && Array.isArray(data?.reasons);
+  }
+
   async function generateRewritePreview(finding: AuditFinding) {
     if (!settings?.apiUrl || !settings?.apiKey) return;
     const rewriteKind = FINDING_TO_REWRITE_KIND[finding.id];
