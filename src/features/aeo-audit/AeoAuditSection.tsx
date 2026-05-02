@@ -583,7 +583,47 @@ export function AeoAuditSection({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Page footer — feedback link. Appears whether or not a scan has
+          completed since beta feedback applies to the empty + loading
+          states too. */}
+      <FeedbackFooter />
     </div>
+  );
+}
+
+function FeedbackFooter() {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ duration: 0.45, ease: EASE }}
+      className="pt-6 mt-2 border-t border-[var(--color-border)] flex flex-wrap items-center justify-between gap-3"
+    >
+      <p
+        className="text-[var(--color-fg-muted)]"
+        style={{ fontSize: 13, lineHeight: 1.5 }}
+      >
+        Surven is still in <strong className="text-[var(--color-fg-secondary)] font-semibold">beta</strong>
+        . Spot a bug, want a feature, or wish a different metric was on this page?
+      </p>
+      <a
+        href="/feedback"
+        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-[var(--radius-md)] border transition-colors hover:bg-[var(--color-surface-alt)]"
+        style={{
+          fontSize: 13,
+          fontWeight: 600,
+          borderColor: "rgba(150,162,131,0.45)",
+          backgroundColor: "rgba(150,162,131,0.10)",
+          color: COLORS.primaryHover,
+        }}
+      >
+        <Sparkles className="h-3.5 w-3.5" />
+        Send feedback
+        <ArrowRight className="h-3.5 w-3.5" />
+      </a>
+    </motion.div>
   );
 }
 
@@ -1273,17 +1313,20 @@ function PillarBarRow({
 
   return (
     <div className="space-y-2.5">
-      {/* Header row — icon on the left, name + description stacked in the
-          middle column, tier + score on the right. */}
-      <div className="flex items-start gap-3">
+      {/* Header row — icon + name + Info hover (description on hover only)
+          on the left; tier + score on the right. */}
+      <HoverHint hint={PILLAR_BLURBS[score.pillar]} display="block">
         <div
-          className="h-10 w-10 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
-          style={{ backgroundColor: `${tok.color}22` }}
+          className="flex items-center gap-3 flex-wrap"
+          style={{ cursor: "help" }}
         >
-          <Icon className="h-5 w-5" style={{ color: tok.color }} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div
+            className="h-10 w-10 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
+            style={{ backgroundColor: `${tok.color}22` }}
+          >
+            <Icon className="h-5 w-5" style={{ color: tok.color }} />
+          </div>
+          <div className="inline-flex items-center gap-1.5">
             <p
               style={{
                 fontFamily: "var(--font-display)",
@@ -1296,22 +1339,18 @@ function PillarBarRow({
             >
               {PILLAR_LABELS[score.pillar]}
             </p>
-            <span
-              className="font-semibold uppercase"
-              style={{ fontSize: 11.5, letterSpacing: "0.12em", color: tok.color }}
-            >
-              {tok.label}
-            </span>
+            <Info
+              className="h-3.5 w-3.5 text-[var(--color-fg-muted)]"
+              aria-label={`What ${PILLAR_LABELS[score.pillar]} measures`}
+            />
           </div>
-          <p
-            className="text-[var(--color-fg-secondary)] mt-1.5"
-            style={{ fontSize: 13, lineHeight: 1.5 }}
+          <span
+            className="font-semibold uppercase"
+            style={{ fontSize: 11.5, letterSpacing: "0.12em", color: tok.color }}
           >
-            {PILLAR_BLURBS[score.pillar]}
-          </p>
-        </div>
-        <div className="shrink-0 ml-auto">
-          <span className="inline-flex items-baseline tabular-nums">
+            {tok.label}
+          </span>
+          <span className="inline-flex items-baseline tabular-nums ml-auto">
             <span
               style={{
                 fontFamily: "var(--font-display)",
@@ -1332,7 +1371,7 @@ function PillarBarRow({
             </span>
           </span>
         </div>
-      </div>
+      </HoverHint>
       {/* Stacked segment bar: pass / partial / critical. */}
       <div className="h-3 rounded-full overflow-hidden flex bg-[var(--color-surface-alt)]">
         {passPct > 0 && (
