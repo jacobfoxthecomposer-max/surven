@@ -1337,56 +1337,56 @@ function PillarBarRow({
         </span>
       </div>
 
-      {/* Dedicated toggle tab below the bar. When open, its bottom corners
-          flatten and the bottom border drops so it visually connects to
-          the panel below. */}
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        className={
-          "w-full mt-1 inline-flex items-center justify-between gap-2 px-3 py-2 border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 hover:bg-[var(--color-surface-alt)] transition-colors " +
-          (open
-            ? "rounded-t-[var(--radius-md)] rounded-b-none border-b-0"
-            : "rounded-[var(--radius-md)]")
-        }
-        style={{ fontSize: 13, fontWeight: 600, color: "var(--color-fg-secondary)" }}
-      >
-        <span className="inline-flex items-center gap-2">
-          <ListChecks className="h-3.5 w-3.5 text-[var(--color-fg-muted)]" />
-          {open ? "Hide" : "View"} {checks.length} check
-          {checks.length === 1 ? "" : "s"}
-        </span>
-        <ChevronDown
+      {/* Dedicated toggle tab + panel. Wrapped in their own div so the
+          parent's `space-y-2.5` doesn't add a gap between them — the
+          toggle and the panel must touch to read as one connected shape. */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
           className={
-            "h-5 w-5 text-[var(--color-fg-muted)] transition-transform " +
-            (open ? "rotate-180" : "")
+            "w-full inline-flex items-center justify-between gap-2 px-3 py-2 border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 hover:bg-[var(--color-surface-alt)] transition-colors " +
+            (open
+              ? "rounded-t-[var(--radius-md)] rounded-b-none border-b-0"
+              : "rounded-[var(--radius-md)]")
           }
-        />
-      </button>
+          style={{ fontSize: 13, fontWeight: 600, color: "var(--color-fg-secondary)" }}
+        >
+          <span className="inline-flex items-center gap-2">
+            <ListChecks className="h-3.5 w-3.5 text-[var(--color-fg-muted)]" />
+            {open ? "Hide" : "View"} {checks.length} check
+            {checks.length === 1 ? "" : "s"}
+          </span>
+          <ChevronDown
+            className={
+              "h-5 w-5 text-[var(--color-fg-muted)] transition-transform " +
+              (open ? "rotate-180" : "")
+            }
+          />
+        </button>
 
-      {/* Per-pillar check list — visually attaches directly under the
-          toggle (flat top corners, shared border) when open. */}
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            key="pillar-checks"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: EASE }}
-            className="overflow-hidden"
-          >
-            <ul
-              className="rounded-b-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] divide-y divide-[var(--color-border)] -mt-px"
+        <AnimatePresence initial={false}>
+          {open && (
+            <motion.div
+              key="pillar-checks"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: EASE }}
+              className="overflow-hidden"
             >
-              {sortedChecks.map((c) => (
-                <CheckRow key={c.id} check={c} />
-              ))}
-            </ul>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <ul
+                className="rounded-b-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] divide-y divide-[var(--color-border)]"
+              >
+                {sortedChecks.map((c) => (
+                  <CheckRow key={c.id} check={c} />
+                ))}
+              </ul>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
