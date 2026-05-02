@@ -87,13 +87,25 @@ function showToast(message: string) {
   highlighted.push({ el: toast, outline: "", outlineOffset: "", backgroundColor: "" });
 }
 
-// Selectors for visible findings
+// Selectors for visible findings — each maps to candidate selectors tried in order
 const FINDING_SELECTORS: Record<string, string[]> = {
-  credentials_missing: ["footer", "[id*='about']", "[class*='about']", "[id*='team']", "[class*='team']", "[id*='credential']", "[class*='credential']"],
-  credentials_low: ["footer", "[id*='about']", "[class*='about']", "[id*='team']", "[class*='team']"],
-  content_freshness_unknown: ["main", "article", "[role='main']", "[id*='content']", "[class*='content']", "section"],
-  content_stale: ["main", "article", "[role='main']", "[id*='content']", "[class*='content']", "section"],
-  content_outdated: ["main", "article", "[role='main']", "[id*='content']", "[class*='content']", "section"],
+  credentials_missing: ["[id*='about' i]", "[class*='about' i]", "[id*='team' i]", "[class*='team' i]", "[id*='credential' i]", "[class*='credential' i]", "footer"],
+  credentials_low: ["[id*='about' i]", "[class*='about' i]", "[id*='team' i]", "[class*='team' i]", "footer"],
+  content_freshness_unknown: ["main", "article", "[role='main']", "[id*='content' i]", "[class*='content' i]", "section"],
+  content_stale: ["main", "article", "[role='main']", "[id*='content' i]", "[class*='content' i]", "section"],
+  content_outdated: ["main", "article", "[role='main']", "[id*='content' i]", "[class*='content' i]", "section"],
+  faq_schema_missing: ["[class*='faq' i]", "[id*='faq' i]", "[class*='accordion' i]", "details", "dl"],
+  faq_schema_insufficient: ["[class*='faq' i]", "[id*='faq' i]", "[class*='accordion' i]", "details", "dl"],
+  local_business_schema_missing: ["address", "[class*='contact' i]", "[class*='location' i]", "[id*='contact' i]", "footer"],
+  citation_consistency: ["address", "[class*='contact' i]", "[class*='location' i]", "footer"],
+  alt_text_missing: ["img:not([alt])", "img[alt='']"],
+  images_missing_alt: ["img:not([alt])", "img[alt='']"],
+  duplicate_titles: ["h1"],
+  thin_content: ["main", "article", "[role='main']"],
+  word_count_low: ["main", "article", "[role='main']"],
+  no_h1: ["body"],
+  multiple_h1: ["h1"],
+  broken_links: ["a[href^='http']"],
 };
 
 const INVISIBLE_MESSAGES: Record<string, string> = {
@@ -111,34 +123,74 @@ const INVISIBLE_MESSAGES: Record<string, string> = {
   citation_consistency: "Action required: Audit your citations across Google, Yelp, BBB",
 };
 
-function highlightFinding(findingId: string) {
+type FindingSeverity = "critical" | "high" | "medium" | "low";
+
+const SEVERITY_PULSE_COLORS: Record<FindingSeverity, string> = {
+  critical: "rgba(181, 70, 49, 0.65)",
+  high: "rgba(201, 123, 69, 0.6)",
+  medium: "rgba(212, 169, 90, 0.6)",
+  low: "rgba(150, 162, 131, 0.6)",
+};
+
+const FINDING_PULSE_STYLE_ID = "surven-finding-pulse-style";
+
+function ensureFindingPulseStyle() {
+  if (document.getElementById(FINDING_PULSE_STYLE_ID)) return;
+  const style = document.createElement("style");
+  style.id = FINDING_PULSE_STYLE_ID;
+  style.textContent = `
+    @keyframes survenFindingPulseCritical {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(181, 70, 49, 0.65); }
+      50% { box-shadow: 0 0 0 16px rgba(181, 70, 49, 0); }
+    }
+    @keyframes survenFindingPulseHigh {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(201, 123, 69, 0.6); }
+      50% { box-shadow: 0 0 0 16px rgba(201, 123, 69, 0); }
+    }
+    @keyframes survenFindingPulseMedium {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(212, 169, 90, 0.6); }
+      50% { box-shadow: 0 0 0 16px rgba(212, 169, 90, 0); }
+    }
+    @keyframes survenFindingPulseLow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(150, 162, 131, 0.6); }
+      50% { box-shadow: 0 0 0 16px rgba(150, 162, 131, 0); }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function scrollAndPulseFinding(el: HTMLElement, severity: FindingSeverity = "medium") {
+  ensureFindingPulseStyle();
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  const animationName = `survenFindingPulse${severity[0].toUpperCase()}${severity.slice(1)}`;
+  const prevAnimation = el.style.animation;
+  el.style.setProperty("animation", `${animationName} 1.4s ease-out 3`, "important");
+  setTimeout(() => {
+    el.style.animation = prevAnimation;
+  }, 4400);
+  void SEVERITY_PULSE_COLORS;
+}
+
+function highlightFinding(findingId: string, severity: FindingSeverity = "medium") {
   clearAllHighlights();
 
   const selectors = FINDING_SELECTORS[findingId];
 
   if (!selectors) {
-    // Invisible finding — show a toast
-    const msg = INVISIBLE_MESSAGES[findingId] ?? "See sidebar for details";
+    const msg = INVISIBLE_MESSAGES[findingId] ?? "This fix is in your <head> or invisible code — see sidebar for details";
     showToast(msg);
     return;
   }
 
-  // Find first matching element for each selector and highlight it
-  let found = false;
   for (const selector of selectors) {
     const els = document.querySelectorAll<HTMLElement>(selector);
     if (els.length > 0) {
-      const el = els[0];
-      highlightEl(el);
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-      found = true;
-      break;
+      scrollAndPulseFinding(els[0], severity);
+      return;
     }
   }
 
-  if (!found) {
-    showToast("Could not find a matching element — see sidebar for fix instructions");
-  }
+  showToast("Could not find a matching element on this page — see sidebar for the fix");
 }
 
 function ensureBadgeHost(): ShadowRoot {
@@ -831,7 +883,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message.type === "HIGHLIGHT") {
-    highlightFinding(message.findingId);
+    highlightFinding(message.findingId, message.severity);
     sendResponse({ success: true });
     return true;
   }
