@@ -7,8 +7,9 @@ import "./styles.css";
 type FixState =
   | { status: "idle" }
   | { status: "applying" }
-  | { status: "success"; commitUrl?: string; filePath?: string; snippet?: string; manualNote?: string }
-  | { status: "manual"; snippet: string; manualNote: string }
+  | { status: "preview"; current: string | null; suggested: string; rewriteKind: "meta_desc" | "title_tag" }
+  | { status: "success"; commitUrl?: string; filePath?: string; snippet?: string; manualNote?: string; suggested?: string }
+  | { status: "manual"; snippet?: string; suggested?: string; manualNote: string; rewriteKind?: "meta_desc" | "title_tag" }
   | { status: "error"; message: string; connectUrl?: string; snippet?: string };
 
 const FINDING_TO_SCHEMA_TYPE: Record<string, string> = {
@@ -16,6 +17,33 @@ const FINDING_TO_SCHEMA_TYPE: Record<string, string> = {
   local_business_schema_missing: "LocalBusiness",
   faq_schema_missing: "FAQPage",
   faq_schema_insufficient: "FAQPage",
+};
+
+const FINDING_TO_REWRITE_KIND: Record<string, "meta_desc" | "title_tag"> = {
+  meta_desc_missing: "meta_desc",
+  meta_desc_short: "meta_desc",
+  meta_desc_long: "meta_desc",
+  title_tag_missing: "title_tag",
+  title_tag_generic: "title_tag",
+  title_tag_short: "title_tag",
+  title_tag_long: "title_tag",
+};
+
+const REWRITE_LABELS: Record<"meta_desc" | "title_tag", { button: string; whatItIs: string; previewWhatAiSees: string; previewBetter: string; useThis: string }> = {
+  meta_desc: {
+    button: "Improve how AI describes your site",
+    whatItIs: "the summary AI engines use when describing your site",
+    previewWhatAiSees: "What AI sees now",
+    previewBetter: "Better version (more likely to get cited)",
+    useThis: "Use this version",
+  },
+  title_tag: {
+    button: "Improve your site's main headline",
+    whatItIs: "your site's main headline (browser tab + Google results)",
+    previewWhatAiSees: "Your headline now",
+    previewBetter: "Stronger version",
+    useThis: "Use this version",
+  },
 };
 
 function getGenerateUrl(auditUrl: string): string {
