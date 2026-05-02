@@ -28,3 +28,12 @@ body {
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-cormorant);
 }
+
+@keyframes surven-spin-anim {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.surven-spin {
+  animation: surven-spin-anim 0.9s linear infinite;
+}
