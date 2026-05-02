@@ -1763,6 +1763,257 @@ export default function App() {
                             </button>
                           );
                         })()}
+
+                        {FAQ_FINDING_IDS.has(finding.id) && (() => {
+                          const fixState = fixStates[finding.id] ?? { status: "idle" as const };
+
+                          if (fixState.status === "preview-faq") {
+                            return (
+                              <div style={{ padding: "12px", background: "#FAF8F2", border: "1px solid #C8C2B0", borderRadius: "6px", fontSize: "12px", color: "#3D3F3D" }}>
+                                <div style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: "#6B7A59", marginBottom: "8px" }}>
+                                  Generated Q&amp;A pairs ({fixState.pairs.length})
+                                </div>
+                                <div style={{ maxHeight: "300px", overflowY: "auto", border: "1px solid #E5E1D5", borderRadius: "4px", background: "white", marginBottom: "10px" }}>
+                                  {fixState.pairs.map((pair, i) => (
+                                    <div key={i} style={{ padding: "8px 10px", borderBottom: i < fixState.pairs.length - 1 ? "1px solid #F2EEE3" : "none" }}>
+                                      <div style={{ fontSize: "11px", fontWeight: 700, color: "#3D3F3D", marginBottom: "3px" }}>Q: {pair.question}</div>
+                                      <div style={{ fontSize: "11px", color: "#666", lineHeight: "1.4" }}>A: {pair.answer}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                                  <button
+                                    onClick={() => applyFaqCommit(finding)}
+                                    style={{ padding: "8px 12px", background: "#96A283", color: "white", border: "none", borderRadius: "4px", fontSize: "12px", fontWeight: 600, cursor: "pointer", width: "100%" }}
+                                  >
+                                    ✓ Use these Q&amp;A pairs on my site
+                                  </button>
+                                  <div style={{ display: "flex", gap: "6px" }}>
+                                    <button
+                                      onClick={() => generateFaqPreview(finding)}
+                                      style={{ flex: 1, padding: "6px 10px", background: "transparent", border: "1px solid #C8C2B0", color: "#3D3F3D", borderRadius: "4px", fontSize: "11px", cursor: "pointer", fontWeight: 500 }}
+                                    >
+                                      ↻ Regenerate
+                                    </button>
+                                    <button
+                                      onClick={() => copyToClipboard(fixState.snippet)}
+                                      style={{ flex: 1, padding: "6px 10px", background: "transparent", border: "1px solid #C8C2B0", color: "#3D3F3D", borderRadius: "4px", fontSize: "11px", cursor: "pointer", fontWeight: 500 }}
+                                    >
+                                      📋 Copy snippet
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          if (fixState.status === "success" && fixState.snippet) {
+                            return (
+                              <div style={{ padding: "10px", background: "#F0FDF4", border: "1px solid #96A283", borderRadius: "4px", fontSize: "12px", color: "#3D3F3D" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "6px" }}>
+                                  <CheckCircle2 size={14} style={{ color: "#96A283" }} /> FAQ schema added to your site
+                                </div>
+                                {fixState.filePath && (
+                                  <div style={{ marginBottom: "4px", fontSize: "11px" }}>File: <code style={{ background: "#EDE8DC", padding: "1px 4px", borderRadius: "2px" }}>{fixState.filePath}</code></div>
+                                )}
+                                {fixState.commitUrl && (
+                                  <a href={fixState.commitUrl} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#96A283", textDecoration: "none", fontSize: "11px" }}>
+                                    View commit on GitHub <ExternalLink size={11} />
+                                  </a>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          if (fixState.status === "manual") {
+                            const instructions = getInstructionsForPlatform(detectedPlatform, "faq_page");
+                            return (
+                              <div style={{ padding: "12px", background: "#FEF3C7", border: "1px solid #C97B45", borderRadius: "6px", fontSize: "12px", color: "#3D3F3D" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "6px", color: "#C97B45" }}>
+                                  <AlertCircle size={14} /> Add this to {getDisplayName(detectedPlatform)} manually
+                                </div>
+                                <div style={{ background: "white", border: "1px solid #E5D8B8", borderRadius: "4px", padding: "10px", marginBottom: "10px" }}>
+                                  <div style={{ fontWeight: 600, fontSize: "11px", marginBottom: "6px" }}>Steps for {instructions.platformName}:</div>
+                                  <ol style={{ margin: 0, paddingLeft: "18px", fontSize: "11px", lineHeight: "1.55" }}>
+                                    {instructions.steps.map((step, i) => (
+                                      <li key={i} style={{ marginBottom: "3px" }}>{step}</li>
+                                    ))}
+                                  </ol>
+                                  {instructions.note && (
+                                    <div style={{ marginTop: "8px", padding: "6px 8px", background: "#FFF8E1", borderRadius: "3px", fontSize: "10px", color: "#7C5800", fontStyle: "italic" }}>💡 {instructions.note}</div>
+                                  )}
+                                </div>
+                                {fixState.snippet && (
+                                  <button
+                                    onClick={() => copyToClipboard(fixState.snippet ?? "")}
+                                    style={{ padding: "8px 12px", background: "#C97B45", border: "none", color: "white", borderRadius: "4px", fontSize: "12px", cursor: "pointer", fontWeight: 600, width: "100%" }}
+                                  >
+                                    📋 Copy snippet to clipboard
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          if (fixState.status === "error") {
+                            return (
+                              <div style={{ padding: "10px", background: "#FEE2E2", border: "1px solid #B54631", borderRadius: "4px", fontSize: "12px", color: "#3D3F3D" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "4px", color: "#B54631" }}>
+                                  <AlertCircle size={14} /> Couldn&apos;t generate FAQ
+                                </div>
+                                <div style={{ marginBottom: "6px" }}>{fixState.message}</div>
+                                <button
+                                  onClick={() => generateFaqPreview(finding)}
+                                  style={{ padding: "6px 10px", background: "transparent", border: "1px solid #B54631", color: "#B54631", borderRadius: "4px", fontSize: "11px", cursor: "pointer", fontWeight: 500 }}
+                                >Try again</button>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <button
+                              onClick={() => generateFaqPreview(finding)}
+                              disabled={fixState.status === "applying"}
+                              style={{
+                                width: "100%",
+                                padding: "8px 12px",
+                                background: fixState.status === "applying" ? "#d1d5db" : "#96A283",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "4px",
+                                fontSize: "13px",
+                                fontWeight: 500,
+                                cursor: fixState.status === "applying" ? "default" : "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "6px",
+                              }}
+                            >
+                              {fixState.status === "applying" ? (
+                                <><Loader2 size={14} className="surven-spin" /> Reading your page…</>
+                              ) : (
+                                <>✨ Build a FAQ section AI can cite</>
+                              )}
+                            </button>
+                          );
+                        })()}
+
+                        {ALT_TEXT_FINDING_IDS.has(finding.id) && (() => {
+                          const fixState = fixStates[finding.id] ?? { status: "idle" as const };
+
+                          if (fixState.status === "preview-alt") {
+                            const validSuggestions = fixState.suggestions.filter((s) => s.alt && !s.error);
+                            return (
+                              <div style={{ padding: "12px", background: "#FAF8F2", border: "1px solid #C8C2B0", borderRadius: "6px", fontSize: "12px", color: "#3D3F3D" }}>
+                                <div style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: "#6B7A59", marginBottom: "8px" }}>
+                                  AI-described image text ({validSuggestions.length} of {fixState.suggestions.length})
+                                </div>
+                                <div style={{ maxHeight: "320px", overflowY: "auto", marginBottom: "10px" }}>
+                                  {fixState.suggestions.map((sug, i) => (
+                                    <div key={i} style={{ padding: "8px", background: "white", border: "1px solid #E5E1D5", borderRadius: "4px", marginBottom: "6px", display: "flex", gap: "8px" }}>
+                                      <img src={sug.src} alt="" style={{ width: "44px", height: "44px", objectFit: "cover", borderRadius: "3px", flexShrink: 0, background: "#F2EEE3" }} />
+                                      <div style={{ flex: 1, minWidth: 0 }}>
+                                        {sug.alt ? (
+                                          <div style={{ fontSize: "11px", color: "#3D3F3D", lineHeight: "1.4" }}>{sug.alt}</div>
+                                        ) : (
+                                          <div style={{ fontSize: "11px", color: "#B54631", lineHeight: "1.4", fontStyle: "italic" }}>Couldn&apos;t describe: {sug.error ?? "unknown error"}</div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                                <button
+                                  onClick={() => applyAltTextCommit(finding, validSuggestions.map((s) => ({ src: s.src, alt: s.alt! })))}
+                                  disabled={validSuggestions.length === 0}
+                                  style={{ padding: "8px 12px", background: validSuggestions.length === 0 ? "#d1d5db" : "#96A283", color: "white", border: "none", borderRadius: "4px", fontSize: "12px", fontWeight: 600, cursor: validSuggestions.length === 0 ? "default" : "pointer", width: "100%" }}
+                                >
+                                  ✓ Apply these descriptions to {validSuggestions.length} image{validSuggestions.length === 1 ? "" : "s"}
+                                </button>
+                              </div>
+                            );
+                          }
+
+                          if (fixState.status === "success") {
+                            return (
+                              <div style={{ padding: "10px", background: "#F0FDF4", border: "1px solid #96A283", borderRadius: "4px", fontSize: "12px", color: "#3D3F3D" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "6px" }}>
+                                  <CheckCircle2 size={14} style={{ color: "#96A283" }} /> Image descriptions added
+                                </div>
+                                {fixState.commitUrl && (
+                                  <a href={fixState.commitUrl} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#96A283", textDecoration: "none", fontSize: "11px" }}>
+                                    View commit on GitHub <ExternalLink size={11} />
+                                  </a>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          if (fixState.status === "manual") {
+                            const instructions = getInstructionsForPlatform(detectedPlatform, "alt_text");
+                            return (
+                              <div style={{ padding: "12px", background: "#FEF3C7", border: "1px solid #C97B45", borderRadius: "6px", fontSize: "12px", color: "#3D3F3D" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "6px", color: "#C97B45" }}>
+                                  <AlertCircle size={14} /> Add image descriptions to {getDisplayName(detectedPlatform)} manually
+                                </div>
+                                <div style={{ marginBottom: "10px", lineHeight: "1.4", fontSize: "11px", color: "#666" }}>
+                                  We can&apos;t auto-edit images on {getDisplayName(detectedPlatform)} (yet) — but here&apos;s where to paste each description:
+                                </div>
+                                <div style={{ background: "white", border: "1px solid #E5D8B8", borderRadius: "4px", padding: "10px" }}>
+                                  <div style={{ fontWeight: 600, fontSize: "11px", marginBottom: "6px" }}>Steps for {instructions.platformName}:</div>
+                                  <ol style={{ margin: 0, paddingLeft: "18px", fontSize: "11px", lineHeight: "1.55" }}>
+                                    {instructions.steps.map((step, i) => (
+                                      <li key={i} style={{ marginBottom: "3px" }}>{step}</li>
+                                    ))}
+                                  </ol>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          if (fixState.status === "error") {
+                            return (
+                              <div style={{ padding: "10px", background: "#FEE2E2", border: "1px solid #B54631", borderRadius: "4px", fontSize: "12px", color: "#3D3F3D" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "4px", color: "#B54631" }}>
+                                  <AlertCircle size={14} /> Couldn&apos;t generate descriptions
+                                </div>
+                                <div style={{ marginBottom: "6px" }}>{fixState.message}</div>
+                                <button
+                                  onClick={() => generateAltTextPreview(finding)}
+                                  style={{ padding: "6px 10px", background: "transparent", border: "1px solid #B54631", color: "#B54631", borderRadius: "4px", fontSize: "11px", cursor: "pointer", fontWeight: 500 }}
+                                >Try again</button>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <button
+                              onClick={() => generateAltTextPreview(finding)}
+                              disabled={fixState.status === "applying"}
+                              style={{
+                                width: "100%",
+                                padding: "8px 12px",
+                                background: fixState.status === "applying" ? "#d1d5db" : "#96A283",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "4px",
+                                fontSize: "13px",
+                                fontWeight: 500,
+                                cursor: fixState.status === "applying" ? "default" : "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "6px",
+                              }}
+                            >
+                              {fixState.status === "applying" ? (
+                                <><Loader2 size={14} className="surven-spin" /> AI is looking at your images…</>
+                              ) : (
+                                <>✨ Describe the images on this page for AI</>
+                              )}
+                            </button>
+                          );
+                        })()}
                       </div>
                     </div>
                   )}
