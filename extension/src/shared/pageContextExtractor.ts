@@ -723,20 +723,6 @@ function extractArticleMeta(): { headline?: string; author?: string; datePublish
   return { headline, author, datePublished };
 }
 
-function readJsonLdValue(path: string[]): string | undefined {
-  const scripts = document.querySelectorAll<HTMLScriptElement>('script[type="application/ld+json"]');
-  for (const script of Array.from(scripts)) {
-    try {
-      const parsed = JSON.parse(script.textContent ?? "");
-      const found = walk(parsed, path);
-      if (typeof found === "string") return found;
-    } catch {
-      // skip malformed
-    }
-  }
-  return undefined;
-}
-
 /**
  * Find a value at `path` from a JSON-LD entity matching one of the given @type values.
  *
