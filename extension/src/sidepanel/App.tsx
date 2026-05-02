@@ -1263,6 +1263,205 @@ export default function App() {
                             </button>
                           );
                         })()}
+
+                        {FINDING_TO_REWRITE_KIND[finding.id] && (() => {
+                          const fixState = fixStates[finding.id] ?? { status: "idle" as const };
+                          const rewriteKind = FINDING_TO_REWRITE_KIND[finding.id];
+                          const labels = REWRITE_LABELS[rewriteKind];
+
+                          if (fixState.status === "preview") {
+                            return (
+                              <div style={{ padding: "12px", background: "#FAF8F2", border: "1px solid #C8C2B0", borderRadius: "6px", fontSize: "12px", color: "#3D3F3D" }}>
+                                <div style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: "#888", marginBottom: "4px" }}>
+                                  {labels.previewWhatAiSees}
+                                </div>
+                                <div style={{ padding: "8px 10px", background: "white", border: "1px solid #E5E1D5", borderRadius: "4px", marginBottom: "10px", fontSize: "12px", lineHeight: "1.4", color: fixState.current ? "#3D3F3D" : "#999", fontStyle: fixState.current ? "normal" : "italic" }}>
+                                  {fixState.current ?? "(nothing — your site has no description set)"}
+                                </div>
+
+                                <div style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: "#6B7A59", marginBottom: "4px" }}>
+                                  {labels.previewBetter}
+                                </div>
+                                <div style={{ padding: "8px 10px", background: "white", border: "1px solid #96A283", borderRadius: "4px", marginBottom: "10px", fontSize: "12px", lineHeight: "1.4", color: "#3D3F3D", fontWeight: 500 }}>
+                                  {fixState.suggested}
+                                </div>
+
+                                <div style={{ display: "flex", gap: "6px", flexDirection: "column" }}>
+                                  <button
+                                    onClick={() => applyRewrite(finding)}
+                                    style={{
+                                      padding: "8px 12px",
+                                      background: "#96A283",
+                                      color: "white",
+                                      border: "none",
+                                      borderRadius: "4px",
+                                      fontSize: "12px",
+                                      fontWeight: 600,
+                                      cursor: "pointer",
+                                      width: "100%",
+                                    }}
+                                  >
+                                    ✓ {labels.useThis}
+                                  </button>
+                                  <div style={{ display: "flex", gap: "6px" }}>
+                                    <button
+                                      onClick={() => generateRewritePreview(finding)}
+                                      style={{
+                                        flex: 1,
+                                        padding: "6px 10px",
+                                        background: "transparent",
+                                        border: "1px solid #C8C2B0",
+                                        color: "#3D3F3D",
+                                        borderRadius: "4px",
+                                        fontSize: "11px",
+                                        cursor: "pointer",
+                                        fontWeight: 500,
+                                      }}
+                                    >
+                                      ↻ Try a different one
+                                    </button>
+                                    <button
+                                      onClick={() => copyToClipboard(fixState.suggested)}
+                                      style={{
+                                        flex: 1,
+                                        padding: "6px 10px",
+                                        background: "transparent",
+                                        border: "1px solid #C8C2B0",
+                                        color: "#3D3F3D",
+                                        borderRadius: "4px",
+                                        fontSize: "11px",
+                                        cursor: "pointer",
+                                        fontWeight: 500,
+                                      }}
+                                    >
+                                      📋 Copy
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          if (fixState.status === "success" && fixState.suggested) {
+                            return (
+                              <div style={{ padding: "10px", background: "#F0FDF4", border: "1px solid #96A283", borderRadius: "4px", fontSize: "12px", color: "#3D3F3D" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "6px" }}>
+                                  <CheckCircle2 size={14} style={{ color: "#96A283" }} /> Updated on your site
+                                </div>
+                                <div style={{ fontSize: "11px", color: "#666", marginBottom: "4px" }}>New version:</div>
+                                <div style={{ padding: "6px 8px", background: "white", borderRadius: "3px", fontSize: "11px", lineHeight: "1.4", marginBottom: "6px" }}>
+                                  {fixState.suggested}
+                                </div>
+                                {fixState.filePath && (
+                                  <div style={{ marginBottom: "4px", fontSize: "11px" }}>File: <code style={{ background: "#EDE8DC", padding: "1px 4px", borderRadius: "2px" }}>{fixState.filePath}</code></div>
+                                )}
+                                {fixState.commitUrl && (
+                                  <a
+                                    href={fixState.commitUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#96A283", textDecoration: "none", fontSize: "11px" }}
+                                  >
+                                    View commit on GitHub <ExternalLink size={11} />
+                                  </a>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          if (fixState.status === "manual") {
+                            return (
+                              <div style={{ padding: "10px", background: "#FEF3C7", border: "1px solid #C97B45", borderRadius: "4px", fontSize: "12px", color: "#3D3F3D" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "6px", color: "#C97B45" }}>
+                                  <AlertCircle size={14} /> Auto-update not available for this site
+                                </div>
+                                <div style={{ marginBottom: "8px", lineHeight: "1.4" }}>{fixState.manualNote}</div>
+                                {fixState.suggested && (
+                                  <>
+                                    <div style={{ fontSize: "11px", color: "#666", marginBottom: "4px" }}>The new version (paste this in your site settings):</div>
+                                    <div style={{ padding: "8px 10px", background: "white", borderRadius: "3px", fontSize: "11px", lineHeight: "1.4", marginBottom: "8px", border: "1px solid #C97B45" }}>
+                                      {fixState.suggested}
+                                    </div>
+                                    <button
+                                      onClick={() => copyToClipboard(fixState.suggested!)}
+                                      style={{
+                                        padding: "6px 10px",
+                                        background: "#C97B45",
+                                        border: "none",
+                                        color: "white",
+                                        borderRadius: "4px",
+                                        fontSize: "11px",
+                                        cursor: "pointer",
+                                        fontWeight: 500,
+                                        width: "100%",
+                                      }}
+                                    >
+                                      📋 Copy to clipboard
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          if (fixState.status === "error") {
+                            return (
+                              <div style={{ padding: "10px", background: "#FEE2E2", border: "1px solid #B54631", borderRadius: "4px", fontSize: "12px", color: "#3D3F3D" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "4px", color: "#B54631" }}>
+                                  <AlertCircle size={14} /> Couldn't generate
+                                </div>
+                                <div style={{ marginBottom: "6px" }}>{fixState.message}</div>
+                                <button
+                                  onClick={() => generateRewritePreview(finding)}
+                                  style={{
+                                    padding: "6px 10px",
+                                    background: "transparent",
+                                    border: "1px solid #B54631",
+                                    color: "#B54631",
+                                    borderRadius: "4px",
+                                    fontSize: "11px",
+                                    cursor: "pointer",
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  Try again
+                                </button>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <button
+                              onClick={() => generateRewritePreview(finding)}
+                              disabled={fixState.status === "applying"}
+                              style={{
+                                width: "100%",
+                                padding: "8px 12px",
+                                background: fixState.status === "applying" ? "#d1d5db" : "#96A283",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "4px",
+                                fontSize: "13px",
+                                fontWeight: 500,
+                                cursor: fixState.status === "applying" ? "default" : "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "6px",
+                              }}
+                            >
+                              {fixState.status === "applying" ? (
+                                <>
+                                  <Loader2 size={14} className="surven-spin" /> Asking AI…
+                                </>
+                              ) : (
+                                <>
+                                  ✨ {labels.button}
+                                </>
+                              )}
+                            </button>
+                          );
+                        })()}
                       </div>
                     </div>
                   )}
