@@ -18,7 +18,9 @@ import {
   Gauge,
   ListChecks,
   Puzzle,
+  Info,
 } from "lucide-react";
+import { HoverHint } from "@/components/atoms/HoverHint";
 
 const CHROME_EXT_URL = "https://chromewebstore.google.com/detail/surven-auditor/";
 
@@ -527,6 +529,20 @@ export function AeoAuditSection({
 
 // ─── Stat strip (under hero) ──────────────────────────────────────────────
 
+// Half-circle gauge math, mirroring VisibilityScoreGauge.tsx so the visual
+// identity matches across the product.
+function polar(cx: number, cy: number, r: number, deg: number) {
+  return {
+    x: cx - r * Math.cos((deg * Math.PI) / 180),
+    y: cy - r * Math.sin((deg * Math.PI) / 180),
+  };
+}
+function halfArc(cx: number, cy: number, r: number, a: number, b: number) {
+  const s = polar(cx, cy, r, a);
+  const e = polar(cx, cy, r, b);
+  return `M ${s.x} ${s.y} A ${r} ${r} 0 ${b - a > 180 ? 1 : 0} 1 ${e.x} ${e.y}`;
+}
+
 function ResultStatStrip({ result }: { result: ScanResult }) {
   const tier =
     result.score >= 81
@@ -539,12 +555,29 @@ function ResultStatStrip({ result }: { result: ScanResult }) {
   const tok = GRADE_TOK[tier];
   const scannedAtPretty = formatScannedAt(result.scannedAt);
 
-  // SVG ring math (mirrors the SentimentHero pattern).
-  const ringSize = 140;
-  const ringStroke = 12;
-  const ringRadius = (ringSize - ringStroke) / 2;
-  const circumference = 2 * Math.PI * ringRadius;
-  const offset = circumference * (1 - result.score / 100);
+  // Half-circle gauge math
+  const gaugeWidth = 240;
+  const cx = 130;
+  const cy = 130;
+  const r = 100;
+  const stroke = 18;
+  const angle = 180 * (result.score / 100);
+  const tierLabel =
+    result.score >= 81
+      ? "EXCELLENT"
+      : result.score >= 56
+      ? "GREAT"
+      : result.score >= 26
+      ? "FAIR"
+      : "LOW";
+  const tierDescription =
+    result.score >= 81
+      ? "AI engines read your site clearly across nearly every signal — protect this position."
+      : result.score >= 56
+      ? "Solid foundation with room to climb. A few targeted fixes will lift the score."
+      : result.score >= 26
+      ? "AI engines pick up parts of your site but miss key signals. Plenty of room to improve."
+      : "AI engines struggle to read this page. The biggest growth lever sits here.";
 
   return (
     <motion.div
@@ -553,92 +586,110 @@ function ResultStatStrip({ result }: { result: ScanResult }) {
       transition={{ duration: 0.5, delay: 0.05, ease: EASE }}
       className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5 flex items-center gap-6 flex-wrap"
     >
-      {/* SVG progress ring */}
-      <div className="relative shrink-0" style={{ width: ringSize, height: ringSize }}>
-        <svg width={ringSize} height={ringSize}>
-          <circle
-            cx={ringSize / 2}
-            cy={ringSize / 2}
-            r={ringRadius}
+      {/* Half-circle gauge */}
+      <div className="relative shrink-0" style={{ width: gaugeWidth }}>
+        <svg viewBox="0 0 260 175" width="100%" style={{ display: "block" }}>
+          <defs>
+            <linearGradient id="aeoGaugeTrack" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#B54631" stopOpacity="0.32" />
+              <stop offset="33%" stopColor="#C97B45" stopOpacity="0.38" />
+              <stop offset="66%" stopColor="#96A283" stopOpacity="0.5" />
+              <stop offset="100%" stopColor="#7D8E6C" stopOpacity="0.55" />
+            </linearGradient>
+          </defs>
+          {/* Track (full half-arc, gradient) */}
+          <path
+            d={halfArc(cx, cy, r, 0, 180)}
+            stroke="url(#aeoGaugeTrack)"
+            strokeWidth={stroke}
             fill="none"
-            stroke="var(--color-surface-alt)"
-            strokeWidth={ringStroke}
-          />
-          <circle
-            cx={ringSize / 2}
-            cy={ringSize / 2}
-            r={ringRadius}
-            fill="none"
-            stroke={tok.color}
-            strokeWidth={ringStroke}
             strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-            transform={`rotate(-90 ${ringSize / 2} ${ringSize / 2})`}
+          />
+          {/* Filled portion (tier color) */}
+          <path
+            d={halfArc(cx, cy, r, 0, angle)}
+            stroke={tok.color}
+            strokeWidth={stroke}
+            fill="none"
+            strokeLinecap="round"
             style={{
-              transition:
-                "stroke-dashoffset 0.9s cubic-bezier(0.16, 1, 0.3, 1)",
+              transition: "stroke-dashoffset 0.9s cubic-bezier(0.16,1,0.3,1)",
             }}
           />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span
-            className="tabular-nums"
+          {/* Score number */}
+          <text
+            x={cx}
+            y={cy - 16}
+            textAnchor="middle"
             style={{
               fontFamily: "var(--font-display)",
-              fontSize: 44,
+              fontSize: 52,
               fontWeight: 600,
-              color: tok.color,
+              fill: tok.color,
               letterSpacing: "-0.02em",
-              lineHeight: 1,
             }}
           >
             {result.score}
-          </span>
-          <span
-            className="text-[var(--color-fg-muted)] tabular-nums mt-0.5"
-            style={{ fontSize: 13, fontFamily: "var(--font-display)" }}
+          </text>
+          <text
+            x={cx}
+            y={cy + 4}
+            textAnchor="middle"
+            fill="var(--color-fg-muted)"
+            fontSize="14"
           >
             /100
+          </text>
+        </svg>
+        {/* Tier label + question-mark hover hint, centered below the arc */}
+        <div className="flex items-center justify-center gap-1.5 -mt-2">
+          <span
+            className="font-semibold uppercase"
+            style={{
+              fontSize: 14,
+              letterSpacing: "0.10em",
+              color: tok.color,
+            }}
+          >
+            {tierLabel}
           </span>
+          <HoverHint hint={tierDescription}>
+            <Info
+              className="h-3.5 w-3.5 text-[var(--color-fg-muted)] hover:text-[var(--color-fg-secondary)] cursor-help transition-colors"
+              aria-label="Score tier explanation"
+            />
+          </HoverHint>
         </div>
       </div>
 
       {/* Right-side meta */}
       <div className="flex-1 min-w-0 space-y-2.5">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span
-            className="rounded-full px-3 py-1 font-semibold uppercase"
-            style={{
-              fontSize: 11.5,
-              letterSpacing: "0.12em",
-              backgroundColor: `${tok.color}1f`,
-              color: tok.color,
-            }}
-          >
-            {tok.label}
-          </span>
-          <span
-            className="text-[var(--color-fg-secondary)]"
-            style={{ fontSize: 14 }}
-          >
-            Readability across 25 checks
-          </span>
-        </div>
+        <p
+          className="text-[var(--color-fg-secondary)]"
+          style={{ fontSize: 15, lineHeight: 1.55 }}
+        >
+          AI readability across 25 checks.
+        </p>
         <div
           className="flex flex-wrap items-baseline gap-x-5 gap-y-1.5 text-[var(--color-fg-secondary)]"
           style={{ fontSize: 14 }}
         >
           <span>
             Last scan{" "}
-            <span className="font-semibold text-[var(--color-fg)]">{scannedAtPretty}</span>
+            <span className="font-semibold text-[var(--color-fg)]">
+              {scannedAtPretty}
+            </span>
           </span>
-          <span className="text-[var(--color-fg-muted)]" style={{ fontSize: 13 }}>·</span>
+          <span className="text-[var(--color-fg-muted)]" style={{ fontSize: 13 }}>
+            ·
+          </span>
           <span>
             Next scan{" "}
             <span className="font-semibold text-[var(--color-fg)]">in 7 days</span>
           </span>
-          <span className="text-[var(--color-fg-muted)]" style={{ fontSize: 13 }}>·</span>
+          <span className="text-[var(--color-fg-muted)]" style={{ fontSize: 13 }}>
+            ·
+          </span>
           <span>
             Scan time{" "}
             <span className="font-semibold text-[var(--color-fg)] tabular-nums">
