@@ -391,4 +391,20 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     sendResponse({ success: true });
     return true;
   }
+
+  if (message.type === "HEATMAP_SHOW") {
+    try {
+      applyHeatmap();
+      sendResponse({ success: true, count: heatmapEntries.length });
+    } catch (err) {
+      sendResponse({ success: false, error: String(err) });
+    }
+    return true;
+  }
+
+  if (message.type === "HEATMAP_HIDE") {
+    removeHeatmap();
+    sendResponse({ success: true });
+    return true;
+  }
 });
