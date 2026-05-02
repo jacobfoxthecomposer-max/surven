@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request", details: parse.error.flatten() }, { status: 400 });
   }
 
-  const { kind, pageContext, commit, findingId, findingTitle, schemaType } = parse.data;
+  const { kind, pageContext, commit, findingId, findingTitle, schemaType, approvedContent } = parse.data;
 
   if (kind === "schema_org") {
     if (!schemaType) {
