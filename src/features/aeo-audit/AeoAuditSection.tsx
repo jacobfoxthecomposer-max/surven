@@ -44,17 +44,17 @@ function ChromeExtLink({ children }: { children?: React.ReactNode }) {
 function ChromeExtCallout() {
   return (
     <div
-      className="rounded-[var(--radius-lg)] border bg-[var(--color-surface)] overflow-hidden"
+      className="rounded-[var(--radius-lg)] border bg-[var(--color-surface)] overflow-hidden h-full flex flex-col"
       style={{ borderColor: "rgba(150,162,131,0.45)" }}
     >
       <div
-        className="px-5 py-4 flex flex-wrap items-center justify-between gap-4"
+        className="px-5 py-5 flex-1 flex flex-col gap-4"
         style={{
           background:
             "linear-gradient(135deg, rgba(150,162,131,0.18) 0%, rgba(150,162,131,0.04) 100%)",
         }}
       >
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
           <div
             className="h-11 w-11 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
             style={{ backgroundColor: "rgba(150,162,131,0.22)" }}
@@ -75,7 +75,7 @@ function ChromeExtCallout() {
               Audit any page in one click
             </p>
             <p
-              className="text-[var(--color-fg-secondary)] mt-0.5"
+              className="text-[var(--color-fg-secondary)] mt-1"
               style={{ fontSize: 14, lineHeight: 1.5 }}
             >
               The Surven Chrome extension runs this same readability scan on
@@ -87,11 +87,67 @@ function ChromeExtCallout() {
           href={CHROME_EXT_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium shadow-md transition-colors shrink-0"
+          className="self-start inline-flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium shadow-md transition-colors shrink-0"
           style={{ fontSize: 14 }}
         >
           <Puzzle className="h-4 w-4" />
           Install extension
+          <ArrowRight className="h-4 w-4" />
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function WebsiteAuditCallout() {
+  return (
+    <div
+      className="rounded-[var(--radius-lg)] border bg-[var(--color-surface)] overflow-hidden h-full flex flex-col"
+      style={{ borderColor: "rgba(150,162,131,0.45)" }}
+    >
+      <div
+        className="px-5 py-5 flex-1 flex flex-col gap-4"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(150,162,131,0.18) 0%, rgba(150,162,131,0.04) 100%)",
+        }}
+      >
+        <div className="flex items-start gap-3 min-w-0 flex-1">
+          <div
+            className="h-11 w-11 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
+            style={{ backgroundColor: "rgba(150,162,131,0.22)" }}
+          >
+            <ListChecks className="h-5 w-5" style={{ color: COLORS.primary }} />
+          </div>
+          <div className="min-w-0">
+            <p
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 22,
+                fontWeight: 600,
+                letterSpacing: "-0.01em",
+                color: "var(--color-fg)",
+                lineHeight: 1.2,
+              }}
+            >
+              Open the full Website Audit
+            </p>
+            <p
+              className="text-[var(--color-fg-secondary)] mt-1"
+              style={{ fontSize: 14, lineHeight: 1.5 }}
+            >
+              Severity-tagged findings across schema, freshness, FAQ
+              markup, and meta — with deeper diagnostics and action plans.
+            </p>
+          </div>
+        </div>
+        <a
+          href="/audit"
+          className="self-start inline-flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium shadow-md transition-colors shrink-0"
+          style={{ fontSize: 14 }}
+        >
+          <ListChecks className="h-4 w-4" />
+          Open Website Audit
           <ArrowRight className="h-4 w-4" />
         </a>
       </div>
@@ -458,8 +514,12 @@ export function AeoAuditSection({
               <ChecksList checks={result.checks} />
             </motion.div>
 
-            <motion.div {...reveal}>
+            <motion.div
+              {...reveal}
+              className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch"
+            >
               <ChromeExtCallout />
+              <WebsiteAuditCallout />
             </motion.div>
           </motion.div>
         )}
