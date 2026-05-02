@@ -1394,35 +1394,57 @@ export default function App() {
                           }
 
                           if (fixState.status === "manual") {
+                            const fixKindForInstructions: FixKind = (fixState.rewriteKind ?? rewriteKind);
+                            const instructions = getInstructionsForPlatform(detectedPlatform, fixKindForInstructions);
                             return (
-                              <div style={{ padding: "10px", background: "#FEF3C7", border: "1px solid #C97B45", borderRadius: "4px", fontSize: "12px", color: "#3D3F3D" }}>
+                              <div style={{ padding: "12px", background: "#FEF3C7", border: "1px solid #C97B45", borderRadius: "6px", fontSize: "12px", color: "#3D3F3D" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "6px", color: "#C97B45" }}>
-                                  <AlertCircle size={14} /> Auto-update not available for this site
+                                  <AlertCircle size={14} /> Add this to {getDisplayName(detectedPlatform)} manually
                                 </div>
-                                <div style={{ marginBottom: "8px", lineHeight: "1.4" }}>{fixState.manualNote}</div>
+                                <div style={{ marginBottom: "10px", lineHeight: "1.4", fontSize: "11px", color: "#666" }}>
+                                  We can&apos;t auto-update {getDisplayName(detectedPlatform)} (yet) — but here&apos;s exactly where to paste it:
+                                </div>
+
                                 {fixState.suggested && (
                                   <>
-                                    <div style={{ fontSize: "11px", color: "#666", marginBottom: "4px" }}>The new version (paste this in your site settings):</div>
-                                    <div style={{ padding: "8px 10px", background: "white", borderRadius: "3px", fontSize: "11px", lineHeight: "1.4", marginBottom: "8px", border: "1px solid #C97B45" }}>
+                                    <div style={{ fontSize: "11px", color: "#666", marginBottom: "4px", fontWeight: 500 }}>The new version:</div>
+                                    <div style={{ padding: "8px 10px", background: "white", borderRadius: "4px", fontSize: "11px", lineHeight: "1.4", marginBottom: "10px", border: "1px solid #C97B45" }}>
                                       {fixState.suggested}
                                     </div>
-                                    <button
-                                      onClick={() => copyToClipboard(fixState.suggested!)}
-                                      style={{
-                                        padding: "6px 10px",
-                                        background: "#C97B45",
-                                        border: "none",
-                                        color: "white",
-                                        borderRadius: "4px",
-                                        fontSize: "11px",
-                                        cursor: "pointer",
-                                        fontWeight: 500,
-                                        width: "100%",
-                                      }}
-                                    >
-                                      📋 Copy to clipboard
-                                    </button>
                                   </>
+                                )}
+
+                                <div style={{ background: "white", border: "1px solid #E5D8B8", borderRadius: "4px", padding: "10px", marginBottom: "10px" }}>
+                                  <div style={{ fontWeight: 600, fontSize: "11px", marginBottom: "6px", color: "#3D3F3D" }}>Steps for {instructions.platformName}:</div>
+                                  <ol style={{ margin: 0, paddingLeft: "18px", fontSize: "11px", lineHeight: "1.55" }}>
+                                    {instructions.steps.map((step, i) => (
+                                      <li key={i} style={{ marginBottom: "3px" }}>{step}</li>
+                                    ))}
+                                  </ol>
+                                  {instructions.note && (
+                                    <div style={{ marginTop: "8px", padding: "6px 8px", background: "#FFF8E1", borderRadius: "3px", fontSize: "10px", color: "#7C5800", fontStyle: "italic" }}>
+                                      💡 {instructions.note}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {fixState.suggested && (
+                                  <button
+                                    onClick={() => copyToClipboard(fixState.suggested!)}
+                                    style={{
+                                      padding: "8px 12px",
+                                      background: "#C97B45",
+                                      border: "none",
+                                      color: "white",
+                                      borderRadius: "4px",
+                                      fontSize: "12px",
+                                      cursor: "pointer",
+                                      fontWeight: 600,
+                                      width: "100%",
+                                    }}
+                                  >
+                                    📋 Copy to clipboard
+                                  </button>
                                 )}
                               </div>
                             );
