@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   X as XIcon,
   ChevronDown,
+  ChevronUp,
   Loader2,
   ExternalLink,
   Compass,
@@ -994,15 +995,23 @@ function PriorityFixCards({ checks }: { checks: CheckResult[] }) {
     .filter((c) => c.status !== "pass")
     .map((c) => ({ check: c, gain: c.max - c.earned }))
     .filter((x) => x.gain > 0)
-    .sort((a, b) => b.gain - a.gain)
-    .slice(0, 3);
+    .sort((a, b) => b.gain - a.gain);
+
+  const PAGE_SIZE = 3;
+  const [startIndex, setStartIndex] = useState(0);
 
   if (fixable.length === 0) return null;
   const totalGain = fixable.reduce((s, x) => s + x.gain, 0);
+  const maxStart = Math.max(0, fixable.length - PAGE_SIZE);
+  const canUp = startIndex > 0;
+  const canDown = startIndex < maxStart;
+  const goUp = () => setStartIndex((s) => Math.max(0, s - PAGE_SIZE));
+  const goDown = () => setStartIndex((s) => Math.min(maxStart, s + PAGE_SIZE));
+  const visible = fixable.slice(startIndex, startIndex + PAGE_SIZE);
 
   return (
     <div
-      className="rounded-[var(--radius-lg)] border bg-[var(--color-surface)] overflow-hidden"
+      className="rounded-[var(--radius-lg)] border bg-[var(--color-surface)] overflow-hidden flex flex-col h-full"
       style={{ borderColor: "rgba(150,162,131,0.45)" }}
     >
       <div
@@ -1020,7 +1029,7 @@ function PriorityFixCards({ checks }: { checks: CheckResult[] }) {
             <Sparkles className="h-4.5 w-4.5" style={{ color: COLORS.primary, height: 18, width: 18 }} />
           </div>
           <SectionHeading text="Fix these first" />
-          <HoverHint hint="The three highest-impact issues across all pillars, ranked by points recoverable.">
+          <HoverHint hint="Highest-impact non-passing checks across all pillars, ranked by points recoverable. Use the arrows to page through.">
             <Info
               className="h-3.5 w-3.5 text-[var(--color-fg-muted)] hover:text-[var(--color-fg-secondary)] cursor-help transition-colors"
               aria-label="What this card shows"
@@ -1032,11 +1041,30 @@ function PriorityFixCards({ checks }: { checks: CheckResult[] }) {
           <span className="font-semibold tabular-nums" style={{ color: COLORS.primary }}>
             {Math.round(totalGain)}
           </span>{" "}
-          points by tackling these.
+          points across {fixable.length} fix{fixable.length === 1 ? "" : "es"}.
         </p>
       </div>
-      <ul className="divide-y divide-[var(--color-border)]">
-        {fixable.map(({ check, gain }) => {
+
+      {/* Up arrow — same pattern as WhatsNextCard. */}
+      <div className="flex justify-center pt-2 pb-1">
+        <button
+          type="button"
+          onClick={goUp}
+          disabled={!canUp}
+          aria-label="Show previous fixes"
+          className={
+            "rounded-full p-1 transition-colors " +
+            (canUp
+              ? "text-[var(--color-fg-secondary)] hover:text-[var(--color-fg)] hover:bg-[var(--color-surface-alt)] cursor-pointer"
+              : "text-[var(--color-border)] cursor-default")
+          }
+        >
+          <ChevronUp className="h-5 w-5" />
+        </button>
+      </div>
+
+      <ul className="divide-y divide-[var(--color-border)] flex-1">
+        {visible.map(({ check, gain }) => {
           const tok = STATUS_TOK[check.status];
           const Icon = tok.Icon;
           const eff = effortBadge(check.effortMin);
@@ -1138,6 +1166,30 @@ function PriorityFixCards({ checks }: { checks: CheckResult[] }) {
           );
         })}
       </ul>
+
+      {/* Down arrow + page indicator */}
+      <div className="flex items-center justify-center gap-3 pt-1 pb-2">
+        <span
+          className="text-[var(--color-fg-muted)] tabular-nums"
+          style={{ fontSize: 11.5 }}
+        >
+          {Math.min(startIndex + PAGE_SIZE, fixable.length)} of {fixable.length}
+        </span>
+        <button
+          type="button"
+          onClick={goDown}
+          disabled={!canDown}
+          aria-label="Show next fixes"
+          className={
+            "rounded-full p-1 transition-colors " +
+            (canDown
+              ? "text-[var(--color-fg-secondary)] hover:text-[var(--color-fg)] hover:bg-[var(--color-surface-alt)] cursor-pointer"
+              : "text-[var(--color-border)] cursor-default")
+          }
+        >
+          <ChevronDown className="h-5 w-5" />
+        </button>
+      </div>
     </div>
   );
 }
