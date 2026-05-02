@@ -2020,7 +2020,7 @@ function CheckRow({ check }: { check: CheckResult }) {
           <Icon className="h-5 w-5" />
         </span>
 
-        {/* Title + status pill + detail */}
+        {/* Title + status pill + cost badge + detail */}
         <div className="flex-1 min-w-0 space-y-1.5">
           <div className="flex items-center gap-2 flex-wrap">
             <p
@@ -2040,6 +2040,24 @@ function CheckRow({ check }: { check: CheckResult }) {
             >
               {tok.label}
             </span>
+            {check.status !== "pass" && check.max - check.earned > 0 && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold tabular-nums"
+                style={{
+                  fontSize: 11,
+                  letterSpacing: "0.02em",
+                  backgroundColor: tok.bg,
+                  color: tok.color,
+                }}
+                title={`Costing your overall score ${Math.round(
+                  (check.max - check.earned) * 10,
+                ) / 10} point${check.max - check.earned === 1 ? "" : "s"}`}
+              >
+                −
+                {Math.round((check.max - check.earned) * 10) / 10}
+                <span style={{ opacity: 0.7 }}>pts</span>
+              </span>
+            )}
           </div>
           <p
             className="text-[var(--color-fg-secondary)]"
