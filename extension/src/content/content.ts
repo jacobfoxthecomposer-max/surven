@@ -111,13 +111,6 @@ const INVISIBLE_MESSAGES: Record<string, string> = {
 
 type FindingSeverity = "critical" | "high" | "medium" | "low";
 
-const SEVERITY_PULSE_COLORS: Record<FindingSeverity, string> = {
-  critical: "rgba(181, 70, 49, 0.65)",
-  high: "rgba(201, 123, 69, 0.6)",
-  medium: "rgba(212, 169, 90, 0.6)",
-  low: "rgba(150, 162, 131, 0.6)",
-};
-
 const FINDING_PULSE_STYLE_ID = "surven-finding-pulse-style";
 
 function ensureFindingPulseStyle() {
