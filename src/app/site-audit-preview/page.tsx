@@ -5,11 +5,16 @@
  * scanner. Bypasses auth + Supabase so the URL input + scan flow +
  * results UI can be visually QA'd without credentials.
  *
+ * Wraps in DashboardLayout so the Sidebar (with current section
+ * order) is visible alongside the page — useful for QA-ing sidebar
+ * changes too.
+ *
  * Defaults to plan="plus" so the scan form renders. Free-plan paywall
  * variant is reachable by appending ?plan=free.
  */
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { AeoAuditSection } from "@/features/aeo-audit/AeoAuditSection";
 
 function Inner() {
@@ -20,12 +25,10 @@ function Inner() {
 
 export default function SiteAuditPreviewPage() {
   return (
-    <main className="min-h-screen bg-[var(--color-bg)] py-8 px-6">
-      <div className="max-w-7xl mx-auto">
-        <Suspense fallback={null}>
-          <Inner />
-        </Suspense>
-      </div>
-    </main>
+    <DashboardLayout>
+      <Suspense fallback={null}>
+        <Inner />
+      </Suspense>
+    </DashboardLayout>
   );
 }

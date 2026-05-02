@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Spinner } from "@/components/atoms/Spinner";
@@ -14,12 +15,19 @@ export default function SiteAuditPage() {
   const { business, isLoading: bizLoading } = useBusiness();
   const { plan, isLoading: profileLoading } = useUserProfile();
 
-  if (!user && !authLoading) {
-    router.push("/login");
-    return null;
-  }
+  // Redirects must run after render — calling router.push() during the
+  // render phase triggers React 19's "setState during render" warning.
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/login");
+      return;
+    }
+    if (!authLoading && !bizLoading && user && !business) {
+      router.push("/onboarding");
+    }
+  }, [user, authLoading, business, bizLoading, router]);
 
-  if (authLoading || bizLoading || profileLoading) {
+  if (authLoading || bizLoading || profileLoading || !user || !business) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -27,11 +35,6 @@ export default function SiteAuditPage() {
         </div>
       </DashboardLayout>
     );
-  }
-
-  if (!business) {
-    router.push("/onboarding");
-    return null;
   }
 
   return (
