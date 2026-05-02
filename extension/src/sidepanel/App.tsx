@@ -390,6 +390,14 @@ export default function App() {
         return;
       }
 
+      if (isAmbiguousPageResponse(data as { error?: string; reasons?: string[] })) {
+        setFixStates((s) => ({
+          ...s,
+          [finding.id]: { status: "ambiguous", reasons: (data as { reasons?: string[] }).reasons ?? [] },
+        }));
+        return;
+      }
+
       if (!res.ok || !data.suggested) {
         setFixStates((s) => ({
           ...s,
