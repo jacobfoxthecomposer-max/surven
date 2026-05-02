@@ -649,6 +649,10 @@ function applySchemaOverlay() {
         background: rgba(140, 50, 35, 0.95) !important;
         color: white !important;
       }
+      @keyframes survenSchemaPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(181, 70, 49, 0.6) !important; }
+        50% { box-shadow: 0 0 0 14px rgba(181, 70, 49, 0) !important; }
+      }
     `;
     document.head.appendChild(style);
   }
