@@ -160,6 +160,137 @@ export default function App() {
     }
   }
 
+  async function generateSchemaFix(finding: AuditFinding) {
+    if (!settings?.apiUrl || !settings?.apiKey) return;
+    const schemaType = FINDING_TO_SCHEMA_TYPE[finding.id];
+    if (!schemaType) return;
+
+    setFixStates((s) => ({ ...s, [finding.id]: { status: "applying" } }));
+
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) {
+      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: "No active tab found" } }));
+      return;
+    }
+
+    let pageContext: unknown;
+    try {
+      const ctxResp = await chrome.tabs.sendMessage(tab.id, { type: "EXTRACT_PAGE_CONTEXT" });
+      if (!ctxResp?.success) {
+        setFixStates((s) => ({
+          ...s,
+          [finding.id]: { status: "error", message: ctxResp?.error ?? "Couldn't read page content. Refresh the tab and try again." },
+        }));
+        return;
+      }
+      pageContext = ctxResp.context;
+    } catch (err) {
+      setFixStates((s) => ({
+        ...s,
+        [finding.id]: { status: "error", message: `Couldn't reach page: ${err instanceof Error ? err.message : "unknown"}. Refresh the tab.` },
+      }));
+      return;
+    }
+
+    try {
+      const res = await fetch(getGenerateUrl(settings.apiUrl), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": settings.apiKey,
+        },
+        body: JSON.stringify({
+          kind: "schema_org",
+          schemaType,
+          pageContext,
+          commit: true,
+          findingId: finding.id,
+          findingTitle: finding.title,
+        }),
+      });
+
+      const rawText = await res.text();
+      let data: {
+        ok?: boolean;
+        commitUrl?: string;
+        filePath?: string;
+        snippet?: string;
+        manualNote?: string;
+        error?: string;
+        message?: string;
+        connectUrl?: string;
+      } = {};
+      if (rawText) {
+        try {
+          data = JSON.parse(rawText);
+        } catch {
+          setFixStates((s) => ({
+            ...s,
+            [finding.id]: { status: "error", message: `Server returned an unparseable response (status ${res.status}).` },
+          }));
+          return;
+        }
+      }
+
+      if (!res.ok) {
+        setFixStates((s) => ({
+          ...s,
+          [finding.id]: {
+            status: "error",
+            message: data.message ?? data.error ?? `Generation failed (status ${res.status})`,
+            connectUrl: data.connectUrl,
+            snippet: data.snippet,
+          },
+        }));
+        return;
+      }
+
+      if (data.ok === false && data.snippet && data.manualNote) {
+        setFixStates((s) => ({
+          ...s,
+          [finding.id]: { status: "manual", snippet: data.snippet!, manualNote: data.manualNote! },
+        }));
+        return;
+      }
+
+      if (data.ok === false) {
+        setFixStates((s) => ({
+          ...s,
+          [finding.id]: {
+            status: "error",
+            message: data.message ?? data.error ?? "Commit failed",
+            connectUrl: data.connectUrl,
+            snippet: data.snippet,
+          },
+        }));
+        return;
+      }
+
+      setFixStates((s) => ({
+        ...s,
+        [finding.id]: {
+          status: "success",
+          commitUrl: data.commitUrl,
+          filePath: data.filePath,
+          snippet: data.snippet,
+        },
+      }));
+    } catch (err) {
+      setFixStates((s) => ({
+        ...s,
+        [finding.id]: { status: "error", message: err instanceof Error ? err.message : "Network error" },
+      }));
+    }
+  }
+
+  async function copyToClipboard(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // ignore — fallback would be a textarea trick, not worth the complexity
+    }
+  }
+
   useEffect(() => {
     chrome.storage.local.get("surven_settings", (data) => {
       if (data.surven_settings) {
