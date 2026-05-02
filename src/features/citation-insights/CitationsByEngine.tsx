@@ -2,11 +2,12 @@
 
 import { useMemo } from "react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { ChartExplainer } from "@/components/atoms/ChartExplainer";
-import { Cpu, Info, ExternalLink } from "lucide-react";
+import { Cpu, Info, ExternalLink, ArrowRight } from "lucide-react";
 import { AI_MODELS } from "@/utils/constants";
 import type { ScanResult, ModelName } from "@/types/database";
 
@@ -63,6 +64,12 @@ export function CitationsByEngine({ results }: CitationsByEngineProps) {
         <HoverHint hint="Each AI model cites different sources. See which engines are pulling from which domains for your business.">
           <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
         </HoverHint>
+        <Link
+          href="/ai-visibility-tracker"
+          className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors"
+        >
+          Full tracker <ArrowRight className="h-3 w-3" />
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
@@ -137,6 +144,13 @@ export function CitationsByEngine({ results }: CitationsByEngineProps) {
                 </div>
               ))}
             </div>
+
+            <Link
+              href="/prompts"
+              className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors"
+            >
+              See {s.name} prompts <ArrowRight className="h-3 w-3" />
+            </Link>
           </motion.div>
         ))}
       </div>

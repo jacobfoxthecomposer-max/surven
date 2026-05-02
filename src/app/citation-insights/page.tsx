@@ -1,9 +1,19 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Calendar, Info, Link2, Database, ShieldCheck } from "lucide-react";
+import {
+  Calendar,
+  Info,
+  Link2,
+  Database,
+  ShieldCheck,
+  ArrowRight,
+  Search,
+  RefreshCw,
+} from "lucide-react";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Spinner } from "@/components/atoms/Spinner";
 import { Card } from "@/components/atoms/Card";
@@ -19,6 +29,9 @@ import { AuthorityBreakdown } from "@/features/citation-insights/AuthorityBreakd
 import { SourceCategoryBreakdown } from "@/features/citation-insights/SourceCategoryBreakdown";
 import { CitationsByEngine } from "@/features/citation-insights/CitationsByEngine";
 import { CitedDomainsTable } from "@/features/citation-insights/CitedDomainsTable";
+import { CitationDiagnosticBand } from "@/features/citation-insights/CitationDiagnosticBand";
+import { CitationFixActions } from "@/features/citation-insights/CitationFixActions";
+import { CitationFooterDiagnostic } from "@/features/citation-insights/CitationFooterDiagnostic";
 import { AI_MODELS } from "@/utils/constants";
 import { getAuthority } from "@/utils/citationAuthority";
 import { colorForValue, SURVEN_THRESHOLDS } from "@/utils/brandColors";
@@ -162,264 +175,349 @@ export default function CitationInsightsPage() {
       : `AI engines aren't citing any sources for ${business.name} yet. Getting listed on high-authority directories is the fastest way to build citation presence.`
     : null;
 
+  const hasResults = allResults.length > 0;
+
   return (
     <DashboardLayout>
       <div className="space-y-6 w-full">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease }}
-          className="flex items-start justify-between gap-6"
-        >
-          <div className="space-y-2 min-w-0 flex-1">
-            <h1
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: "clamp(32px, 4vw, 52px)",
-                fontWeight: 600,
-                lineHeight: 1.15,
-                letterSpacing: "-0.01em",
-                color: "var(--color-fg)",
-              }}
+        {/* Top hero row — headline + filter (left 2/3), action panel (right 1/3) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          <div className="lg:col-span-2 space-y-5 min-w-0">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease }}
+              className="space-y-2 min-w-0"
             >
-              Your citation profile is{" "}
-              <span style={{ color: profileColor, fontStyle: "italic" }}>
-                {profileWord}
-              </span>
-              .
-            </h1>
-            <p className="text-sm text-[var(--color-fg-muted)] mt-1.5">
-              The sources AI models cite when answering questions about {business.name}.
-            </p>
-          </div>
-          <div className="shrink-0 mt-1">
-            <NextScanCard />
-          </div>
-        </motion.div>
-
-        {/* Filter bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1, ease }}
-          className="flex flex-wrap items-center gap-2 pb-4 border-b border-[var(--color-border)]"
-        >
-          <div className="inline-flex rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-1 gap-1">
-            {TIME_RANGES.map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => setTimeRange(key)}
-                className={
-                  "px-3.5 py-2 font-medium rounded-[var(--radius-sm)] transition-colors " +
-                  (timeRange === key
-                    ? "bg-[var(--color-primary)] text-white"
-                    : "text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-alt)]")
-                }
-                style={{ fontSize: 14 }}
+              <h1
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontSize: "clamp(32px, 4vw, 52px)",
+                  fontWeight: 600,
+                  lineHeight: 1.15,
+                  letterSpacing: "-0.01em",
+                  color: "var(--color-fg)",
+                }}
               >
-                {label}
-              </button>
-            ))}
-          </div>
+                Your citation profile is{" "}
+                <span style={{ color: profileColor, fontStyle: "italic" }}>
+                  {profileWord}
+                </span>
+                .
+              </h1>
+              <p className="text-sm text-[var(--color-fg-muted)] mt-1.5">
+                The sources AI models cite when answering questions about{" "}
+                {business.name}.
+              </p>
+            </motion.div>
 
-          <button
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 font-medium rounded-[var(--radius-md)] border transition-colors bg-[var(--color-surface)] text-[var(--color-fg-secondary)] border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]"
-            style={{ fontSize: 14 }}
-            title="Custom date range (coming soon)"
-          >
-            <Calendar className="h-4 w-4" /> Custom
-          </button>
+            {hasResults && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.1, ease }}
+                className="flex flex-wrap items-center gap-2"
+              >
+                <div className="inline-flex rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-1 gap-1">
+                  {TIME_RANGES.map(({ key, label }) => (
+                    <button
+                      key={key}
+                      onClick={() => setTimeRange(key)}
+                      className={
+                        "px-3.5 py-2 font-medium rounded-[var(--radius-sm)] transition-colors " +
+                        (timeRange === key
+                          ? "bg-[var(--color-primary)] text-white"
+                          : "text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-alt)]")
+                      }
+                      style={{ fontSize: 14 }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
 
-          <div className="h-4 w-px bg-[var(--color-border)]" />
-
-          <span className="text-[var(--color-fg-muted)] mr-1" style={{ fontSize: 14 }}>
-            AI engines:
-          </span>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {AI_MODELS.map((m) => {
-              const active = selectedModels.has(m.id);
-              return (
                 <button
-                  key={m.id}
-                  onClick={() => toggleModel(m.id)}
-                  className={
-                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-full)] border font-medium transition-colors " +
-                    (active
-                      ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
-                      : "bg-transparent text-[var(--color-fg-muted)] border-[var(--color-border)] hover:border-[var(--color-border-hover)] hover:text-[var(--color-fg-secondary)]")
-                  }
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 font-medium rounded-[var(--radius-md)] border transition-colors bg-[var(--color-surface)] text-[var(--color-fg-secondary)] border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]"
+                  style={{ fontSize: 14 }}
+                  title="Custom date range (coming soon)"
+                >
+                  <Calendar className="h-4 w-4" /> Custom
+                </button>
+
+                <div className="h-4 w-px bg-[var(--color-border)]" />
+
+                <span
+                  className="text-[var(--color-fg-muted)] mr-1"
                   style={{ fontSize: 14 }}
                 >
-                  <EngineIcon id={m.id} size={13} />
-                  {m.name}
-                </button>
-              );
-            })}
+                  AI engines:
+                </span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {AI_MODELS.map((m) => {
+                    const active = selectedModels.has(m.id);
+                    return (
+                      <button
+                        key={m.id}
+                        onClick={() => toggleModel(m.id)}
+                        className={
+                          "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-full)] border font-medium transition-colors " +
+                          (active
+                            ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                            : "bg-transparent text-[var(--color-fg-muted)] border-[var(--color-border)] hover:border-[var(--color-border-hover)] hover:text-[var(--color-fg-secondary)]")
+                        }
+                        style={{ fontSize: 14 }}
+                      >
+                        <EngineIcon id={m.id} size={13} />
+                        {m.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
           </div>
-        </motion.div>
+
+          {/* Right col — action panel */}
+          <div className="flex flex-col gap-2">
+            <NextScanCard />
+            <Link
+              href="/audit"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] border border-[var(--color-border)] text-sm font-medium text-[var(--color-fg-secondary)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)] transition-colors"
+            >
+              <Search className="h-4 w-4" />
+              Run GEO audit
+            </Link>
+            <Link
+              href="/competitor-comparison"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] border border-[var(--color-border)] text-sm font-medium text-[var(--color-fg-secondary)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)] transition-colors"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Compare competitors
+            </Link>
+          </div>
+        </div>
 
         {/* Loading / empty / content */}
         {scanLoading ? (
           <div className="flex items-center justify-center min-h-[40vh]">
             <Spinner size="lg" />
           </div>
-        ) : allResults.length === 0 ? (
+        ) : !hasResults ? (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2, ease }}
             className="text-center py-20"
           >
-            <p className="text-lg text-[var(--color-fg-secondary)]">No scan data yet</p>
+            <p className="text-lg text-[var(--color-fg-secondary)]">
+              No scan data yet
+            </p>
             <p className="text-sm text-[var(--color-fg-muted)] mt-2">
               Run a scan from the Dashboard to see citation insights.
             </p>
           </motion.div>
         ) : (
           <>
-            {/* KPI cards */}
-            {insights && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.15, ease }}
-                className="grid grid-cols-1 sm:grid-cols-3 gap-4"
-              >
-                {(() => {
-                  const rateColor = colorForValue(insights.citationRate, SURVEN_THRESHOLDS.citationRate);
-                  return (
-                    <Card className="flex items-center gap-4 p-5">
-                      <div
-                        className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: `${rateColor}1A` }}
-                      >
-                        <Link2 className="h-5 w-5" style={{ color: rateColor }} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1 mb-0.5">
-                          <p className="text-xs text-[var(--color-fg-muted)]">Citation Rate</p>
-                          <HoverHint hint="Share of AI responses about you that include a cited source. 50%+ is strong; under 25% means AI engines are answering without grounding their claims.">
-                            <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
-                          </HoverHint>
-                        </div>
-                        <p
-                          style={{
-                            fontFamily: "var(--font-display)",
-                            fontSize: 22,
-                            fontWeight: 600,
-                            lineHeight: 1.2,
-                            color: "var(--color-fg)",
-                          }}
-                        >
-                          {insights.citationRate}%
-                        </p>
-                        <p className="text-xs text-[var(--color-fg-muted)]">
-                          Mentioned in responses
-                        </p>
-                        <p className="text-[11px] text-[var(--color-fg-muted)] mt-0.5 opacity-70 leading-tight">
-                          {insights.totalCitations} total citations
-                        </p>
-                      </div>
-                    </Card>
-                  );
-                })()}
+            {/* Divider line — sits between control row and the data row below */}
+            <div className="border-t border-[var(--color-border)]" />
 
-                <Card className="flex items-center gap-4 p-5">
-                  <div className="h-10 w-10 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center flex-shrink-0">
-                    <Database className="h-5 w-5 text-[var(--color-primary)]" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1 mb-0.5">
-                      <p className="text-xs text-[var(--color-fg-muted)]">Unique Sources</p>
-                      <HoverHint hint="Number of distinct domains AI models cited about your business.">
-                        <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
-                      </HoverHint>
-                    </div>
-                    <p
-                      style={{
-                        fontFamily: "var(--font-display)",
-                        fontSize: 22,
-                        fontWeight: 600,
-                        lineHeight: 1.2,
-                        color: "var(--color-fg)",
-                      }}
-                    >
-                      {insights.uniqueDomains}
-                    </p>
-                    <p className="text-xs text-[var(--color-fg-muted)]">Domains</p>
-                    <p className="text-[11px] text-[var(--color-fg-muted)] mt-0.5 opacity-70 leading-tight">
-                      Across {insights.engineCount}{" "}
-                      {insights.engineCount === 1 ? "engine" : "engines"}
-                    </p>
-                  </div>
-                </Card>
-
-                <Card className="flex items-center gap-4 p-5">
-                  <div
-                    className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                      insights.highAuthorityPct >= 60
-                        ? "bg-[#96A283]/10"
-                        : insights.highAuthorityPct < 30
-                        ? "bg-[#B54631]/10"
-                        : "bg-[var(--color-primary)]/10"
-                    }`}
+            {/* Data row — left 2/3: KPIs + AIOverview + diagnostic. Right 1/3: fix actions */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+              <div className="lg:col-span-2 flex flex-col gap-4 min-w-0">
+                {/* KPI cards */}
+                {insights && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.15, ease }}
+                    className="grid grid-cols-1 sm:grid-cols-3 gap-3"
                   >
-                    <ShieldCheck
-                      className={`h-5 w-5 ${
-                        insights.highAuthorityPct >= 60
-                          ? "text-[#96A283]"
-                          : insights.highAuthorityPct < 30
-                          ? "text-[#B54631]"
-                          : "text-[var(--color-primary)]"
-                      }`}
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1 mb-0.5">
-                      <p className="text-xs text-[var(--color-fg-muted)]">Authority Mix</p>
-                      <HoverHint hint="Share of your citations coming from high-authority sources like Yelp, Google, BBB, and major news.">
-                        <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
-                      </HoverHint>
-                    </div>
-                    <p
-                      style={{
-                        fontFamily: "var(--font-display)",
-                        fontSize: 22,
-                        fontWeight: 600,
-                        lineHeight: 1.2,
-                        color: "var(--color-fg)",
-                      }}
-                    >
-                      {insights.highAuthorityPct}%
-                    </p>
-                    <p className="text-xs text-[var(--color-fg-muted)]">High authority</p>
-                    <p className="text-[11px] text-[var(--color-fg-muted)] mt-0.5 opacity-70 leading-tight">
-                      {insights.authorityCounts.high} high · {insights.authorityCounts.medium} med ·{" "}
-                      {insights.authorityCounts.low} low
-                    </p>
-                  </div>
-                </Card>
-              </motion.div>
-            )}
+                    {(() => {
+                      const rateColor = colorForValue(
+                        insights.citationRate,
+                        SURVEN_THRESHOLDS.citationRate,
+                      );
+                      return (
+                        <Card className="flex flex-col gap-3 p-4">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                              style={{ backgroundColor: `${rateColor}1A` }}
+                            >
+                              <Link2
+                                className="h-5 w-5"
+                                style={{ color: rateColor }}
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1 mb-0.5">
+                                <p className="text-xs text-[var(--color-fg-muted)]">
+                                  Citation Rate
+                                </p>
+                                <HoverHint hint="Share of AI responses about you that include a cited source. 50%+ is strong; under 25% means AI engines are answering without grounding their claims.">
+                                  <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+                                </HoverHint>
+                              </div>
+                              <p
+                                style={{
+                                  fontFamily: "var(--font-display)",
+                                  fontSize: 22,
+                                  fontWeight: 600,
+                                  lineHeight: 1.2,
+                                  color: "var(--color-fg)",
+                                }}
+                              >
+                                {insights.citationRate}%
+                              </p>
+                              <p className="text-[11px] text-[var(--color-fg-muted)] mt-0.5 opacity-70 leading-tight">
+                                {insights.totalCitations} total citations
+                              </p>
+                            </div>
+                          </div>
+                          <Link
+                            href="/prompts"
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors mt-auto"
+                          >
+                            See prompts <ArrowRight className="h-3 w-3" />
+                          </Link>
+                        </Card>
+                      );
+                    })()}
 
-            {/* AIOverview */}
-            {aiInsight && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.2, ease }}
-              >
-                <AIOverview text={aiInsight} size="md" />
-              </motion.div>
-            )}
+                    <Card className="flex flex-col gap-3 p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center flex-shrink-0">
+                          <Database className="h-5 w-5 text-[var(--color-primary)]" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <p className="text-xs text-[var(--color-fg-muted)]">
+                              Unique Sources
+                            </p>
+                            <HoverHint hint="Number of distinct domains AI models cited about your business.">
+                              <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+                            </HoverHint>
+                          </div>
+                          <p
+                            style={{
+                              fontFamily: "var(--font-display)",
+                              fontSize: 22,
+                              fontWeight: 600,
+                              lineHeight: 1.2,
+                              color: "var(--color-fg)",
+                            }}
+                          >
+                            {insights.uniqueDomains}
+                          </p>
+                          <p className="text-[11px] text-[var(--color-fg-muted)] mt-0.5 opacity-70 leading-tight">
+                            Across {insights.engineCount}{" "}
+                            {insights.engineCount === 1 ? "engine" : "engines"}
+                          </p>
+                        </div>
+                      </div>
+                      <Link
+                        href="/ai-visibility-tracker"
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors mt-auto"
+                      >
+                        Engine breakdown <ArrowRight className="h-3 w-3" />
+                      </Link>
+                    </Card>
+
+                    <Card className="flex flex-col gap-3 p-4">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                            insights.highAuthorityPct >= 60
+                              ? "bg-[#96A283]/10"
+                              : insights.highAuthorityPct < 30
+                              ? "bg-[#B54631]/10"
+                              : "bg-[var(--color-primary)]/10"
+                          }`}
+                        >
+                          <ShieldCheck
+                            className={`h-5 w-5 ${
+                              insights.highAuthorityPct >= 60
+                                ? "text-[#96A283]"
+                                : insights.highAuthorityPct < 30
+                                ? "text-[#B54631]"
+                                : "text-[var(--color-primary)]"
+                            }`}
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <p className="text-xs text-[var(--color-fg-muted)]">
+                              Authority Mix
+                            </p>
+                            <HoverHint hint="Share of your citations coming from high-authority sources like Yelp, Google, BBB, and major news.">
+                              <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+                            </HoverHint>
+                          </div>
+                          <p
+                            style={{
+                              fontFamily: "var(--font-display)",
+                              fontSize: 22,
+                              fontWeight: 600,
+                              lineHeight: 1.2,
+                              color: "var(--color-fg)",
+                            }}
+                          >
+                            {insights.highAuthorityPct}%
+                          </p>
+                          <p className="text-[11px] text-[var(--color-fg-muted)] mt-0.5 opacity-70 leading-tight">
+                            {insights.authorityCounts.high} high ·{" "}
+                            {insights.authorityCounts.medium} med ·{" "}
+                            {insights.authorityCounts.low} low
+                          </p>
+                        </div>
+                      </div>
+                      <Link
+                        href="/audit"
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors mt-auto"
+                      >
+                        Run audit <ArrowRight className="h-3 w-3" />
+                      </Link>
+                    </Card>
+                  </motion.div>
+                )}
+
+                {/* AIOverview */}
+                {aiInsight && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.2, ease }}
+                  >
+                    <AIOverview text={aiInsight} size="md" />
+                  </motion.div>
+                )}
+
+                <CitationDiagnosticBand
+                  results={results}
+                  businessName={business.name}
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <CitationFixActions
+                  results={results}
+                  businessName={business.name}
+                />
+              </div>
+            </div>
 
             {/* Sections */}
             <motion.div {...reveal}>
-              <CitationGapSection results={results} businessName={business.name} />
+              <CitationGapSection
+                results={results}
+                businessName={business.name}
+              />
             </motion.div>
 
-            <motion.div {...reveal} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <motion.div
+              {...reveal}
+              className="grid grid-cols-1 lg:grid-cols-2 gap-4"
+            >
               <AuthorityBreakdown results={results} />
               <SourceCategoryBreakdown results={results} />
             </motion.div>
@@ -431,6 +529,12 @@ export default function CitationInsightsPage() {
             <motion.div {...reveal}>
               <CitedDomainsTable results={results} />
             </motion.div>
+
+            {/* Footer 3-column diagnostic strip */}
+            <CitationFooterDiagnostic
+              results={results}
+              businessName={business.name}
+            />
           </>
         )}
       </div>

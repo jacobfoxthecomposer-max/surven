@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { ChartExplainer } from "@/components/atoms/ChartExplainer";
-import { Database, Info, ExternalLink, ArrowUpDown } from "lucide-react";
+import { Database, Info, ExternalLink, ArrowUpDown, ArrowRight } from "lucide-react";
 import {
   AUTHORITY_COLOR,
   AUTHORITY_LABEL,
@@ -112,6 +113,12 @@ export function CitedDomainsTable({ results }: CitedDomainsTableProps) {
         <span className="ml-auto text-xs text-[var(--color-fg-muted)]">
           {rows.length} {rows.length === 1 ? "source" : "sources"}
         </span>
+        <Link
+          href="/audit"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors"
+        >
+          Run audit <ArrowRight className="h-3 w-3" />
+        </Link>
       </div>
 
       <div className="overflow-x-auto -mx-6">
@@ -136,8 +143,11 @@ export function CitedDomainsTable({ results }: CitedDomainsTableProps) {
                   </button>
                 </th>
               ))}
-              <th className="px-3 py-2 pr-6 text-xs font-medium text-[var(--color-fg-muted)] uppercase tracking-wide text-right">
+              <th className="px-3 py-2 text-xs font-medium text-[var(--color-fg-muted)] uppercase tracking-wide text-right">
                 Engines
+              </th>
+              <th className="px-3 py-2 pr-6 text-xs font-medium text-[var(--color-fg-muted)] uppercase tracking-wide text-right">
+                Action
               </th>
             </tr>
           </thead>
@@ -192,7 +202,7 @@ export function CitedDomainsTable({ results }: CitedDomainsTableProps) {
                     {row.listed ? "Listed" : "Gap"}
                   </span>
                 </td>
-                <td className="px-3 py-2.5 pr-6 text-right">
+                <td className="px-3 py-2.5 text-right">
                   <div className="inline-flex items-center gap-1">
                     {row.engines.map((e) => (
                       <span
@@ -204,6 +214,24 @@ export function CitedDomainsTable({ results }: CitedDomainsTableProps) {
                       </span>
                     ))}
                   </div>
+                </td>
+                <td className="px-3 py-2.5 pr-6 text-right">
+                  {row.listed ? (
+                    <Link
+                      href="/competitor-comparison"
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors"
+                    >
+                      Compare <ArrowRight className="h-3 w-3" />
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/audit"
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold transition-opacity hover:opacity-70"
+                      style={{ color: "#8C3522" }}
+                    >
+                      Get listed <ArrowRight className="h-3 w-3" />
+                    </Link>
+                  )}
                 </td>
               </tr>
             ))}

@@ -2,8 +2,9 @@
 
 import { useMemo } from "react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { Card } from "@/components/atoms/Card";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, ArrowRight } from "lucide-react";
 import type { ScanResult } from "@/types/database";
 
 interface CitationGapSectionProps {
@@ -52,10 +53,20 @@ export function CitationGapSection({ results, businessName }: CitationGapSection
 
   return (
     <section>
-      <h2 className="text-lg font-semibold mb-1">Citation Gap Analysis</h2>
-      <p className="text-sm text-[var(--color-fg-muted)] mb-4">
-        Domains cited by AI models — gaps show where {businessName} is missing from key sources.
-      </p>
+      <div className="flex items-end justify-between gap-4 mb-4">
+        <div>
+          <h2 className="text-lg font-semibold mb-1">Citation Gap Analysis</h2>
+          <p className="text-sm text-[var(--color-fg-muted)]">
+            Domains cited by AI models — gaps show where {businessName} is missing from key sources.
+          </p>
+        </div>
+        <Link
+          href="/audit"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors shrink-0 mb-1"
+        >
+          Run audit <ArrowRight className="h-3 w-3" />
+        </Link>
+      </div>
       <Card>
         <div className="space-y-3">
           {domainStats.map((stat, i) => {
@@ -109,6 +120,16 @@ export function CitationGapSection({ results, businessName }: CitationGapSection
                 >
                   {isGap ? "Gap" : "Listed"}
                 </span>
+
+                {/* Per-row action */}
+                <Link
+                  href={isGap ? "/audit" : "/competitor-comparison"}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold w-20 text-right justify-end transition-opacity hover:opacity-70 shrink-0"
+                  style={{ color: isGap ? "#8C3522" : "#566A47" }}
+                >
+                  {isGap ? "Get listed" : "Compare"}
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
               </motion.div>
             );
           })}

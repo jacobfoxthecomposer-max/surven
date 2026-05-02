@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { ChartExplainer } from "@/components/atoms/ChartExplainer";
-import { ShieldCheck, Info } from "lucide-react";
+import { ShieldCheck, Info, ArrowRight } from "lucide-react";
 import {
   PieChart,
   Pie,
@@ -65,16 +66,24 @@ export function AuthorityBreakdown({ results }: AuthorityBreakdownProps) {
         className="-mx-6 -mt-6 px-6 py-4 mb-5"
         style={{ background: headerGradient }}
       >
-        <div className="flex items-center gap-2">
-          <div className={`h-7 w-7 rounded-lg ${iconBg} flex items-center justify-center`}>
-            <ShieldCheck className={`h-4 w-4 ${iconColor}`} />
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className={`h-7 w-7 rounded-lg ${iconBg} flex items-center justify-center`}>
+              <ShieldCheck className={`h-4 w-4 ${iconColor}`} />
+            </div>
+            <h3 className="text-sm font-semibold text-[var(--color-fg)]">
+              Authority Breakdown
+            </h3>
+            <HoverHint hint="Quality of the sources AI cites about you. High-authority sources (Yelp, Google, BBB, major news) carry more weight in AI ranking.">
+              <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+            </HoverHint>
           </div>
-          <h3 className="text-sm font-semibold text-[var(--color-fg)]">
-            Authority Breakdown
-          </h3>
-          <HoverHint hint="Quality of the sources AI cites about you. High-authority sources (Yelp, Google, BBB, major news) carry more weight in AI ranking.">
-            <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
-          </HoverHint>
+          <Link
+            href="/audit"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors"
+          >
+            Run audit <ArrowRight className="h-3 w-3" />
+          </Link>
         </div>
       </div>
 
@@ -129,7 +138,7 @@ export function AuthorityBreakdown({ results }: AuthorityBreakdownProps) {
             </div>
           ))}
 
-          <div className="pt-3 mt-3 border-t border-[var(--color-border)]">
+          <div className="pt-3 mt-3 border-t border-[var(--color-border)] flex items-center justify-between gap-3">
             <p className="text-xs text-[var(--color-fg-muted)]">
               {highPct >= 60
                 ? "Strong authority mix — your citations come from trusted sources."
@@ -137,6 +146,12 @@ export function AuthorityBreakdown({ results }: AuthorityBreakdownProps) {
                 ? "Mixed authority — some high-trust sources, room to improve."
                 : "Low authority mix — focus on getting listed on high-trust directories."}
             </p>
+            <Link
+              href="/competitor-comparison"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors shrink-0"
+            >
+              Compare <ArrowRight className="h-3 w-3" />
+            </Link>
           </div>
         </div>
       </div>

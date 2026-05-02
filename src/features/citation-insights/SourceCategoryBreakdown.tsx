@@ -2,10 +2,11 @@
 
 import { useMemo } from "react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { ChartExplainer } from "@/components/atoms/ChartExplainer";
-import { Layers, Info } from "lucide-react";
+import { Layers, Info, ArrowRight } from "lucide-react";
 import {
   CATEGORY_COLOR,
   CATEGORY_LABEL,
@@ -93,6 +94,12 @@ export function SourceCategoryBreakdown({ results }: SourceCategoryBreakdownProp
         <span className="ml-auto text-xs text-[var(--color-fg-muted)] tabular-nums">
           {total} citations
         </span>
+        <Link
+          href="/competitor-comparison"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors"
+        >
+          Compare <ArrowRight className="h-3 w-3" />
+        </Link>
       </div>
 
       <div className="flex h-3 rounded-full overflow-hidden bg-[var(--color-surface-alt)] mb-5">
