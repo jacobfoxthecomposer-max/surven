@@ -39,6 +39,11 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${cormorant.variable}`}>
       <body className="min-h-screen bg-[var(--color-bg)] text-[var(--color-fg)] font-sans antialiased">
+        <script
+          type="application/ld+json"
+          data-surven-schema-type="Organization"
+          dangerouslySetInnerHTML={{ __html: `{"@context":"https://schema.org","@type":"Organization","name":"The Hidden Still","url":"https://surven-8sxen36tj-jacobfoxthecomposer-6176s-projects.vercel.app","description":"Track your business visibility across ChatGPT, Claude, Gemini, Google AI, and more. See if AI is recommending your business."}` }}
+        />
         <Providers>{children}</Providers>
       </body>
     </html>
