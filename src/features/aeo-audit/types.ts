@@ -5,21 +5,21 @@ export type CheckStatus = "pass" | "partial" | "critical";
 export type Pillar = "discoverable" | "structured" | "quotable" | "trustworthy";
 
 export const PILLAR_LABELS: Record<Pillar, string> = {
-  discoverable: "Discoverable",
-  structured: "Structured",
-  quotable: "Quotable",
-  trustworthy: "Trustworthy",
+  discoverable: "Findable",
+  structured: "Organized",
+  quotable: "Citable",
+  trustworthy: "Authoritative",
 };
 
 export const PILLAR_BLURBS: Record<Pillar, string> = {
   discoverable:
-    "Crawlers can find and reach your site, and the AI bots are welcome.",
+    "AI crawlers can find and reach your site, and the major bots are welcome.",
   structured:
-    "Headings, schema, and metadata help AI parse what your page is about.",
+    "Headings, schema, and metadata are organized so AI can parse the page.",
   quotable:
     "Substantial, fresh, answer-shaped content AI can lift into responses.",
   trustworthy:
-    "Citations, authoritative links, and the modern AI well-known files.",
+    "Authoritative links, citations, and the modern AI well-known files.",
 };
 
 export interface CheckResult {
