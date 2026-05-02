@@ -13,6 +13,7 @@ type FixState =
   | { status: "preview-alt"; suggestions: Array<{ src: string; alt: string | null; error: string | null }> }
   | { status: "success"; commitUrl?: string; filePath?: string; snippet?: string; manualNote?: string; suggested?: string }
   | { status: "manual"; snippet?: string; suggested?: string; manualNote: string; rewriteKind?: "meta_desc" | "title_tag" | "faq_page" | "alt_text" }
+  | { status: "ambiguous"; reasons: string[] }
   | { status: "error"; message: string; connectUrl?: string; snippet?: string };
 
 const FINDING_TO_SCHEMA_TYPE: Record<string, string> = {
