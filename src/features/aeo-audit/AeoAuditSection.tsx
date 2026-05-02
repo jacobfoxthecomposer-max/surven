@@ -1337,14 +1337,19 @@ function PillarBarRow({
         </span>
       </div>
 
-      {/* Dedicated toggle tab below the bar. Separate from the header so
-          the visualization stays static and the expand action is its own
-          surface. */}
+      {/* Dedicated toggle tab below the bar. When open, its bottom corners
+          flatten and the bottom border drops so it visually connects to
+          the panel below. */}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="w-full mt-1 inline-flex items-center justify-between gap-2 px-3 py-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 hover:bg-[var(--color-surface-alt)] transition-colors"
+        className={
+          "w-full mt-1 inline-flex items-center justify-between gap-2 px-3 py-2 border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 hover:bg-[var(--color-surface-alt)] transition-colors " +
+          (open
+            ? "rounded-t-[var(--radius-md)] rounded-b-none border-b-0"
+            : "rounded-[var(--radius-md)]")
+        }
         style={{ fontSize: 13, fontWeight: 600, color: "var(--color-fg-secondary)" }}
       >
         <span className="inline-flex items-center gap-2">
@@ -1354,13 +1359,14 @@ function PillarBarRow({
         </span>
         <ChevronDown
           className={
-            "h-4 w-4 text-[var(--color-fg-muted)] transition-transform " +
+            "h-5 w-5 text-[var(--color-fg-muted)] transition-transform " +
             (open ? "rotate-180" : "")
           }
         />
       </button>
 
-      {/* Per-pillar check list — collapsed by default. */}
+      {/* Per-pillar check list — visually attaches directly under the
+          toggle (flat top corners, shared border) when open. */}
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
@@ -1372,7 +1378,7 @@ function PillarBarRow({
             className="overflow-hidden"
           >
             <ul
-              className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] divide-y divide-[var(--color-border)] mt-2"
+              className="rounded-b-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] divide-y divide-[var(--color-border)] -mt-px"
             >
               {sortedChecks.map((c) => (
                 <CheckRow key={c.id} check={c} />
@@ -2125,7 +2131,7 @@ function CheckRow({ check }: { check: CheckResult }) {
         {expandable && (
           <ChevronDown
             className={
-              "h-4 w-4 text-[var(--color-fg-muted)] transition-transform shrink-0 mt-2 " +
+              "h-5 w-5 text-[var(--color-fg-muted)] transition-transform shrink-0 mt-2 " +
               (open ? "rotate-180" : "")
             }
           />
@@ -2185,6 +2191,22 @@ function CheckRow({ check }: { check: CheckResult }) {
                     {check.recommendation}
                   </p>
                 </div>
+              )}
+              {/* Big CTA — only on non-passing checks. Links to the in-app
+                  Website Audit so the user can act on the recommendation. */}
+              {check.status !== "pass" && (
+                <a
+                  href="/audit"
+                  className="md:col-span-2 mt-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-[var(--radius-md)] font-semibold shadow-md transition-colors text-white"
+                  style={{
+                    fontSize: 14.5,
+                    backgroundColor: tok.color,
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Fix that
+                  <ArrowRight className="h-4 w-4" />
+                </a>
               )}
             </div>
           </motion.div>
