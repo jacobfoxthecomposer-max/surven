@@ -56,6 +56,16 @@ interface GithubCommitResponse {
 
 const HTML_FILE_CANDIDATES = ["index.html", "public/index.html", "src/index.html"];
 const NEXTJS_MARKERS = ["next.config.js", "next.config.mjs", "next.config.ts", "next.config.cjs"];
+const NEXTJS_LAYOUT_CANDIDATES = [
+  "src/app/layout.tsx",
+  "src/app/layout.jsx",
+  "src/app/layout.ts",
+  "src/app/layout.js",
+  "app/layout.tsx",
+  "app/layout.jsx",
+  "app/layout.ts",
+  "app/layout.js",
+];
 
 async function ghFetch(path: string, token: string, init?: RequestInit): Promise<Response> {
   return fetch(`${GITHUB_API}${path}`, {
