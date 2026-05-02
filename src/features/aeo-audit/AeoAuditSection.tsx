@@ -602,34 +602,36 @@ function FeedbackFooter() {
       className="rounded-[var(--radius-lg)] border overflow-hidden mt-2"
       style={{ borderColor: "rgba(150,162,131,0.55)" }}
     >
+      {/* Top BETA stripe — full-width, unmissable */}
+      <div
+        className="px-5 py-2.5 flex items-center justify-center gap-2 border-b"
+        style={{
+          background:
+            "linear-gradient(90deg, rgba(150,162,131,0.55) 0%, rgba(184,160,48,0.45) 50%, rgba(201,123,69,0.45) 100%)",
+          borderBottomColor: "rgba(150,162,131,0.55)",
+        }}
+      >
+        <Sparkles className="h-4 w-4" style={{ color: "#3D3F3D" }} />
+        <span
+          className="uppercase font-bold"
+          style={{
+            fontSize: 12.5,
+            letterSpacing: "0.16em",
+            color: "#1A1C1A",
+          }}
+        >
+          Surven is still in beta
+        </span>
+        <Sparkles className="h-4 w-4" style={{ color: "#3D3F3D" }} />
+      </div>
+
       <div
         className="px-6 py-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-3 text-center"
         style={{
           background:
-            "linear-gradient(135deg, rgba(150,162,131,0.32) 0%, rgba(184,160,48,0.18) 50%, rgba(201,123,69,0.16) 100%)",
+            "linear-gradient(135deg, rgba(150,162,131,0.20) 0%, rgba(184,160,48,0.10) 50%, rgba(201,123,69,0.08) 100%)",
         }}
       >
-        {/* Beta pill */}
-        <span
-          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 border shrink-0"
-          style={{
-            borderColor: "rgba(150,162,131,0.55)",
-            backgroundColor: "rgba(255,255,255,0.55)",
-          }}
-        >
-          <Sparkles className="h-3.5 w-3.5" style={{ color: COLORS.primary }} />
-          <span
-            className="uppercase font-bold"
-            style={{
-              fontSize: 11,
-              letterSpacing: "0.14em",
-              color: COLORS.primaryHover,
-            }}
-          >
-            Beta
-          </span>
-        </span>
-
         <div className="min-w-0">
           <h3
             style={{
