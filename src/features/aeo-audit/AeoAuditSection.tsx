@@ -588,16 +588,24 @@ function ResultStatStrip({ result }: { result: ScanResult }) {
     >
       {/* Half-circle gauge */}
       <div className="relative shrink-0" style={{ width: gaugeWidth }}>
-        <svg viewBox="0 0 260 175" width="100%" style={{ display: "block" }}>
+        <svg viewBox="0 0 260 150" width="100%" style={{ display: "block" }}>
           <defs>
+            {/* Soft gradient for the inactive track */}
             <linearGradient id="aeoGaugeTrack" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#B54631" stopOpacity="0.32" />
-              <stop offset="33%" stopColor="#C97B45" stopOpacity="0.38" />
-              <stop offset="66%" stopColor="#96A283" stopOpacity="0.5" />
-              <stop offset="100%" stopColor="#7D8E6C" stopOpacity="0.55" />
+              <stop offset="0%" stopColor="#B54631" stopOpacity="0.18" />
+              <stop offset="33%" stopColor="#C97B45" stopOpacity="0.20" />
+              <stop offset="66%" stopColor="#96A283" stopOpacity="0.26" />
+              <stop offset="100%" stopColor="#7D8E6C" stopOpacity="0.30" />
+            </linearGradient>
+            {/* Full-opacity gradient for the active filled arc */}
+            <linearGradient id="aeoGaugeActive" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#B54631" />
+              <stop offset="40%" stopColor="#C97B45" />
+              <stop offset="72%" stopColor="#96A283" />
+              <stop offset="100%" stopColor="#7D8E6C" />
             </linearGradient>
           </defs>
-          {/* Track (full half-arc, gradient) */}
+          {/* Track (full half-arc, soft) */}
           <path
             d={halfArc(cx, cy, r, 0, 180)}
             stroke="url(#aeoGaugeTrack)"
@@ -605,25 +613,22 @@ function ResultStatStrip({ result }: { result: ScanResult }) {
             fill="none"
             strokeLinecap="round"
           />
-          {/* Filled portion (tier color) */}
+          {/* Filled portion (gradient — same color stops as track at full opacity) */}
           <path
             d={halfArc(cx, cy, r, 0, angle)}
-            stroke={tok.color}
+            stroke="url(#aeoGaugeActive)"
             strokeWidth={stroke}
             fill="none"
             strokeLinecap="round"
-            style={{
-              transition: "stroke-dashoffset 0.9s cubic-bezier(0.16,1,0.3,1)",
-            }}
           />
-          {/* Score number */}
+          {/* Score number — placed in the visual center of the arc bowl */}
           <text
             x={cx}
-            y={cy - 16}
+            y={cy - 28}
             textAnchor="middle"
             style={{
               fontFamily: "var(--font-display)",
-              fontSize: 52,
+              fontSize: 56,
               fontWeight: 600,
               fill: tok.color,
               letterSpacing: "-0.02em",
@@ -633,21 +638,22 @@ function ResultStatStrip({ result }: { result: ScanResult }) {
           </text>
           <text
             x={cx}
-            y={cy + 4}
+            y={cy - 4}
             textAnchor="middle"
             fill="var(--color-fg-muted)"
             fontSize="14"
+            style={{ fontFamily: "var(--font-display)" }}
           >
             /100
           </text>
         </svg>
         {/* Tier label + question-mark hover hint, centered below the arc */}
-        <div className="flex items-center justify-center gap-1.5 -mt-2">
+        <div className="flex items-center justify-center gap-1.5 mt-1">
           <span
             className="font-semibold uppercase"
             style={{
               fontSize: 14,
-              letterSpacing: "0.10em",
+              letterSpacing: "0.12em",
               color: tok.color,
             }}
           >
