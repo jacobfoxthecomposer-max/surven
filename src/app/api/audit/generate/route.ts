@@ -194,12 +194,16 @@ export async function POST(request: NextRequest) {
   }
 
   if (kind === "title_tag") {
-    const result = await rewriteTitleTag(pageContext as PageContext);
-    if (!result.ok || !result.data) {
-      return NextResponse.json({ error: result.error ?? "rewrite_failed" }, { status: 422 });
+    let title: string;
+    if (approvedContent && commit) {
+      title = approvedContent;
+    } else {
+      const result = await rewriteTitleTag(pageContext as PageContext);
+      if (!result.ok || !result.data) {
+        return NextResponse.json({ error: result.error ?? "rewrite_failed" }, { status: 422 });
+      }
+      title = result.data.title;
     }
-
-    const title = result.data.title;
 
     if (!commit) {
       return NextResponse.json({
