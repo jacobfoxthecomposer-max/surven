@@ -2,11 +2,11 @@
 // Site Readability Audit page. Mirrors the shape and check IDs returned
 // by the real /api/aeo-scan endpoint so the UI renders identically.
 
-import { READABILITY_IMPACT } from "./checks";
+import { CHECK_EFFORT_MIN, READABILITY_IMPACT } from "./checks";
 import type { CheckResult, ScanResult } from "./types";
 
 export function buildMockScanResult(displayUrl = "thecurbskateshop.com"): ScanResult {
-  const rawChecks: Omit<CheckResult, "readabilityImpact">[] = [
+  const rawChecks: Omit<CheckResult, "readabilityImpact" | "effortMin">[] = [
     // ── Discoverable ──────────────────────────────────────────────
     {
       id: "https",
@@ -55,7 +55,7 @@ export function buildMockScanResult(displayUrl = "thecurbskateshop.com"): ScanRe
       id: "ai-bots",
       pillar: "discoverable",
       label: "AI crawlers allowed",
-      status: "fail",
+      status: "critical",
       earned: 0,
       max: 4,
       detail: "Robots.txt blocks: GPTBot, ClaudeBot.",
@@ -129,7 +129,7 @@ export function buildMockScanResult(displayUrl = "thecurbskateshop.com"): ScanRe
       id: "twitter-card",
       pillar: "structured",
       label: "Twitter Card",
-      status: "fail",
+      status: "critical",
       earned: 0,
       max: 2,
       detail: "No twitter:card meta tag found.",
@@ -160,7 +160,7 @@ export function buildMockScanResult(displayUrl = "thecurbskateshop.com"): ScanRe
       id: "json-ld",
       pillar: "structured",
       label: "JSON-LD schema",
-      status: "fail",
+      status: "critical",
       earned: 0,
       max: 4,
       detail: "No JSON-LD <script> blocks were found.",
@@ -171,7 +171,7 @@ export function buildMockScanResult(displayUrl = "thecurbskateshop.com"): ScanRe
       id: "schema-coverage",
       pillar: "structured",
       label: "Schema type coverage",
-      status: "fail",
+      status: "critical",
       earned: 0,
       max: 3,
       detail:
@@ -206,7 +206,7 @@ export function buildMockScanResult(displayUrl = "thecurbskateshop.com"): ScanRe
       id: "freshness",
       pillar: "quotable",
       label: "Freshness signals",
-      status: "fail",
+      status: "critical",
       earned: 0,
       max: 5,
       detail:
@@ -218,7 +218,7 @@ export function buildMockScanResult(displayUrl = "thecurbskateshop.com"): ScanRe
       id: "faq",
       pillar: "quotable",
       label: "FAQ-style content",
-      status: "fail",
+      status: "critical",
       earned: 0,
       max: 4,
       detail: "No FAQPage schema and no question-style headings found.",
@@ -240,7 +240,7 @@ export function buildMockScanResult(displayUrl = "thecurbskateshop.com"): ScanRe
       id: "external-links",
       pillar: "trustworthy",
       label: "External citation links",
-      status: "fail",
+      status: "critical",
       earned: 0,
       max: 4,
       detail: "No outbound citation links found in body content.",
@@ -251,7 +251,7 @@ export function buildMockScanResult(displayUrl = "thecurbskateshop.com"): ScanRe
       id: "llms-txt",
       pillar: "trustworthy",
       label: "llms.txt present",
-      status: "fail",
+      status: "critical",
       earned: 0,
       max: 4,
       detail: "No /llms.txt file found at the site root.",
@@ -284,6 +284,7 @@ export function buildMockScanResult(displayUrl = "thecurbskateshop.com"): ScanRe
   const checks: CheckResult[] = rawChecks.map((c) => ({
     ...c,
     readabilityImpact: READABILITY_IMPACT[c.id] || "",
+    effortMin: CHECK_EFFORT_MIN[c.id] ?? 15,
   }));
 
   const pillars = (["discoverable", "structured", "quotable", "trustworthy"] as const).map((p) => {

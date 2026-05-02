@@ -35,6 +35,37 @@ type Check = (ctx: ScanContext) => CheckResult;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
+// Estimated minutes to fix each check (rough — used for effort pills
+// on priority cards). 5 = trivial copy edit. 15 = small markup tweak.
+// 30 = schema work. 60+ = writing or dev work.
+export const CHECK_EFFORT_MIN: Record<string, number> = {
+  https: 60,
+  "robots-txt": 10,
+  sitemap: 30,
+  canonical: 10,
+  "ai-bots": 5,
+  "robots-meta": 5,
+  title: 5,
+  "meta-description": 5,
+  h1: 5,
+  "heading-hierarchy": 30,
+  "open-graph": 10,
+  "twitter-card": 5,
+  "html-lang": 5,
+  viewport: 5,
+  "json-ld": 30,
+  "schema-coverage": 45,
+  "alt-text": 30,
+  "body-content": 60,
+  freshness: 15,
+  faq: 45,
+  "internal-links": 30,
+  "external-links": 20,
+  "llms-txt": 10,
+  "ai-txt": 10,
+  favicon: 5,
+};
+
 // One sentence per check on how it affects whether AI engines can
 // read and understand the page. Surfaced under the row's expanded
 // "How this affects readability" section in the UI.
@@ -106,6 +137,7 @@ function pass(
     detail,
     readabilityImpact: READABILITY_IMPACT[id] || "",
     recommendation: "",
+    effortMin: CHECK_EFFORT_MIN[id] ?? 15,
   };
 }
 
@@ -121,12 +153,13 @@ function fail(
     id,
     pillar,
     label,
-    status: "fail",
+    status: "critical",
     earned: 0,
     max,
     detail,
     readabilityImpact: READABILITY_IMPACT[id] || "",
     recommendation,
+    effortMin: CHECK_EFFORT_MIN[id] ?? 15,
   };
 }
 
@@ -149,6 +182,7 @@ function partial(
     detail,
     readabilityImpact: READABILITY_IMPACT[id] || "",
     recommendation,
+    effortMin: CHECK_EFFORT_MIN[id] ?? 15,
   };
 }
 
