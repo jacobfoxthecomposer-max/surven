@@ -27,7 +27,7 @@ const SUPABASE_UNCONFIGURED =
   process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder");
 
 const UNCONFIGURED_MESSAGE =
-  "Auth isn't configured for local dev. Use /prompts-preview to view the dashboard without signing in.";
+  "Auth isn't configured for local dev. Use /dashboard-preview, /prompts-preview, or /visibility-preview to view pages without signing in.";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
