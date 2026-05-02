@@ -32,6 +32,9 @@ const FINDING_TO_REWRITE_KIND: Record<string, "meta_desc" | "title_tag"> = {
   title_tag_long: "title_tag",
 };
 
+const FAQ_FINDING_IDS = new Set(["faq_schema_missing", "faq_schema_insufficient"]);
+const ALT_TEXT_FINDING_IDS = new Set(["alt_text_missing", "images_missing_alt"]);
+
 const REWRITE_LABELS: Record<"meta_desc" | "title_tag", { button: string; whatItIs: string; previewWhatAiSees: string; previewBetter: string; useThis: string }> = {
   meta_desc: {
     button: "Improve how AI describes your site",
