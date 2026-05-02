@@ -17,6 +17,7 @@ import { CompetitorBenchmarkSection } from "@/features/dashboard/pages/Competito
 import { HistorySection } from "@/features/dashboard/pages/HistorySection";
 import { SentimentSection } from "@/features/dashboard/pages/SentimentSection";
 import { CitationGapSection } from "@/features/dashboard/pages/CitationGapSection";
+import { WhatsNextCard } from "@/components/organisms/WhatsNextCard";
 import { exportScanResultsAsCsv } from "@/utils/csvExport";
 import { Button } from "@/components/atoms/Button";
 import { Download } from "lucide-react";
@@ -112,7 +113,8 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-10">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
+        <div className="space-y-10 min-w-0">
         {/* 1: Visibility Gauge — animates on mount (first thing visible) */}
         <motion.div
           initial={{ opacity: 0, y: 24, filter: "blur(4px)" }}
@@ -227,6 +229,14 @@ export default function DashboardPage() {
             </p>
           </motion.div>
         )}
+        </div>
+
+        {/* Right rail — sticks while the main column scrolls */}
+        <aside className="hidden xl:block">
+          <div className="sticky top-6">
+            <WhatsNextCard />
+          </div>
+        </aside>
       </div>
     </DashboardLayout>
   );
