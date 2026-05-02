@@ -77,6 +77,10 @@ export default function LoginPage() {
             <Link href="/visibility-preview" className="text-[var(--color-primary)] hover:underline font-medium">
               /visibility-preview
             </Link>
+            {" · "}
+            <Link href="/site-audit-preview" className="text-[var(--color-primary)] hover:underline font-medium">
+              /site-audit-preview
+            </Link>
             .
           </p>
         </div>
