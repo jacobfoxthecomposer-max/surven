@@ -420,14 +420,14 @@ export default function App() {
     }
 
     try {
-      const overrideField = rewriteKind === "meta_desc" ? "description" : "title";
       const res = await fetch(getGenerateUrl(settings.apiUrl), {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-api-key": settings.apiKey },
         body: JSON.stringify({
           kind: rewriteKind,
-          pageContext: { ...(pageContext as object), [overrideField === "description" ? "description" : "title"]: suggested, _override: { [overrideField]: suggested } },
+          pageContext,
           commit: true,
+          approvedContent: suggested,
           findingId: finding.id,
           findingTitle: finding.title,
         }),
