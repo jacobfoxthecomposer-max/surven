@@ -39,19 +39,35 @@ export function FeedbackSection() {
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!message.trim() || submitting) return;
     setSubmitting(true);
-    // Simulate submit. Real backend wiring (Supabase / webhook) goes here.
-    await new Promise((r) => setTimeout(r, 600));
-    setSubmitting(false);
-    setSubmitted(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ category, email: email.trim(), message: message.trim() }),
+      });
+      const json = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !json.ok) {
+        setError(json.error || "Couldn't send. Please try again or email hello@surven.ai.");
+        return;
+      }
+      setSubmitted(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function reset() {
     setSubmitted(false);
+    setError(null);
     setCategory("feature");
     setEmail("");
     setMessage("");
@@ -220,13 +236,26 @@ export function FeedbackSection() {
                 </p>
               </div>
 
+              {error && (
+                <div
+                  className="text-sm rounded-[var(--radius-md)] p-3 border-l-4"
+                  style={{
+                    color: "#B54631",
+                    borderLeftColor: "#B54631",
+                    backgroundColor: "rgba(181,70,49,0.06)",
+                    fontSize: 13,
+                  }}
+                >
+                  {error}
+                </div>
+              )}
               <div className="flex items-center justify-between flex-wrap gap-3 pt-1">
                 <p
                   className="text-[var(--color-fg-muted)]"
                   style={{ fontSize: 12.5, lineHeight: 1.45 }}
                 >
-                  Read directly by Joey + Jake. Usually responded to within
-                  the week.
+                  Read directly by Joey + Jake. We personally respond in
+                  1–3 days.
                 </p>
                 <Button
                   type="submit"

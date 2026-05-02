@@ -872,7 +872,7 @@ function ResultStatStrip({ result }: { result: ScanResult }) {
               fontFamily: "var(--font-display)",
               fontSize: 56,
               fontWeight: 600,
-              fill: tok.color,
+              fill: "var(--color-fg)",
               letterSpacing: "-0.02em",
             }}
           >
