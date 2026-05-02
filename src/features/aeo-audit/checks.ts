@@ -153,7 +153,7 @@ function fail(
     id,
     pillar,
     label,
-    status: "fail",
+    status: "critical",
     earned: 0,
     max,
     detail,

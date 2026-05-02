@@ -193,11 +193,11 @@ const STATUS_TOK = {
     Icon: AlertTriangle,
     label: "Partial",
   },
-  fail: {
+  critical: {
     color: "#B54631",
     bg: "rgba(181,70,49,0.14)",
     Icon: XIcon,
-    label: "Fail",
+    label: "Critical",
   },
 } as const;
 
@@ -224,7 +224,7 @@ function effortBadge(min: number): { label: string; color: string; bg: string } 
 
 function buildPageSummary(result: ScanResult): string {
   const checks = result.checks;
-  const fails = checks.filter((c) => c.status === "fail");
+  const fails = checks.filter((c) => c.status === "critical");
   const partials = checks.filter((c) => c.status === "partial");
   const passing = checks.filter((c) => c.status === "pass");
 
@@ -359,13 +359,13 @@ export function AeoAuditSection({
 
   // Top-of-page AI summary copy.
   const failCount =
-    result?.checks.filter((c) => c.status === "fail").length ?? 0;
+    result?.checks.filter((c) => c.status === "critical").length ?? 0;
   const partialCount =
     result?.checks.filter((c) => c.status === "partial").length ?? 0;
   const aiOverviewText = !result
     ? "Reading your site through every AI engine's lens to identify what's clear and what's getting missed."
     : failCount > 0
-    ? `${failCount} readability gap${failCount === 1 ? "" : "s"} are blocking AI from reading parts of your site, plus ${partialCount} partial issue${partialCount === 1 ? "" : "s"}. Tackle the failures first.`
+    ? `${failCount} critical readability gap${failCount === 1 ? "" : "s"} ${failCount === 1 ? "is" : "are"} blocking AI from reading parts of your site, plus ${partialCount} partial issue${partialCount === 1 ? "" : "s"}. Tackle the critical ones first.`
     : partialCount > 0
     ? `No major readability blockers — ${partialCount} check${partialCount === 1 ? "" : "s"} could move from partial to pass with light edits.`
     : "Site reads cleanly for AI engines. Keep monitoring content freshness and schema coverage.";
@@ -433,8 +433,6 @@ export function AeoAuditSection({
         <AIOverview text={aiOverviewText} />
       </motion.div>
 
-      {/* Natural-language summary — in-depth paragraph computed from real data */}
-      {result && <PageSummary result={result} />}
 
       {/* Inline error banner if the auto-scan blew up. */}
       {error && (
@@ -482,21 +480,6 @@ export function AeoAuditSection({
             transition={{ duration: 0.45, ease: EASE }}
             className="space-y-5"
           >
-            {/* Scanned-URL link — small, no rescan affordance (the URL
-                comes from onboarding; one source of truth). */}
-            <motion.div {...reveal}>
-              <a
-                href={result.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-[var(--color-fg-muted)] hover:text-[var(--color-primary)] transition-colors"
-                style={{ fontSize: 14 }}
-              >
-                <ExternalLink className="h-4 w-4" />
-                {result.url}
-              </a>
-            </motion.div>
-
             {/* Priority fix cards — full-width, no fix steps (Chrome ext takes that),
                 effort + impact pills front-and-center. */}
             <motion.div {...reveal}>
@@ -554,6 +537,10 @@ function ResultStatStrip({ result }: { result: ScanResult }) {
       : "poor";
   const tok = GRADE_TOK[tier];
   const scannedAtPretty = formatScannedAt(result.scannedAt);
+  // Per-status counts for the legend.
+  const passCount = result.checks.filter((c) => c.status === "pass").length;
+  const partialCount = result.checks.filter((c) => c.status === "partial").length;
+  const criticalCount = result.checks.filter((c) => c.status === "critical").length;
 
   // Half-circle gauge math
   const gaugeWidth = 240;
@@ -690,13 +677,79 @@ function ResultStatStrip({ result }: { result: ScanResult }) {
       </div>
 
       {/* Right-side meta */}
-      <div className="flex-1 min-w-0 space-y-2.5">
+      <div className="flex-1 min-w-0 space-y-3.5">
         <p
           className="text-[var(--color-fg-secondary)]"
           style={{ fontSize: 15, lineHeight: 1.55 }}
         >
           AI readability across 25 checks.
         </p>
+
+        {/* Status legend — three side-by-side pill cards (Pass / Partial /
+            Critical) tinted with each status color. Fills the empty space
+            to the right of the gauge with at-a-glance counts. */}
+        <div className="grid grid-cols-3 gap-2.5">
+          {(
+            [
+              { id: "pass" as const, count: passCount },
+              { id: "partial" as const, count: partialCount },
+              { id: "critical" as const, count: criticalCount },
+            ]
+          ).map(({ id, count }) => {
+            const stok = STATUS_TOK[id];
+            const SIcon = stok.Icon;
+            return (
+              <div
+                key={id}
+                className="rounded-[var(--radius-md)] border px-3 py-2.5 flex items-center gap-2.5"
+                style={{
+                  borderColor: `${stok.color}40`,
+                  backgroundColor: `${stok.color}0d`,
+                }}
+              >
+                <span
+                  className="inline-flex items-center justify-center rounded-[var(--radius-sm)] shrink-0"
+                  style={{
+                    width: 30,
+                    height: 30,
+                    backgroundColor: stok.bg,
+                    color: stok.color,
+                  }}
+                  aria-hidden
+                >
+                  <SIcon className="h-4 w-4" />
+                </span>
+                <div className="min-w-0">
+                  <p
+                    className="uppercase font-semibold"
+                    style={{
+                      fontSize: 10.5,
+                      letterSpacing: "0.12em",
+                      color: stok.color,
+                      lineHeight: 1.1,
+                    }}
+                  >
+                    {stok.label}
+                  </p>
+                  <p
+                    className="tabular-nums"
+                    style={{
+                      fontFamily: "var(--font-display)",
+                      fontSize: 22,
+                      fontWeight: 600,
+                      color: "var(--color-fg)",
+                      letterSpacing: "-0.01em",
+                      lineHeight: 1.1,
+                    }}
+                  >
+                    {count}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
         <div
           className="flex flex-wrap items-baseline gap-x-5 gap-y-1.5 text-[var(--color-fg-secondary)]"
           style={{ fontSize: 14 }}
@@ -947,7 +1000,7 @@ function PillarBars({
           const rows = checks.filter((c) => c.pillar === p.pillar);
           const passCount = rows.filter((c) => c.status === "pass").length;
           const partialCount = rows.filter((c) => c.status === "partial").length;
-          const failCount = rows.filter((c) => c.status === "fail").length;
+          const failCount = rows.filter((c) => c.status === "critical").length;
           const total = rows.length || 1;
           const passPct = (passCount / total) * 100;
           const partialPct = (partialCount / total) * 100;
@@ -1027,7 +1080,7 @@ function PillarBars({
                 {failPct > 0 && (
                   <motion.div
                     className="h-full"
-                    style={{ backgroundColor: STATUS_TOK.fail.color }}
+                    style={{ backgroundColor: STATUS_TOK.critical.color }}
                     initial={{ width: 0 }}
                     animate={{ width: `${failPct}%` }}
                     transition={{ duration: 0.6, delay: i * 0.08 + 0.1, ease: EASE }}
@@ -1061,12 +1114,12 @@ function PillarBars({
                 <span className="inline-flex items-center gap-1.5">
                   <span
                     className="rounded-full"
-                    style={{ width: 9, height: 9, backgroundColor: STATUS_TOK.fail.color }}
+                    style={{ width: 9, height: 9, backgroundColor: STATUS_TOK.critical.color }}
                   />
                   <span className="tabular-nums font-semibold text-[var(--color-fg)]">
                     {failCount}
                   </span>{" "}
-                  fail
+                  critical
                 </span>
               </div>
             </div>
@@ -1203,7 +1256,7 @@ function PillarCard({
 
   const passCount = checks.filter((c) => c.status === "pass").length;
   const partialCount = checks.filter((c) => c.status === "partial").length;
-  const failCount = checks.filter((c) => c.status === "fail").length;
+  const failCount = checks.filter((c) => c.status === "critical").length;
 
   return (
     <motion.div
@@ -1305,9 +1358,9 @@ function PillarCard({
           <span className="inline-flex items-center gap-1.5">
             <span
               className="rounded-full"
-              style={{ width: 9, height: 9, backgroundColor: STATUS_TOK.fail.color }}
+              style={{ width: 9, height: 9, backgroundColor: STATUS_TOK.critical.color }}
             />
-            <span className="tabular-nums font-semibold">{failCount}</span> fail
+            <span className="tabular-nums font-semibold">{failCount}</span> critical
           </span>
         </div>
 
@@ -1435,7 +1488,7 @@ function TopFixesPanel({ checks }: { checks: CheckResult[] }) {
 type ChecksFilter = "needs-work" | "all" | "passing";
 
 const STATUS_RANK: Record<CheckResult["status"], number> = {
-  fail: 0,
+  critical: 0,
   partial: 1,
   pass: 2,
 };
@@ -1576,7 +1629,7 @@ function PillarGroup({
   const Icon = PILLAR_ICON[pillar];
   const [showPasses, setShowPasses] = useState(false);
 
-  const fails = checks.filter((c) => c.status === "fail");
+  const fails = checks.filter((c) => c.status === "critical");
   const partials = checks.filter((c) => c.status === "partial");
   const passes = checks.filter((c) => c.status === "pass");
 

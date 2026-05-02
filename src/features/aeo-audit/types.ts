@@ -1,6 +1,6 @@
 // AEO audit types — shared between server (api route) and client (UI).
 
-export type CheckStatus = "pass" | "partial" | "fail";
+export type CheckStatus = "pass" | "partial" | "critical";
 
 export type Pillar = "discoverable" | "structured" | "quotable" | "trustworthy";
 
