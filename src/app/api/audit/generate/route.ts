@@ -30,6 +30,19 @@ const MANAGED_PLAN_CTA = {
   body: "Surven Managed deploys every fix to your site automatically, gets you listed on the directories AI engines cite most, and refreshes your content monthly so your visibility keeps climbing. You focus on the business — we focus on getting you cited.",
   buttonLabel: "See Managed plans",
 } as const;
+
+/**
+ * Inject the Managed-plan upsell into any commit result that didn't successfully auto-deploy.
+ * This is a structured field the side panel can render — extension falls back gracefully
+ * if it's missing.
+ */
+function withManagedPlanCta<T extends { ok?: boolean; manualSnippet?: string; manualNote?: string }>(
+  result: T,
+): T & { managedPlanCta?: typeof MANAGED_PLAN_CTA } {
+  const isManualFallback = result.ok === false || !!result.manualSnippet || !!result.manualNote;
+  if (!isManualFallback) return result;
+  return { ...result, managedPlanCta: MANAGED_PLAN_CTA };
+}
 import { generateSchema, type SchemaKind, type PageContext } from "@/services/schemaGenerator";
 import { rewriteMetaDescription, rewriteTitleTag, generateFaqPairs, generateAltText } from "@/services/llmRewriter";
 import { writeAuditLog, ipFromRequest } from "@/services/auditLog";
