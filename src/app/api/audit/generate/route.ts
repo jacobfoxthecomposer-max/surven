@@ -282,7 +282,7 @@ export async function POST(request: NextRequest) {
       origin: request.nextUrl.origin,
       ipAddress: ipFromRequest(request),
     });
-    return NextResponse.json({ ...commitResult, suggested: title, current: pageContext.title ?? null });
+    return NextResponse.json(withManagedPlanCta({ ...commitResult, suggested: title, current: pageContext.title ?? null }));
   }
 
   if (kind === "faq_page") {
