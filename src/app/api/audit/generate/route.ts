@@ -20,8 +20,10 @@ import { decryptCredentials } from "@/utils/credentialsEncryption";
 import { applyHtmlInject } from "@/features/crawlability/services/applyFix/htmlInjectHandler";
 import { applyFixToWordpress } from "@/features/crawlability/services/applyFix/wordpressHandler";
 import { applyFixToWix } from "@/features/crawlability/services/applyFix/wixHandler";
-// Shopify dispatch is currently disabled — auto-deploy is GitHub + WordPress only.
-// The handler stays in the codebase so it's a one-line re-enable when we ship a Shopify Public App.
+// Wix + Shopify dispatch are currently disabled — auto-deploy is GitHub + WordPress only.
+// The handlers stay in the codebase (wixHandler.ts, shopifyHandler.ts) so re-enabling
+// is a one-import + one-dispatch-branch + one-runner-function restore from git history.
+// import { applyFixToWix } from "@/features/crawlability/services/applyFix/wixHandler";
 // import { applyFixToShopify } from "@/features/crawlability/services/applyFix/shopifyHandler";
 
 const MANAGED_PLAN_CTA = {
