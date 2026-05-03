@@ -5,6 +5,55 @@ import { computeVisibilityScore } from "../shared/scoring";
 import { getInstructionsForPlatform, getDisplayName, type CmsPlatform, type FixKind } from "../shared/platformInstructions";
 import "./styles.css";
 
+interface ManagedPlanCta {
+  url: string;
+  headline: string;
+  body: string;
+  buttonLabel: string;
+}
+
+function ManagedPlanCard({ cta }: { cta?: ManagedPlanCta }) {
+  if (!cta) return null;
+  return (
+    <div
+      style={{
+        marginTop: "10px",
+        padding: "12px",
+        background: "linear-gradient(135deg, rgba(125,142,108,0.08), rgba(125,142,108,0.02))",
+        border: "1px solid rgba(125,142,108,0.35)",
+        borderLeft: "3px solid #7D8E6C",
+        borderRadius: "6px",
+      }}
+    >
+      <div style={{ fontSize: "12px", fontWeight: 600, color: "#3D3F3D", marginBottom: "6px" }}>
+        {cta.headline}
+      </div>
+      <div style={{ fontSize: "11px", lineHeight: "1.5", color: "#555", marginBottom: "10px" }}>
+        {cta.body}
+      </div>
+      <a
+        href={cta.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "5px",
+          padding: "7px 12px",
+          background: "#7D8E6C",
+          color: "white",
+          textDecoration: "none",
+          borderRadius: "4px",
+          fontSize: "11px",
+          fontWeight: 600,
+        }}
+      >
+        {cta.buttonLabel} <ExternalLink size={11} />
+      </a>
+    </div>
+  );
+}
+
 type FixState =
   | { status: "idle" }
   | { status: "applying" }
