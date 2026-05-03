@@ -33,12 +33,19 @@ export interface WixCredentials {
   accountId: string;
 }
 
+export interface ShopifyCredentials {
+  shopDomain: string;
+  clientId: string;
+  clientSecret: string;
+}
+
 export type PlatformCredentials =
   | { platform: "github"; data: GithubCredentials }
   | { platform: "vercel"; data: VercelCredentials }
   | { platform: "wordpress"; data: WordpressCredentials }
   | { platform: "webflow"; data: WebflowCredentials }
-  | { platform: "wix"; data: WixCredentials };
+  | { platform: "wix"; data: WixCredentials }
+  | { platform: "shopify"; data: ShopifyCredentials };
 
 export interface ValidationResult {
   ok: boolean;
