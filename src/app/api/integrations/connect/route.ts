@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
         apiKey: data.apiKey,
         accountId: data.accountId,
       };
-      row = { site_id: data.siteId };
+      row = { site_id: data.siteId, site_url: data.siteUrl };
       break;
     }
   }
