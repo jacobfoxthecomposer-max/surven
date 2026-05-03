@@ -421,6 +421,9 @@ async function commitToConnectedRepo(args: CommitArgs) {
   if (connection.platform === "wordpress") {
     return await runWordpressCommit(supabaseAdmin, connection, args);
   }
+  if (connection.platform === "wix") {
+    return await runWixCommit(supabaseAdmin, connection, args);
+  }
   if (connection.platform === "github") {
     return await runGithubCommit(supabaseAdmin, connection, args);
   }
