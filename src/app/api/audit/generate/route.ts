@@ -18,6 +18,7 @@ import { supabase } from "@/services/supabase";
 import { createServerClient } from "@/services/supabaseServer";
 import { decryptCredentials } from "@/utils/credentialsEncryption";
 import { applyHtmlInject } from "@/features/crawlability/services/applyFix/htmlInjectHandler";
+import { applyFixToWordpress } from "@/features/crawlability/services/applyFix/wordpressHandler";
 import { generateSchema, type SchemaKind, type PageContext } from "@/services/schemaGenerator";
 import { rewriteMetaDescription, rewriteTitleTag, generateFaqPairs, generateAltText } from "@/services/llmRewriter";
 import { writeAuditLog, ipFromRequest } from "@/services/auditLog";
@@ -365,11 +366,13 @@ async function commitToConnectedRepo(args: CommitArgs) {
     }
   })();
 
+  // Fetch ALL active connections for this user (GitHub + WordPress + future platforms).
+  // We pick the one whose site_url matches the audited URL by hostname.
   const { data: connections } = await supabaseAdmin
     .from("site_connections")
     .select("id, user_id, business_id, platform, credentials, repo, branch, site_url, status")
     .eq("user_id", args.userId)
-    .eq("platform", "github")
+    .in("platform", ["github", "wordpress"])
     .eq("status", "active")
     .returns<ConnectionRow[]>();
 
@@ -377,12 +380,15 @@ async function commitToConnectedRepo(args: CommitArgs) {
     return {
       ok: false,
       error: "no_connection",
-      message: "Connect GitHub to your Surven account to enable auto-commit.",
-      connectUrl: `${args.origin}/onboarding/connect`,
-      manualNote: "No GitHub connection — copy the snippet below and paste it into your site manually.",
+      message: "Connect a site (GitHub or WordPress) to your Surven account to enable auto-update.",
+      connectUrl: `${args.origin}/settings`,
+      manualNote: "No site connection — copy the snippet below and paste it into your site manually.",
     };
   }
 
+  // Pick the connection that matches this audited URL by hostname.
+  // Without a hostname match, we don't auto-pick — would be too risky to commit to the
+  // wrong site. Tell the user what's connected vs. what they audited.
   let connection: ConnectionRow | null = null;
   if (hostname) {
     connection =
@@ -395,8 +401,41 @@ async function commitToConnectedRepo(args: CommitArgs) {
         }
       }) ?? null;
   }
-  connection = connection ?? connections[0];
 
+  if (!connection) {
+    const connectedHosts = connections.map((c) => {
+      try { return c.site_url ? new URL(c.site_url).hostname.replace(/^www\./, "") : null; } catch { return null; }
+    }).filter(Boolean);
+    return {
+      ok: false,
+      error: "site_not_connected",
+      message: hostname
+        ? `You audited ${hostname} but it's not connected to Surven. Your connected sites: ${connectedHosts.join(", ") || "(none)"}. Add this site under Settings → Integrations or run the audit on a connected site.`
+        : "Couldn't determine which site to update.",
+      connectUrl: `${args.origin}/settings`,
+    };
+  }
+
+  // Dispatch by platform.
+  if (connection.platform === "wordpress") {
+    return await runWordpressCommit(supabaseAdmin, connection, args);
+  }
+  if (connection.platform === "github") {
+    return await runGithubCommit(supabaseAdmin, connection, args);
+  }
+
+  return {
+    ok: false,
+    error: "unsupported_platform",
+    message: `Auto-update for ${connection.platform} isn't wired yet. Use the copy-paste flow.`,
+  };
+}
+
+async function runGithubCommit(
+  supabaseAdmin: ReturnType<typeof createServerClient>,
+  connection: ConnectionRow,
+  args: CommitArgs,
+) {
   if (!connection.repo) {
     return { ok: false, error: "Connection missing repo" };
   }
@@ -478,6 +517,101 @@ async function commitToConnectedRepo(args: CommitArgs) {
   return {
     ok: true,
     committedSha: result.committedSha,
+    commitUrl: result.commitUrl,
+    filePath: result.filePath,
+  };
+}
+
+async function runWordpressCommit(
+  supabaseAdmin: ReturnType<typeof createServerClient>,
+  connection: ConnectionRow,
+  args: CommitArgs,
+) {
+  if (!connection.site_url) {
+    return { ok: false, error: "WordPress connection is missing site URL" };
+  }
+
+  let creds: { username: string; applicationPassword: string };
+  try {
+    creds = decryptCredentials<{ username: string; applicationPassword: string }>(connection.credentials);
+  } catch {
+    return {
+      ok: false,
+      error: "encryption_unavailable",
+      message: "Stored credentials couldn't be decrypted. Reconnect WordPress.",
+    };
+  }
+
+  const { data: pendingRow } = await supabaseAdmin
+    .from("applied_fixes")
+    .insert({
+      business_id: connection.business_id,
+      audit_id: null,
+      finding_id: args.findingId,
+      fix_type: args.kind,
+      platform: "wordpress",
+      status: "pending",
+    })
+    .select("id")
+    .single();
+
+  const result = await applyFixToWordpress({
+    creds,
+    siteUrl: connection.site_url,
+    pageUrl: args.siteUrl,
+    payload: args.payload,
+    findingId: args.findingId,
+    findingTitle: args.findingTitle,
+  });
+
+  if (!result.ok) {
+    if (pendingRow) {
+      await supabaseAdmin
+        .from("applied_fixes")
+        .update({
+          status: result.manualSnippet || result.manualNote ? "skipped" : "failed",
+          error_message: result.error ?? result.manualNote ?? null,
+        })
+        .eq("id", pendingRow.id);
+    }
+    return {
+      ok: false,
+      error: result.error,
+      manualNote: result.manualNote,
+      manualSnippet: result.manualSnippet,
+    };
+  }
+
+  if (pendingRow) {
+    await supabaseAdmin
+      .from("applied_fixes")
+      .update({
+        status: "applied",
+        commit_url: result.commitUrl ?? null,
+        file_path: result.filePath ?? null,
+      })
+      .eq("id", pendingRow.id);
+  }
+
+  await writeAuditLog({
+    eventType: "fix_applied",
+    source: "api/audit/generate",
+    userId: args.userId,
+    businessId: connection.business_id,
+    connectionId: connection.id,
+    payload: {
+      findingId: args.findingId,
+      kind: args.kind,
+      filePath: result.filePath,
+      commitUrl: result.commitUrl,
+      source: "extension",
+      platform: "wordpress",
+    },
+    ipAddress: args.ipAddress,
+  });
+
+  return {
+    ok: true,
     commitUrl: result.commitUrl,
     filePath: result.filePath,
   };
