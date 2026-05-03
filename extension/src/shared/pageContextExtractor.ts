@@ -250,14 +250,26 @@ function getCanonicalUrl(): string {
 }
 
 function extractBodyContent(): string | undefined {
-  // Get visible main content, skipping nav/footer/aside chrome.
+  // Get visible main content, skipping nav/footer/aside/admin chrome.
   const main = document.querySelector("main, article, [role='main']") as HTMLElement | null;
   const sourceEl = main ?? document.body;
   if (!sourceEl) return undefined;
 
-  // Clone and strip nav/footer/script/style/aside before reading text.
+  // Clone and strip noisy chrome before reading text. The CMS admin bars (WordPress's
+  // #wpadminbar, Shopify's preview bar, Webflow's designer chrome) are particularly
+  // important to strip — they're not <nav>/<header> so they slip past generic chrome
+  // selectors, and their text ("Howdy", "+ New", "Edit Page", "WordPress") makes the
+  // LLM hallucinate that the page is about editing the CMS.
   const clone = sourceEl.cloneNode(true) as HTMLElement;
-  for (const sel of ["nav", "footer", "aside", "header", "script", "style", "noscript", "[role='navigation']", "[role='banner']", "[role='contentinfo']"]) {
+  const stripSelectors = [
+    "nav", "footer", "aside", "header",
+    "script", "style", "noscript",
+    "[role='navigation']", "[role='banner']", "[role='contentinfo']",
+    "#wpadminbar", ".admin-bar", ".wp-toolbar",
+    "#shopify-section-header", "[id*='admin-bar' i]",
+    ".webflow-designer", "[data-wf-page]",
+  ];
+  for (const sel of stripSelectors) {
     for (const el of Array.from(clone.querySelectorAll(sel))) el.remove();
   }
 
@@ -277,8 +289,17 @@ function extractBusinessName(ambiguous = false): string | undefined {
   if (websiteName) return websiteName;
 
   // Third: <title> split before separator. Title is a site-level signal in <head>.
-  const title = document.title?.split(/[|–—-]/)[0]?.trim();
-  if (title && title.length > 0 && title.length < 60) return title;
+  // Only split on space-bounded separators ("Page Title | Site" or "Page Title – Site"),
+  // NEVER on plain hyphens — domain names like "felicitous-grivet-xyz.com" contain
+  // hyphens but shouldn't be split apart.
+  const titleParts = (document.title ?? "").split(/\s+[|–—]\s+|\s+-\s+/);
+  const title = titleParts[0]?.trim();
+  // Reject if it looks like a hostname / domain (e.g. "yoursite.instawp.site"). Those
+  // aren't useful as a business name — better to fall through to H1.
+  const looksLikeHostname = title ? /^[a-z0-9]+([-.][a-z0-9]+)+$/i.test(title) : false;
+  if (title && title.length > 0 && title.length < 60 && !looksLikeHostname) {
+    return title;
+  }
 
   // Below this point: lower-confidence signals that can pick up DISPLAYED content on
   // dashboards, directories, etc. Skip them when ambiguous.
