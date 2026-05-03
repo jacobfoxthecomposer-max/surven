@@ -478,6 +478,9 @@ function ConnectedView({
         {platform === "webflow" && (
           <Field label="Site ID" value={connection.site_id ?? "—"} />
         )}
+        {platform === "wix" && (
+          <Field label="Site ID" value={connection.site_id ?? "—"} />
+        )}
         <Field label="Last verified" value={verifiedAt} />
       </div>
 
