@@ -141,6 +141,38 @@ export async function validateWordpress(creds: WordpressCredentials): Promise<Va
   }
 }
 
+export async function validateWix(creds: WixCredentials): Promise<ValidationResult> {
+  if (!creds.apiKey || !creds.siteId || !creds.accountId) {
+    return { ok: false, error: "API Key, Site ID, and Account ID are all required" };
+  }
+  try {
+    // Smoke test: read site SEO settings. If this works, the credentials + scopes are good.
+    const res = await fetch(`https://www.wixapis.com/site-properties/v4/properties`, {
+      headers: {
+        Authorization: creds.apiKey,
+        "wix-site-id": creds.siteId,
+        "wix-account-id": creds.accountId,
+        Accept: "application/json",
+      },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    if (res.status === 401 || res.status === 403) {
+      return { ok: false, error: "Wix API key rejected. Check it has 'Manage Site' or 'Manage SEO' permissions." };
+    }
+    if (res.status === 404) {
+      return { ok: false, error: "Site not found. Double-check Site ID and Account ID." };
+    }
+    if (!res.ok) {
+      return { ok: false, error: `Wix returned ${res.status}` };
+    }
+    const data = await res.json();
+    const displayName = data?.properties?.siteDisplayName ?? data?.siteDisplayName ?? "Wix site";
+    return { ok: true, meta: { displayName } };
+  } catch {
+    return { ok: false, error: "Could not reach Wix. Try again." };
+  }
+}
+
 export async function validateWebflow(creds: WebflowCredentials): Promise<ValidationResult> {
   if (!creds.token || !creds.siteId) {
     return { ok: false, error: "Token and site ID are required" };
