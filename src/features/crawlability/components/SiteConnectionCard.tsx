@@ -103,6 +103,8 @@ export function SiteConnectionCard({
   const [username, setUsername] = useState("");
   const [appPassword, setAppPassword] = useState("");
   const [siteId, setSiteId] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [accountId, setAccountId] = useState("");
 
   const meta = PLATFORM_META[platform];
   const Icon = meta.icon;
