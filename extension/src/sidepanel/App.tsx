@@ -1453,10 +1453,10 @@ export default function App() {
                                 }}
                               >
                                 <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "6px", color: "#C97B45" }}>
-                                  <AlertCircle size={14} /> Add this to {getDisplayName(detectedPlatform)} manually
+                                  <AlertCircle size={14} /> Couldn&apos;t auto-deploy to {getDisplayName(detectedPlatform)}
                                 </div>
                                 <div style={{ marginBottom: "10px", lineHeight: "1.4", fontSize: "11px", color: "#666" }}>
-                                  We can&apos;t auto-deploy to {getDisplayName(detectedPlatform)} (yet) — but here&apos;s exactly where to paste it:
+                                  {fixState.manualNote || `We can't auto-deploy to ${getDisplayName(detectedPlatform)} for this fix type. Here's how to add it manually:`}
                                 </div>
 
                                 <div style={{ background: "white", border: "1px solid #E5D8B8", borderRadius: "4px", padding: "10px", marginBottom: "10px" }}>
