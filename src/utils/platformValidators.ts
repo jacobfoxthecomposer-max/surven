@@ -27,11 +27,18 @@ export interface WebflowCredentials {
   siteId: string;
 }
 
+export interface WixCredentials {
+  apiKey: string;
+  siteId: string;
+  accountId: string;
+}
+
 export type PlatformCredentials =
   | { platform: "github"; data: GithubCredentials }
   | { platform: "vercel"; data: VercelCredentials }
   | { platform: "wordpress"; data: WordpressCredentials }
-  | { platform: "webflow"; data: WebflowCredentials };
+  | { platform: "webflow"; data: WebflowCredentials }
+  | { platform: "wix"; data: WixCredentials };
 
 export interface ValidationResult {
   ok: boolean;
