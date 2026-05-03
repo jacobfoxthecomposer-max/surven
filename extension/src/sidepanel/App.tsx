@@ -672,7 +672,7 @@ export default function App() {
       if (data.ok === false && data.manualNote) {
         setFixStates((s) => ({
           ...s,
-          [finding.id]: { status: "manual", snippet: data.snippet, manualNote: data.manualNote!, rewriteKind: "faq_page" },
+          [finding.id]: { status: "manual", snippet: data.snippet, manualNote: data.manualNote!, rewriteKind: "faq_page", managedPlanCta: (data as { managedPlanCta?: ManagedPlanCta }).managedPlanCta },
         }));
         return;
       }
