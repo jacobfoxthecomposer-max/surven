@@ -333,7 +333,7 @@ export default function App() {
       if (data.ok === false && data.snippet && data.manualNote) {
         setFixStates((s) => ({
           ...s,
-          [finding.id]: { status: "manual", snippet: data.snippet!, manualNote: data.manualNote! },
+          [finding.id]: { status: "manual", snippet: data.snippet!, manualNote: data.manualNote!, managedPlanCta: (data as { managedPlanCta?: ManagedPlanCta }).managedPlanCta },
         }));
         return;
       }
