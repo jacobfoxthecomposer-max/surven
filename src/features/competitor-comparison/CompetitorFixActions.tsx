@@ -2,11 +2,54 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Sparkles, Trophy } from "lucide-react";
-import { Card } from "@/components/atoms/Card";
+import {
+  ArrowRight,
+  Cpu,
+  MessageSquare,
+  Link2,
+  ShieldCheck,
+  Sparkles,
+  type LucideIcon,
+} from "lucide-react";
+import { SectionHeading } from "@/components/atoms/SectionHeading";
 import { Modal } from "@/components/molecules/Modal";
 import { SURVEN_SEMANTIC } from "@/utils/brandColors";
 import type { ScanResult, ModelName } from "@/types/database";
+
+const COLORS = {
+  primary: "#96A283",
+  primaryHover: "#7D8E6C",
+};
+
+// Visual rhythm cribbed from Code Scanner's `TopFixesPanel`. Sage→amber→rust
+// gradient header band + status-tile / title / body rows + sage `+N` pill on
+// the right when the action carries a numeric magnitude.
+
+const ACTION_META: Record<
+  string,
+  { Icon: LucideIcon; tint: string; iconColor: string }
+> = {
+  engine: {
+    Icon: Cpu,
+    tint: "rgba(150,162,131,0.18)",
+    iconColor: "#5E7250",
+  },
+  prompts: {
+    Icon: MessageSquare,
+    tint: "rgba(201,123,69,0.16)",
+    iconColor: "#A06210",
+  },
+  sources: {
+    Icon: Link2,
+    tint: "rgba(184,160,48,0.18)",
+    iconColor: "#7E6B17",
+  },
+  defend: {
+    Icon: ShieldCheck,
+    tint: "rgba(150,162,131,0.18)",
+    iconColor: "#5E7250",
+  },
+};
 
 const MODEL_LABELS: Record<ModelName, string> = {
   chatgpt: "ChatGPT",
@@ -29,10 +72,12 @@ const ENGINE_LEVERS: Record<ModelName, string> = {
 };
 
 interface FixAction {
-  key: string;
+  key: keyof typeof ACTION_META;
   headline: string;
   oneLiner: string;
   modalBody: string;
+  /** Optional magnitude pill rendered on the right of the row. */
+  metric?: string;
 }
 
 interface Props {
@@ -173,13 +218,14 @@ export function CompetitorFixActions({
           key: "engine",
           headline: `Close the ${worstEngineGap}% gap on ${MODEL_LABELS[worstEngine]}`,
           oneLiner: `${worstEngineCompetitor} appears ${worstEngineGap}% more often than ${businessName} on ${MODEL_LABELS[worstEngine]}.`,
-          modalBody: `${worstEngineCompetitor} is currently mentioned on ${worstEngineCompScore}% of ${MODEL_LABELS[worstEngine]} prompts in your scan. ${businessName} is at ${worstEngineYourScore}%. ${MODEL_LABELS[worstEngine]} is one of the highest-traffic AI engines, so closing this gap moves the most leads.\n\nHow to close it: ${ENGINE_LEVERS[worstEngine]}\n\nMost businesses see movement within 2–4 weeks of the right source change. Look at the citation domains ${worstEngineCompetitor} is appearing on (in the 'Top Cited Domains' card below) — if you can get listed on the same ones, you'll often start matching their visibility quickly.`,
+          metric: `${worstEngineGap}% gap`,
+          modalBody: `${worstEngineCompetitor} appears on ${worstEngineCompScore}% of ${MODEL_LABELS[worstEngine]} prompts. ${businessName} is at ${worstEngineYourScore}%.\n\n${ENGINE_LEVERS[worstEngine]}\n\nCheck the Top Cited Domains card below — match the sources ${worstEngineCompetitor} appears on and visibility usually closes within 2–4 weeks.`,
         }
       : {
           key: "engine",
           headline: "You're not trailing on any single engine",
           oneLiner: `${businessName} matches or beats every competitor on every engine.`,
-          modalBody: `Across all four AI engines, no single competitor outpaces ${businessName} by a meaningful margin in this scan. Keep watching — engine gaps tend to open quietly when a competitor publishes new content or earns a high-authority citation. Run a fresh scan in 7–14 days to confirm the lead is holding.`,
+          modalBody: `No competitor outpaces ${businessName} on any engine in this scan. Run a fresh scan in 7–14 days to confirm the lead is holding.`,
         };
 
     // ============== Action 2: Win prompts you're losing ==============
@@ -198,13 +244,14 @@ export function CompetitorFixActions({
           key: "prompts",
           headline: `Win the ${totalGapPrompts} prompt${totalGapPrompts === 1 ? "" : "s"} where ${topGapCompetitor} ranks and you don't`,
           oneLiner: `${topGapCompetitor} shows up on ${totalGapPrompts} prompt${totalGapPrompts === 1 ? "" : "s"} that ${businessName} is missing entirely.`,
-          modalBody: `Here are the prompts ${businessName} is missing:\n\n${promptList}\n\nHow to win them: write content that directly answers each of these prompts, in plain language, on a page indexed by Google. The page title and first paragraph should restate the prompt almost verbatim — AI engines pull copy from pages that match the prompt structure exactly. A "best [category] in [city]" prompt is won by a page titled "Best [category] in [city]," not by a generic services page.\n\nIf the prompts are review-style ("best", "top", "recommended"), aim for at least 5–10 specific named-customer review snippets on the page. AI weights social proof from real names and outcomes much higher than generic marketing copy.`,
+          metric: `${totalGapPrompts} prompt${totalGapPrompts === 1 ? "" : "s"}`,
+          modalBody: `Prompts ${businessName} is missing:\n\n${promptList}\n\nWrite a page that restates each prompt in the title and first paragraph — AI pulls copy from pages that match the prompt almost verbatim. For "best/top" prompts, add 5–10 named-customer reviews on the page; AI weights real names higher than generic marketing copy.`,
         }
       : {
           key: "prompts",
           headline: "No prompts where competitors solo-rank above you",
           oneLiner: `${businessName} is at least matching every competitor where they appear.`,
-          modalBody: `In this scan, every prompt where a competitor was mentioned, ${businessName} was also mentioned. That's a strong starting position — most brands have at least 1-2 "blind spot" prompts where competitors own the answer. Keep scanning weekly to catch new gap prompts as competitors publish content, and look at the cited domains card to see if anyone is gaining new authority sources.`,
+          modalBody: `Every prompt where a competitor was mentioned, ${businessName} was also mentioned. Keep scanning weekly to catch new gap prompts as competitors publish content.`,
         };
 
     // ============== Action 3: Steal competitor citation sources ==============
@@ -220,13 +267,14 @@ export function CompetitorFixActions({
           key: "sources",
           headline: `Get listed on ${topCitationGaps.length} source${topCitationGaps.length === 1 ? "" : "s"} citing your competitors`,
           oneLiner: `AI is citing ${topCitationGaps[0].domain} for ${topCitationGaps[0].competitor}, but never for ${businessName}.`,
-          modalBody: `These sources are powering competitor visibility but currently ignore ${businessName}:\n\n${sourceList}\n\nHow to get listed: each source has its own path. Directories (Yelp, BBB, industry-specific) usually accept free listings — claim or create yours. Editorial sources (news sites, blogs) require either pitching a story angle or earning a mention through a customer / partner. Reddit-style sources happen when real people recommend you in real threads — encourage your best customers to drop a comment when relevant.\n\nThe order of operations matters: prioritize the source with the highest citation count first (currently ${topCitationGaps[0].domain}), since AI weights it most. One strong placement on a high-citation source moves visibility more than five placements on weak sources.`,
+          metric: `${topCitationGaps.length} source${topCitationGaps.length === 1 ? "" : "s"}`,
+          modalBody: `Sources powering competitor visibility but ignoring ${businessName}:\n\n${sourceList}\n\nDirectories (Yelp, BBB, industry-specific) usually accept free listings — claim yours. Editorial mentions need a story pitch or customer-led intro. Reddit happens when real customers recommend you in real threads.\n\nStart with ${topCitationGaps[0].domain} — one placement on the highest-cited source moves more visibility than five on weak ones.`,
         }
       : {
           key: "sources",
           headline: "Match competitors on the citation sources they use",
           oneLiner: `${businessName} is showing up on the same sources competitors are — keep that parity.`,
-          modalBody: `In this scan, AI doesn't appear to be citing any sources for competitors that aren't also citing ${businessName}. That's good source-level parity — most brands trail on at least one or two citation domains. Watch for new gaps as competitors get listed on new platforms; the Citation Insights tool tracks which exact domains AI references in each scan.`,
+          modalBody: `AI isn't citing any sources for competitors that aren't also citing ${businessName}. Watch Citation Insights for new gaps as competitors get listed on new platforms.`,
         };
 
     // ============== Action 4: Defend the prompts you own ==============
@@ -244,13 +292,14 @@ export function CompetitorFixActions({
           key: "defend",
           headline: `Defend the ${totalAdvantagePrompts} prompt${totalAdvantagePrompts === 1 ? "" : "s"} where you alone rank`,
           oneLiner: `${businessName} owns ${totalAdvantagePrompts} prompt${totalAdvantagePrompts === 1 ? "" : "s"} where no competitor is mentioned.`,
-          modalBody: `These are your solo wins — prompts where AI mentions ${businessName} and no competitor:\n\n${advList}\n\nHow to defend them: solo wins disappear quickly when a competitor earns a citation on the same source AI is reading for that prompt. To hold these positions, do three things:\n\n1. Identify the source page AI is reading (check Citation Insights for the cited domains on these prompts).\n\n2. Keep that source fresh. AI heavily weights freshness — if the page hasn't been updated in 6+ months, sentiment and visibility will fade. A small content update every 60–90 days is enough.\n\n3. Add depth to the page. The more concrete a page is (named customers, dated outcomes, specific numbers), the harder it is to dislodge.\n\nTreat solo-win prompts as your moat — every week a competitor isn't mentioned on these prompts is another week of organic AI traffic flowing only to ${businessName}.`,
+          metric: `${totalAdvantagePrompts} solo win${totalAdvantagePrompts === 1 ? "" : "s"}`,
+          modalBody: `Solo wins — prompts where AI mentions ${businessName} and no competitor:\n\n${advList}\n\nThree moves to hold them:\n\n1. Find the source AI is reading (check Citation Insights for the cited domains).\n2. Refresh that page every 60–90 days — AI weights freshness heavily.\n3. Add depth: named customers, dated outcomes, specific numbers. Concrete pages are harder to dislodge.`,
         }
       : {
           key: "defend",
           headline: `Build solo-win prompts ${businessName} can own`,
           oneLiner: `${businessName} doesn't currently solo-rank on any prompt — every win is shared.`,
-          modalBody: `In this scan, every prompt mentioning ${businessName} also mentions at least one competitor. That's normal early on, but solo-wins are where AI traffic actually concentrates — once you own a prompt, the click goes only to you.\n\nHow to build them: pick the most specific category prompt you currently share (e.g., not "best plumber" but "best emergency plumber for older homes in [city]"). Write a content piece that answers that exact specific prompt better than any competitor's existing content does. Specificity is the lever — generic answers stay shared, specific answers get owned.\n\nWithin 2-3 scans of publishing, you'll usually see one or two solo-wins start to show up. Each one becomes a defended position.`,
+          modalBody: `Every prompt mentioning ${businessName} also mentions a competitor — every win is shared. Pick your most specific category prompt (not "best plumber" but "best emergency plumber for older homes in [city]") and write a page that answers it better than any competitor. Specificity is the lever — generic answers stay shared, specific answers get owned. You'll usually see solo-wins appear within 2–3 scans.`,
         };
 
     return [engineAction, promptAction, sourceAction, defendAction];
@@ -260,61 +309,101 @@ export function CompetitorFixActions({
 
   return (
     <>
-      <Card className="h-full flex flex-col">
-        <div className="flex items-center gap-1.5 mb-1">
-          <Trophy
-            className="h-3.5 w-3.5"
-            style={{ color: SURVEN_SEMANTIC.goodAlt }}
-          />
-          <span
-            className="text-[10px] font-bold tracking-wider uppercase"
-            style={{ color: SURVEN_SEMANTIC.goodAlt }}
-          >
-            How to beat competitors
-          </span>
-        </div>
-        <h3
+      <div
+        className="rounded-[var(--radius-lg)] border bg-[var(--color-surface)] flex flex-col h-full"
+        style={{ borderColor: "rgba(150,162,131,0.45)" }}
+      >
+        {/* Header band — same 3-stop sage→amber→rust gradient as the Code
+            Scanner "Fix these first" panel. */}
+        <div
+          className="rounded-t-[var(--radius-lg)] px-5 py-3.5 border-b border-[var(--color-border)] flex items-center justify-between flex-wrap gap-3"
           style={{
-            fontFamily: "var(--font-display)",
-            fontSize: 22,
-            fontWeight: 600,
-            lineHeight: 1.15,
-            color: "var(--color-fg)",
-            marginBottom: 4,
+            background:
+              "linear-gradient(135deg, rgba(150,162,131,0.28) 0%, rgba(184,160,48,0.14) 50%, rgba(201,123,69,0.14) 100%)",
           }}
         >
-          4 ways to take the lead
-        </h3>
-        <p className="text-xs text-[var(--color-fg-muted)] mb-4">
-          Specific to your scan results. Tap any tip for a plain-English playbook.
-        </p>
-
-        <div className="flex-1 flex flex-col gap-2.5">
-          {actions.map((a) => (
-            <button
-              key={a.key}
-              onClick={() => setOpenKey(a.key)}
-              className="text-left rounded-[var(--radius-md)] border border-[var(--color-border)] p-3 hover:border-[var(--color-border-hover)] hover:bg-[var(--color-surface-alt)]/40 transition-colors group"
-              style={{ background: "var(--color-surface-alt)" }}
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div
+              className="h-8 w-8 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
+              style={{ backgroundColor: "rgba(150,162,131,0.22)" }}
             >
-              <div className="flex items-start gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-[var(--color-fg)] leading-snug mb-1">
+              <Sparkles className="h-4 w-4" style={{ color: COLORS.primary }} />
+            </div>
+            <SectionHeading
+              text="4 ways to take the lead"
+              info="The four highest-impact moves for closing the gap on your competitors, derived from your scan."
+            />
+          </div>
+          <p
+            className="text-[var(--color-fg-secondary)]"
+            style={{ fontSize: 13.5 }}
+          >
+            Specific to your scan.{" "}
+            <span style={{ color: COLORS.primary, fontWeight: 600 }}>
+              Tap any row
+            </span>{" "}
+            for the playbook.
+          </p>
+        </div>
+
+        <div className="p-4 flex-1 flex flex-col gap-3">
+          {actions.map((a) => {
+            const meta = ACTION_META[a.key];
+            const Icon = meta.Icon;
+            return (
+              <button
+                key={a.key}
+                onClick={() => setOpenKey(a.key)}
+                className="w-full text-left rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 px-5 py-4 flex items-start gap-4 hover:border-[var(--color-border-hover)] hover:bg-[var(--color-surface-alt)] hover:-translate-y-px transition-all group"
+              >
+                <span
+                  className="inline-flex items-center justify-center rounded-[var(--radius-md)] shrink-0 mt-0.5"
+                  style={{
+                    width: 36,
+                    height: 36,
+                    backgroundColor: meta.tint,
+                    color: meta.iconColor,
+                  }}
+                >
+                  <Icon className="h-5 w-5" />
+                </span>
+                <div className="flex-1 min-w-0 space-y-1">
+                  <p
+                    className="text-[var(--color-fg)]"
+                    style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.3 }}
+                  >
                     {a.headline}
                   </p>
-                  <p className="text-[11px] text-[var(--color-fg-secondary)] leading-snug">
+                  <p
+                    className="text-[var(--color-fg-secondary)]"
+                    style={{ fontSize: 14, lineHeight: 1.5 }}
+                  >
                     {a.oneLiner}
                   </p>
                 </div>
-                <ArrowRight
-                  className="h-3.5 w-3.5 mt-0.5 shrink-0 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"
-                  style={{ color: SURVEN_SEMANTIC.goodAlt }}
-                />
-              </div>
-            </button>
-          ))}
+                <div className="flex items-center gap-2 shrink-0 mt-1">
+                  {a.metric && (
+                    <span
+                      className="rounded-full px-3 py-1 font-semibold tabular-nums"
+                      style={{
+                        fontSize: 13,
+                        backgroundColor: `${COLORS.primary}1f`,
+                        color: COLORS.primaryHover,
+                      }}
+                    >
+                      {a.metric}
+                    </span>
+                  )}
+                  <ArrowRight
+                    className="h-4 w-4 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"
+                    style={{ color: COLORS.primary }}
+                  />
+                </div>
+              </button>
+            );
+          })}
         </div>
-      </Card>
+      </div>
 
       <Modal
         open={open !== null}

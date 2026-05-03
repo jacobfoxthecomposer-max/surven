@@ -14,6 +14,20 @@ import type { Business } from "@/types/database";
 
 const STORAGE_KEY = "surven_active_business_id";
 
+const SUPABASE_UNCONFIGURED =
+  !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder");
+
+const MOCK_BUSINESS: Business = {
+  id: "local-dev-business",
+  user_id: "local-dev-user",
+  name: "Surven Local Dev",
+  industry: "Software",
+  city: "Austin",
+  state: "TX",
+  created_at: new Date().toISOString(),
+};
+
 interface ActiveBusinessContextValue {
   businesses: Business[];
   activeBusiness: Business | null;
@@ -36,7 +50,8 @@ export function ActiveBusinessProvider({ children }: { children: ReactNode }) {
 
   const { data: businesses = [], isLoading, refetch } = useQuery<Business[]>({
     queryKey: ["businesses", user?.id],
-    queryFn: () => getAllBusinesses(user!.id),
+    queryFn: () =>
+      SUPABASE_UNCONFIGURED ? Promise.resolve([MOCK_BUSINESS]) : getAllBusinesses(user!.id),
     enabled: !!user && !authLoading,
     staleTime: 5 * 60 * 1000,
   });

@@ -138,7 +138,7 @@ const TREATMENT_COMPACT_LABEL: Treatment = {
 };
 
 // V2 — Standard label: percentage + name ("67.3%  ProPlumber Austin")
-const TREATMENT_STANDARD_LABEL: Treatment = {
+export const TREATMENT_STANDARD_LABEL: Treatment = {
   ...SHARED_BASE,
   endLabelStyle: "name-value",
   endLabelGutter: 150,
@@ -457,7 +457,7 @@ function buildGaugeInsight(data: ScannerData): string {
   return `${data.youToday.toFixed(1)}% visibility — ${tierWord} territory, ${trend} this period.`;
 }
 
-function buildChartInsight(data: ScannerData): string {
+export function buildChartInsight(data: ScannerData): string {
   const leader = data.ranked[0];
   const youCurrent = data.youToday;
   if (leader.isYou) {
@@ -1053,7 +1053,7 @@ export function buildPositionStats(data: ScannerData): PositionStat[] {
   });
 }
 
-function buildSOVStats(data: ScannerData): PositionStat[] {
+export function buildSOVStats(data: ScannerData): PositionStat[] {
   const T = data.dates.length;
   const seriesById: Record<string, number[]> = {};
   for (const b of data.ranked) seriesById[b.id] = [];
@@ -1079,7 +1079,7 @@ function buildSOVStats(data: ScannerData): PositionStat[] {
   });
 }
 
-function buildSOVInsight(stats: PositionStat[]): string {
+export function buildSOVInsight(stats: PositionStat[]): string {
   const you = stats.find((s) => s.brand.isYou);
   if (!you) return "";
   const sortedByShare = [...stats].sort((a, b) => b.current - a.current);
@@ -1983,7 +1983,7 @@ function SOVPie({
   );
 }
 
-function ShareOfVoiceCard({
+export function ShareOfVoiceCard({
   data,
   stats,
   insight,
@@ -2250,27 +2250,30 @@ function NarrativeFeed({ data, treatment }: { data: ScannerData; treatment: Trea
 
 // ─── CHART CARD (with Focus/Full toggle) ────────────────────────────────────
 
-function ChartCard({
+export function ChartCard({
   data,
   treatment,
   aiOverviewVariant = "V1",
   enabledBrandIds,
+  title = "Your AI visibility over time",
+  titleInfo = "Daily mention rate across all tracked AI tools. Higher = more visibility.",
+  defaultMode = "focus",
 }: {
   data: ScannerData;
   treatment: Treatment;
   aiOverviewVariant?: AIOverviewVariant;
   enabledBrandIds: Set<string>;
+  title?: string;
+  titleInfo?: string;
+  defaultMode?: "focus" | "full";
 }) {
-  const [mode, setMode] = useState<"focus" | "full">("focus");
+  const [mode, setMode] = useState<"focus" | "full">(defaultMode);
   const focusMode: FocusMode = mode === "full" ? "full" : "tight";
 
   return (
     <Card className="p-4 min-w-0">
       <div className="mb-3 pb-2 border-b border-[var(--color-border)]">
-        <SectionHeading
-          text="Your AI visibility over time"
-          info="Daily mention rate across all tracked AI tools. Higher = more visibility."
-        />
+        <SectionHeading text={title} info={titleInfo} />
         <div className="mt-2 mb-2">
           <AIOverview
             text={buildChartInsight(data)}

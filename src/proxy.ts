@@ -4,7 +4,17 @@ import { createServerClient } from "@supabase/ssr";
 const protectedRoutes = ["/dashboard", "/settings", "/onboarding"];
 const authRoutes = ["/login", "/signup"];
 
+const SUPABASE_UNCONFIGURED =
+  !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder");
+
 export async function proxy(request: NextRequest) {
+  // Local dev without real Supabase: skip all auth checks. The page-level
+  // mock user (useAuth/useActiveBusiness) handles rendering.
+  if (SUPABASE_UNCONFIGURED) {
+    return NextResponse.next();
+  }
+
   const { pathname } = request.nextUrl;
 
   const isProtected = protectedRoutes.some((r) => pathname.startsWith(r));
