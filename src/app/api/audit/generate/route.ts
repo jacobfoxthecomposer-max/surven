@@ -118,6 +118,7 @@ interface ConnectionRow {
   repo: string | null;
   branch: string | null;
   site_url: string | null;
+  site_id: string | null;
   status: string;
 }
 
