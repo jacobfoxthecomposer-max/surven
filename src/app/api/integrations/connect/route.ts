@@ -10,6 +10,8 @@ import {
   validateWordpress,
   validateWebflow,
   validateWix,
+  validateShopify,
+  normalizeShopDomain,
 } from "@/utils/platformValidators";
 import { enqueueJob } from "@/services/jobQueue";
 import { writeAuditLog, ipFromRequest } from "@/services/auditLog";
