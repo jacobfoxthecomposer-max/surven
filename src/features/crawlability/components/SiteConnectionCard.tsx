@@ -81,6 +81,17 @@ const PLATFORM_META: Record<
       label: "Create Wix API key",
     },
   },
+  shopify: {
+    label: "Shopify",
+    description: "Auto-deploy SEO meta, JSON-LD schema, and image alt text to your Shopify store via the Admin API.",
+    icon: Globe,
+    color: "#96BF48",
+    tokenHelp: "In your Shopify Admin → Settings → Apps and sales channels → Develop apps → create an app with Admin API scopes (read/write products, themes, content, files), install it on the store, then copy the Client ID + Client Secret from the API credentials tab. Surven mints a 24h bearer token automatically.",
+    tokenLink: {
+      url: "https://admin.shopify.com",
+      label: "Open Shopify Admin",
+    },
+  },
 };
 
 export function SiteConnectionCard({
