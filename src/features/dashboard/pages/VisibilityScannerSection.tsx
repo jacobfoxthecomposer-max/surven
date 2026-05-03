@@ -190,7 +190,7 @@ const MOCK_N = 90;
 
 // Full-color competitor palette, all visually distinct from each other AND
 // from the sage primary (You). c4 is a teal that reads separate from sage.
-const MOCK_BRANDS: MockBrand[] = [
+export const MOCK_BRANDS: MockBrand[] = [
   { id: "you", name: "Your Business",      domain: "acme-plumbing.com",     color: COLORS.primary,     isYou: true,  mentions: 3181, data: genLine(45, 0.18, 2.6, MOCK_N, 1) },
   { id: "c1",  name: "ProPlumber Austin",  domain: "proplumber-austin.com", color: "#C97B45",          isYou: false, mentions: 2769, data: genLine(63, 0.10, 2.4, MOCK_N, 2) },
   { id: "c2",  name: "FastFix Plumbing",   domain: "fastfix-plumbing.com",  color: "#B8A030",          isYou: false, mentions: 2454, data: genLine(38, 0.07, 2.8, MOCK_N, 3) },
@@ -209,7 +209,7 @@ function buildDates(n: number): Date[] {
   }
   return dates;
 }
-const MOCK_DATES = buildDates(MOCK_N);
+export const MOCK_DATES = buildDates(MOCK_N);
 
 const fmtDate = (d: Date) =>
   d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -265,7 +265,7 @@ const ENGINES = [
 
 // ─── DATA HOOK ──────────────────────────────────────────────────────────────
 
-function useScannerData(
+export function useScannerData(
   brands: MockBrand[],
   dates: Date[],
   rangeN: number,
@@ -1027,7 +1027,7 @@ type PositionStat = {
   series: number[];
 };
 
-function buildPositionStats(data: ScannerData): PositionStat[] {
+export function buildPositionStats(data: ScannerData): PositionStat[] {
   const T = data.dates.length;
   const seriesById: Record<string, number[]> = {};
   for (const b of data.ranked) seriesById[b.id] = [];
@@ -1097,7 +1097,7 @@ function buildSOVInsight(stats: PositionStat[]): string {
   return `You hold ${you.current.toFixed(1)}% of voice. ${leader.brand.name} leads at ${leader.current.toFixed(1)}% — close the gap with focused content.`;
 }
 
-function buildPositionInsight(stats: PositionStat[]): string {
+export function buildPositionInsight(stats: PositionStat[]): string {
   const you = stats.find((s) => s.brand.isYou);
   if (!you) return "";
   const competitors = stats.filter((s) => !s.brand.isYou);
@@ -1690,7 +1690,7 @@ function EngineRankRow({ id, label, rank, prevRank }: RankRowProps) {
   );
 }
 
-function RankSeriesCard({
+export function RankSeriesCard({
   title,
   titleInfo,
   data,

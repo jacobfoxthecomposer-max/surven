@@ -20,6 +20,7 @@ import { CompetitorRowTable } from "@/features/competitor-comparison/CompetitorR
 import { CompetitorHeatmap } from "@/features/competitor-comparison/CompetitorHeatmap";
 import { CompetitorGaps } from "@/features/competitor-comparison/CompetitorGaps";
 import { CompetitorCitedDomains } from "@/features/competitor-comparison/CompetitorCitedDomains";
+import { CompetitorRankChart } from "@/features/competitor-comparison/CompetitorRankChart";
 import { FooterDiagnostic } from "@/features/competitor-comparison/FooterDiagnostic";
 import { ExportModal } from "@/features/competitor-comparison/ExportModal";
 import { AI_MODELS } from "@/utils/constants";
@@ -264,6 +265,11 @@ export default function CompetitorComparisonPage() {
                 businessScore={score}
                 competitors={competitorNames}
               />
+            </motion.div>
+
+            {/* Average rank over time — cloned from AI Visibility Tracker */}
+            <motion.div {...reveal}>
+              <CompetitorRankChart />
             </motion.div>
 
             {/* Gaps & advantages */}
