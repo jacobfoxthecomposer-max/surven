@@ -1701,7 +1701,7 @@ export default function App() {
                                   <AlertCircle size={14} /> Add this to {getDisplayName(detectedPlatform)} manually
                                 </div>
                                 <div style={{ marginBottom: "10px", lineHeight: "1.4", fontSize: "11px", color: "#666" }}>
-                                  We can&apos;t auto-update {getDisplayName(detectedPlatform)} (yet) — but here&apos;s exactly where to paste it:
+                                  {fixState.manualNote || `We can't auto-update ${getDisplayName(detectedPlatform)} for this fix type. Here's how to add it manually:`}
                                 </div>
 
                                 {fixState.suggested && (
