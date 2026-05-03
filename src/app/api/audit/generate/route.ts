@@ -20,6 +20,7 @@ import { decryptCredentials } from "@/utils/credentialsEncryption";
 import { applyHtmlInject } from "@/features/crawlability/services/applyFix/htmlInjectHandler";
 import { applyFixToWordpress } from "@/features/crawlability/services/applyFix/wordpressHandler";
 import { applyFixToWix } from "@/features/crawlability/services/applyFix/wixHandler";
+import { applyFixToShopify } from "@/features/crawlability/services/applyFix/shopifyHandler";
 import { generateSchema, type SchemaKind, type PageContext } from "@/services/schemaGenerator";
 import { rewriteMetaDescription, rewriteTitleTag, generateFaqPairs, generateAltText } from "@/services/llmRewriter";
 import { writeAuditLog, ipFromRequest } from "@/services/auditLog";
@@ -374,7 +375,7 @@ async function commitToConnectedRepo(args: CommitArgs) {
     .from("site_connections")
     .select("id, user_id, business_id, platform, credentials, repo, branch, site_url, site_id, status")
     .eq("user_id", args.userId)
-    .in("platform", ["github", "wordpress", "wix"])
+    .in("platform", ["github", "wordpress", "wix", "shopify"])
     .eq("status", "active")
     .returns<ConnectionRow[]>();
 
@@ -382,7 +383,7 @@ async function commitToConnectedRepo(args: CommitArgs) {
     return {
       ok: false,
       error: "no_connection",
-      message: "Connect a site (GitHub or WordPress) to your Surven account to enable auto-update.",
+      message: "Connect a site (GitHub, WordPress, or Shopify) to your Surven account to enable auto-update.",
       connectUrl: `${args.origin}/settings`,
       manualNote: "No site connection — copy the snippet below and paste it into your site manually.",
     };
@@ -424,6 +425,9 @@ async function commitToConnectedRepo(args: CommitArgs) {
   }
   if (connection.platform === "wix") {
     return await runWixCommit(supabaseAdmin, connection, args);
+  }
+  if (connection.platform === "shopify") {
+    return await runShopifyCommit(supabaseAdmin, connection, args);
   }
   if (connection.platform === "github") {
     return await runGithubCommit(supabaseAdmin, connection, args);
@@ -706,6 +710,101 @@ async function runWixCommit(
       commitUrl: result.commitUrl,
       source: "extension",
       platform: "wix",
+    },
+    ipAddress: args.ipAddress,
+  });
+
+  return {
+    ok: true,
+    commitUrl: result.commitUrl,
+    filePath: result.filePath,
+  };
+}
+
+async function runShopifyCommit(
+  supabaseAdmin: ReturnType<typeof createServerClient>,
+  connection: ConnectionRow,
+  args: CommitArgs,
+) {
+  if (!connection.site_id) {
+    return { ok: false, error: "Shopify connection is missing shop domain" };
+  }
+
+  let creds: { clientId: string; clientSecret: string };
+  try {
+    creds = decryptCredentials<{ clientId: string; clientSecret: string }>(connection.credentials);
+  } catch {
+    return {
+      ok: false,
+      error: "encryption_unavailable",
+      message: "Stored credentials couldn't be decrypted. Reconnect Shopify.",
+    };
+  }
+
+  const { data: pendingRow } = await supabaseAdmin
+    .from("applied_fixes")
+    .insert({
+      business_id: connection.business_id,
+      audit_id: null,
+      finding_id: args.findingId,
+      fix_type: args.kind,
+      platform: "shopify",
+      status: "pending",
+    })
+    .select("id")
+    .single();
+
+  const result = await applyFixToShopify({
+    creds,
+    shopDomain: connection.site_id,
+    pageUrl: args.siteUrl,
+    payload: args.payload,
+    findingId: args.findingId,
+    findingTitle: args.findingTitle,
+  });
+
+  if (!result.ok) {
+    if (pendingRow) {
+      await supabaseAdmin
+        .from("applied_fixes")
+        .update({
+          status: result.manualSnippet || result.manualNote ? "skipped" : "failed",
+          error_message: result.error ?? result.manualNote ?? null,
+        })
+        .eq("id", pendingRow.id);
+    }
+    return {
+      ok: false,
+      error: result.error,
+      manualNote: result.manualNote,
+      manualSnippet: result.manualSnippet,
+    };
+  }
+
+  if (pendingRow) {
+    await supabaseAdmin
+      .from("applied_fixes")
+      .update({
+        status: "applied",
+        commit_url: result.commitUrl ?? null,
+        file_path: result.filePath ?? null,
+      })
+      .eq("id", pendingRow.id);
+  }
+
+  await writeAuditLog({
+    eventType: "fix_applied",
+    source: "api/audit/generate",
+    userId: args.userId,
+    businessId: connection.business_id,
+    connectionId: connection.id,
+    payload: {
+      findingId: args.findingId,
+      kind: args.kind,
+      filePath: result.filePath,
+      commitUrl: result.commitUrl,
+      source: "extension",
+      platform: "shopify",
     },
     ipAddress: args.ipAddress,
   });
