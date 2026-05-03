@@ -2022,7 +2022,7 @@ export default function App() {
                                   <AlertCircle size={14} /> Add image descriptions to {getDisplayName(detectedPlatform)} manually
                                 </div>
                                 <div style={{ marginBottom: "10px", lineHeight: "1.4", fontSize: "11px", color: "#666" }}>
-                                  We can&apos;t auto-edit images on {getDisplayName(detectedPlatform)} (yet) — but here&apos;s where to paste each description:
+                                  {fixState.manualNote || `We can't auto-edit images on ${getDisplayName(detectedPlatform)} for this fix type. Here's how to add them manually:`}
                                 </div>
                                 <div style={{ background: "white", border: "1px solid #E5D8B8", borderRadius: "4px", padding: "10px" }}>
                                   <div style={{ fontWeight: 600, fontSize: "11px", marginBottom: "6px" }}>Steps for {instructions.platformName}:</div>
