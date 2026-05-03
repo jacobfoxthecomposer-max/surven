@@ -20,7 +20,16 @@ import { decryptCredentials } from "@/utils/credentialsEncryption";
 import { applyHtmlInject } from "@/features/crawlability/services/applyFix/htmlInjectHandler";
 import { applyFixToWordpress } from "@/features/crawlability/services/applyFix/wordpressHandler";
 import { applyFixToWix } from "@/features/crawlability/services/applyFix/wixHandler";
-import { applyFixToShopify } from "@/features/crawlability/services/applyFix/shopifyHandler";
+// Shopify dispatch is currently disabled — auto-deploy is GitHub + WordPress only.
+// The handler stays in the codebase so it's a one-line re-enable when we ship a Shopify Public App.
+// import { applyFixToShopify } from "@/features/crawlability/services/applyFix/shopifyHandler";
+
+const MANAGED_PLAN_CTA = {
+  url: "https://surven.vercel.app/pricing",
+  headline: "Skip the paste — let our team handle this for you",
+  body: "Surven Managed deploys every fix to your site automatically, gets you listed on the directories AI engines cite most, and refreshes your content monthly so your visibility keeps climbing. You focus on the business — we focus on getting you cited.",
+  buttonLabel: "See Managed plans",
+} as const;
 import { generateSchema, type SchemaKind, type PageContext } from "@/services/schemaGenerator";
 import { rewriteMetaDescription, rewriteTitleTag, generateFaqPairs, generateAltText } from "@/services/llmRewriter";
 import { writeAuditLog, ipFromRequest } from "@/services/auditLog";
