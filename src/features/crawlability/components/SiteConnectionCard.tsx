@@ -72,10 +72,10 @@ const PLATFORM_META: Record<
   },
   wix: {
     label: "Wix",
-    description: "Update SEO, schema, and content via Wix REST API.",
+    description: "Connect your Wix site to get copy-paste fix instructions tailored to the Wix Editor. Full auto-deploy isn't supported yet — Wix's API doesn't expose page SEO, alt text, or custom code to standard API keys.",
     icon: Globe,
     color: "#FFE100",
-    tokenHelp: "In your Wix dashboard: Settings → Headless Settings → API Keys. Generate a key with permissions for SEO, Custom Code, and Media. You'll also need your Site ID and Account ID (visible in Wix dashboard URL).",
+    tokenHelp: "In your Wix dashboard: Settings → Headless Settings → API Keys. Generate a key with permissions for Business Info and Manage Sites. You'll also need your Site ID and Account ID (visible in Wix dashboard URL). Used for verifying ownership only — fixes are still manual.",
     tokenLink: {
       url: "https://manage.wix.com/account/api-keys",
       label: "Create Wix API key",
