@@ -53,6 +53,13 @@ const ConnectSchema = z.discriminatedUnion("platform", [
     accountId: z.string().min(1),
     siteUrl: z.string().url(),
   }),
+  z.object({
+    platform: z.literal("shopify"),
+    businessId: z.string().uuid(),
+    shopDomain: z.string().min(3),
+    clientId: z.string().min(10),
+    clientSecret: z.string().min(10),
+  }),
 ]);
 
 export async function POST(request: NextRequest) {
