@@ -1795,6 +1795,7 @@ export default function App() {
                                     📋 Copy to clipboard
                                   </button>
                                 )}
+                                <ManagedPlanCard cta={fixState.managedPlanCta} />
                               </div>
                             );
                           }
