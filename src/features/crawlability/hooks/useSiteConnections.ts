@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 
-export type Platform = "github" | "vercel" | "wordpress" | "webflow" | "wix";
+export type Platform = "github" | "vercel" | "wordpress" | "webflow" | "wix" | "shopify";
 
 export interface SiteConnection {
   id: string;
