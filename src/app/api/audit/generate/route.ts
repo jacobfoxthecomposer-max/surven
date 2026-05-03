@@ -367,13 +367,13 @@ async function commitToConnectedRepo(args: CommitArgs) {
     }
   })();
 
-  // Fetch ALL active connections for this user (GitHub + WordPress + future platforms).
-  // We pick the one whose site_url matches the audited URL by hostname.
+  // Fetch ALL active connections for this user (GitHub + WordPress + Wix + future platforms).
+  // We pick the one whose site_url or site_id matches the audited URL.
   const { data: connections } = await supabaseAdmin
     .from("site_connections")
-    .select("id, user_id, business_id, platform, credentials, repo, branch, site_url, status")
+    .select("id, user_id, business_id, platform, credentials, repo, branch, site_url, site_id, status")
     .eq("user_id", args.userId)
-    .in("platform", ["github", "wordpress"])
+    .in("platform", ["github", "wordpress", "wix"])
     .eq("status", "active")
     .returns<ConnectionRow[]>();
 
