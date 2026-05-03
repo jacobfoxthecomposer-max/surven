@@ -384,7 +384,9 @@ async function commitToConnectedRepo(args: CommitArgs) {
     .from("site_connections")
     .select("id, user_id, business_id, platform, credentials, repo, branch, site_url, site_id, status")
     .eq("user_id", args.userId)
-    .in("platform", ["github", "wordpress", "wix", "shopify"])
+    // Auto-deploy: GitHub + WordPress only. Wix + Shopify connections are stored
+    // for verification/future-use but route to manual paste with a Managed-plan CTA.
+    .in("platform", ["github", "wordpress"])
     .eq("status", "active")
     .returns<ConnectionRow[]>();
 
