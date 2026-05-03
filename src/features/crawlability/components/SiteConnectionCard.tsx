@@ -130,7 +130,7 @@ export function SiteConnectionCard({
         applicationPassword: appPassword,
       };
     } else if (platform === "wix") {
-      payload = { platform, businessId, apiKey, siteId, accountId };
+      payload = { platform, businessId, apiKey, siteId, accountId, siteUrl };
     } else {
       payload = { platform, businessId, token, siteId };
     }
