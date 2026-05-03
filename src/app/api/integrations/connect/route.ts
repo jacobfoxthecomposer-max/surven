@@ -187,6 +187,29 @@ export async function POST(request: NextRequest) {
       row = { site_id: data.siteId, site_url: data.siteUrl };
       break;
     }
+    case "shopify": {
+      const shopDomain = normalizeShopDomain(data.shopDomain);
+      if (!shopDomain) {
+        return NextResponse.json(
+          { error: "validation_failed", message: "Invalid shop domain. Use mystore.myshopify.com format." },
+          { status: 422 }
+        );
+      }
+      validation = await validateShopify({
+        shopDomain,
+        clientId: data.clientId,
+        clientSecret: data.clientSecret,
+      });
+      credsBlob = {
+        clientId: data.clientId,
+        clientSecret: data.clientSecret,
+      };
+      row = {
+        site_id: shopDomain,
+        site_url: `https://${shopDomain}`,
+      };
+      break;
+    }
   }
 
   if (!validation.ok) {
