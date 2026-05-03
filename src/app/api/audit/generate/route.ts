@@ -328,7 +328,7 @@ export async function POST(request: NextRequest) {
       origin: request.nextUrl.origin,
       ipAddress: ipFromRequest(request),
     });
-    return NextResponse.json({ ...commitResult, snippet: schemaResult.jsonLd, pairs, schemaType: "FAQPage" });
+    return NextResponse.json(withManagedPlanCta({ ...commitResult, snippet: schemaResult.jsonLd, pairs, schemaType: "FAQPage" }));
   }
 
   if (kind === "alt_text") {
