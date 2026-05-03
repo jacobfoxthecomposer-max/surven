@@ -167,6 +167,9 @@ export function SiteConnectionCard({
       setSiteId("");
       setApiKey("");
       setAccountId("");
+      setShopDomain("");
+      setClientId("");
+      setClientSecret("");
     }
     setSubmitting(false);
   }
