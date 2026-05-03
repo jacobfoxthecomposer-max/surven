@@ -43,6 +43,13 @@ const ConnectSchema = z.discriminatedUnion("platform", [
     token: z.string().min(10),
     siteId: z.string().min(1),
   }),
+  z.object({
+    platform: z.literal("wix"),
+    businessId: z.string().uuid(),
+    apiKey: z.string().min(10),
+    siteId: z.string().min(1),
+    accountId: z.string().min(1),
+  }),
 ]);
 
 export async function POST(request: NextRequest) {
