@@ -168,6 +168,7 @@ export function SiteConnectionCard({
     if (platform === "vercel") return connection.site_id ? `Project ${connection.site_id}` : "";
     if (platform === "wordpress") return connection.site_url ?? "";
     if (platform === "webflow") return connection.site_id ? `Site ${connection.site_id}` : "";
+    if (platform === "wix") return connection.site_id ? `Site ${connection.site_id.slice(0, 8)}…` : "";
     return "";
   })();
 
