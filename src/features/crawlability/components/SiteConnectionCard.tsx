@@ -129,6 +129,8 @@ export function SiteConnectionCard({
         username,
         applicationPassword: appPassword,
       };
+    } else if (platform === "wix") {
+      payload = { platform, businessId, apiKey, siteId, accountId };
     } else {
       payload = { platform, businessId, token, siteId };
     }
@@ -147,6 +149,8 @@ export function SiteConnectionCard({
       setUsername("");
       setAppPassword("");
       setSiteId("");
+      setApiKey("");
+      setAccountId("");
     }
     setSubmitting(false);
   }
