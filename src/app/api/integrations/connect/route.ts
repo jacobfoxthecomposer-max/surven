@@ -164,6 +164,19 @@ export async function POST(request: NextRequest) {
       row = { site_id: data.siteId };
       break;
     }
+    case "wix": {
+      validation = await validateWix({
+        apiKey: data.apiKey,
+        siteId: data.siteId,
+        accountId: data.accountId,
+      });
+      credsBlob = {
+        apiKey: data.apiKey,
+        accountId: data.accountId,
+      };
+      row = { site_id: data.siteId };
+      break;
+    }
   }
 
   if (!validation.ok) {
