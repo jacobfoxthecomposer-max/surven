@@ -10,7 +10,7 @@ import { useSiteConnections } from "@/features/crawlability/hooks/useSiteConnect
 import { SiteConnectionCard } from "@/features/crawlability/components/SiteConnectionCard";
 import type { Platform } from "@/features/crawlability/hooks/useSiteConnections";
 
-const PLATFORMS: Platform[] = ["github", "vercel", "wordpress", "webflow"];
+const PLATFORMS: Platform[] = ["github", "vercel", "wordpress", "wix", "webflow"];
 
 const futureIntegrations = [
   {
