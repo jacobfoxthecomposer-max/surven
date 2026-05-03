@@ -375,6 +375,38 @@ export function SiteConnectionCard({
                     </>
                   )}
 
+                  {platform === "wix" && (
+                    <>
+                      <Input
+                        label="API Key"
+                        type="password"
+                        value={apiKey}
+                        onChange={(e) => setApiKey(e.target.value)}
+                        placeholder="IST.xxxxx..."
+                        required
+                        disabled={submitting}
+                      />
+                      <Input
+                        label="Site ID"
+                        type="text"
+                        value={siteId}
+                        onChange={(e) => setSiteId(e.target.value)}
+                        placeholder="UUID — find in Wix dashboard URL"
+                        required
+                        disabled={submitting}
+                      />
+                      <Input
+                        label="Account ID"
+                        type="text"
+                        value={accountId}
+                        onChange={(e) => setAccountId(e.target.value)}
+                        placeholder="UUID — find in Wix dashboard URL"
+                        required
+                        disabled={submitting}
+                      />
+                    </>
+                  )}
+
                   {error && (
                     <div
                       className="text-sm rounded-md p-3 border-l-4"
