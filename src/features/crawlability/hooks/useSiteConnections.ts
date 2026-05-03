@@ -20,7 +20,8 @@ export type ConnectPayload =
   | { platform: "github"; businessId: string; token: string; repo: string; branch?: string }
   | { platform: "vercel"; businessId: string; token: string; projectId: string }
   | { platform: "wordpress"; businessId: string; siteUrl: string; username: string; applicationPassword: string }
-  | { platform: "webflow"; businessId: string; token: string; siteId: string };
+  | { platform: "webflow"; businessId: string; token: string; siteId: string }
+  | { platform: "wix"; businessId: string; apiKey: string; siteId: string; accountId: string };
 
 export function useSiteConnections(businessId: string | undefined) {
   const [connections, setConnections] = useState<SiteConnection[]>([]);
