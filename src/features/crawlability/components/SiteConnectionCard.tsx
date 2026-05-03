@@ -116,6 +116,9 @@ export function SiteConnectionCard({
   const [siteId, setSiteId] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [accountId, setAccountId] = useState("");
+  const [shopDomain, setShopDomain] = useState("");
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
 
   const meta = PLATFORM_META[platform];
   const Icon = meta.icon;
