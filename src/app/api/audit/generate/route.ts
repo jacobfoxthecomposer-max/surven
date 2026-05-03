@@ -621,6 +621,101 @@ async function runWordpressCommit(
   };
 }
 
+async function runWixCommit(
+  supabaseAdmin: ReturnType<typeof createServerClient>,
+  connection: ConnectionRow,
+  args: CommitArgs,
+) {
+  if (!connection.site_id) {
+    return { ok: false, error: "Wix connection is missing Site ID" };
+  }
+
+  let creds: { apiKey: string; accountId: string };
+  try {
+    creds = decryptCredentials<{ apiKey: string; accountId: string }>(connection.credentials);
+  } catch {
+    return {
+      ok: false,
+      error: "encryption_unavailable",
+      message: "Stored credentials couldn't be decrypted. Reconnect Wix.",
+    };
+  }
+
+  const { data: pendingRow } = await supabaseAdmin
+    .from("applied_fixes")
+    .insert({
+      business_id: connection.business_id,
+      audit_id: null,
+      finding_id: args.findingId,
+      fix_type: args.kind,
+      platform: "wix",
+      status: "pending",
+    })
+    .select("id")
+    .single();
+
+  const result = await applyFixToWix({
+    creds,
+    siteId: connection.site_id,
+    pageUrl: args.siteUrl,
+    payload: args.payload,
+    findingId: args.findingId,
+    findingTitle: args.findingTitle,
+  });
+
+  if (!result.ok) {
+    if (pendingRow) {
+      await supabaseAdmin
+        .from("applied_fixes")
+        .update({
+          status: result.manualSnippet || result.manualNote ? "skipped" : "failed",
+          error_message: result.error ?? result.manualNote ?? null,
+        })
+        .eq("id", pendingRow.id);
+    }
+    return {
+      ok: false,
+      error: result.error,
+      manualNote: result.manualNote,
+      manualSnippet: result.manualSnippet,
+    };
+  }
+
+  if (pendingRow) {
+    await supabaseAdmin
+      .from("applied_fixes")
+      .update({
+        status: "applied",
+        commit_url: result.commitUrl ?? null,
+        file_path: result.filePath ?? null,
+      })
+      .eq("id", pendingRow.id);
+  }
+
+  await writeAuditLog({
+    eventType: "fix_applied",
+    source: "api/audit/generate",
+    userId: args.userId,
+    businessId: connection.business_id,
+    connectionId: connection.id,
+    payload: {
+      findingId: args.findingId,
+      kind: args.kind,
+      filePath: result.filePath,
+      commitUrl: result.commitUrl,
+      source: "extension",
+      platform: "wix",
+    },
+    ipAddress: args.ipAddress,
+  });
+
+  return {
+    ok: true,
+    commitUrl: result.commitUrl,
+    filePath: result.filePath,
+  };
+}
+
 export async function GET() {
   return NextResponse.json(
     { error: "POST only", hint: "Send {kind, schemaType?, pageContext, commit, findingId, findingTitle}" },
