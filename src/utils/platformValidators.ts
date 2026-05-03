@@ -180,6 +180,133 @@ export async function validateWix(creds: WixCredentials): Promise<ValidationResu
   }
 }
 
+/**
+ * Normalize a Shopify shop domain to the bare `*.myshopify.com` form.
+ * Accepts: `mystore.myshopify.com`, `https://mystore.myshopify.com`, `mystore` (just the handle).
+ * Returns null if the domain doesn't fit the .myshopify.com pattern.
+ */
+export function normalizeShopDomain(input: string): string | null {
+  const trimmed = input.trim().toLowerCase();
+  if (!trimmed) return null;
+
+  let host: string;
+  try {
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+      host = new URL(trimmed).hostname;
+    } else if (trimmed.includes("/")) {
+      host = new URL(`https://${trimmed}`).hostname;
+    } else {
+      host = trimmed;
+    }
+  } catch {
+    return null;
+  }
+
+  if (host.endsWith(".myshopify.com")) {
+    const handle = host.replace(/\.myshopify\.com$/, "");
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(handle)) return null;
+    return `${handle}.myshopify.com`;
+  }
+
+  // Bare handle (e.g., "greenleap-frogs")
+  if (/^[a-z0-9][a-z0-9-]*$/.test(host)) {
+    return `${host}.myshopify.com`;
+  }
+
+  return null;
+}
+
+/**
+ * Mint a short-lived (~24h) Shopify Admin API bearer token via the
+ * client_credentials OAuth grant. Required after Jan 1, 2026 — legacy `shpat_`
+ * tokens are no longer issued for new apps.
+ *
+ * Caller is responsible for refreshing before expiry.
+ */
+export async function mintShopifyAccessToken(
+  shopDomain: string,
+  clientId: string,
+  clientSecret: string,
+): Promise<{ ok: boolean; accessToken?: string; expiresIn?: number; scope?: string; error?: string }> {
+  try {
+    const res = await fetch(`https://${shopDomain}/admin/oauth/access_token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        client_id: clientId,
+        client_secret: clientSecret,
+        grant_type: "client_credentials",
+      }),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const reason = data?.error_description ?? data?.error ?? `Shopify returned ${res.status}`;
+      return { ok: false, error: reason };
+    }
+    if (!data.access_token) {
+      return { ok: false, error: "Shopify returned no access token" };
+    }
+    return {
+      ok: true,
+      accessToken: data.access_token,
+      expiresIn: typeof data.expires_in === "number" ? data.expires_in : undefined,
+      scope: typeof data.scope === "string" ? data.scope : undefined,
+    };
+  } catch {
+    return { ok: false, error: "Could not reach Shopify. Check the shop domain." };
+  }
+}
+
+export async function validateShopify(creds: ShopifyCredentials): Promise<ValidationResult> {
+  if (!creds.shopDomain || !creds.clientId || !creds.clientSecret) {
+    return { ok: false, error: "Shop domain, Client ID, and Client Secret are all required" };
+  }
+  const shopDomain = normalizeShopDomain(creds.shopDomain);
+  if (!shopDomain) {
+    return { ok: false, error: "Invalid shop domain. Use the format mystore.myshopify.com" };
+  }
+
+  const tokenResult = await mintShopifyAccessToken(shopDomain, creds.clientId, creds.clientSecret);
+  if (!tokenResult.ok) {
+    if (tokenResult.error?.includes("invalid_client") || tokenResult.error?.includes("401") || tokenResult.error?.includes("403")) {
+      return {
+        ok: false,
+        error: "Shopify rejected the credentials. Check Client ID + Secret, and confirm the app is installed on this store.",
+      };
+    }
+    return { ok: false, error: tokenResult.error ?? "Could not authenticate with Shopify" };
+  }
+
+  // Smoke test: read shop info with the freshly minted token.
+  try {
+    const res = await fetch(`https://${shopDomain}/admin/api/2024-10/shop.json`, {
+      headers: {
+        "X-Shopify-Access-Token": tokenResult.accessToken!,
+        Accept: "application/json",
+      },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    if (res.status === 401 || res.status === 403) {
+      return { ok: false, error: "Token didn't have shop access. Check the app's Admin API scopes." };
+    }
+    if (!res.ok) {
+      return { ok: false, error: `Shopify returned ${res.status}` };
+    }
+    const data = await res.json();
+    return {
+      ok: true,
+      meta: {
+        shopDomain,
+        displayName: data?.shop?.name ?? shopDomain,
+        scope: tokenResult.scope ?? "",
+      },
+    };
+  } catch {
+    return { ok: false, error: "Could not reach Shopify shop endpoint" };
+  }
+}
+
 export async function validateWebflow(creds: WebflowCredentials): Promise<ValidationResult> {
   if (!creds.token || !creds.siteId) {
     return { ok: false, error: "Token and site ID are required" };
