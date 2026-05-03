@@ -83,10 +83,10 @@ const PLATFORM_META: Record<
   },
   shopify: {
     label: "Shopify",
-    description: "Auto-deploy SEO meta, JSON-LD schema, and image alt text to your Shopify store via the Admin API.",
+    description: "Connection verifies your store and surfaces guided fix instructions tailored to Shopify Admin. Full auto-deploy is available with the Surven Managed plan.",
     icon: Globe,
     color: "#96BF48",
-    tokenHelp: "In your Shopify Admin → Settings → Apps and sales channels → Develop apps → create an app with Admin API scopes (read/write products, themes, content, files), install it on the store, then copy the Client ID + Client Secret from the API credentials tab. Surven mints a 24h bearer token automatically.",
+    tokenHelp: "In Shopify Admin → Settings → Apps and sales channels → Develop apps → create an app with Admin API scopes (read/write products, themes, content), install it on the store, then copy the Client ID + Client Secret from the API credentials tab.",
     tokenLink: {
       url: "https://admin.shopify.com",
       label: "Open Shopify Admin",
