@@ -70,6 +70,17 @@ const PLATFORM_META: Record<
       label: "Create Webflow token",
     },
   },
+  wix: {
+    label: "Wix",
+    description: "Update SEO, schema, and content via Wix REST API.",
+    icon: Globe,
+    color: "#FFE100",
+    tokenHelp: "In your Wix dashboard: Settings → Headless Settings → API Keys. Generate a key with permissions for SEO, Custom Code, and Media. You'll also need your Site ID and Account ID (visible in Wix dashboard URL).",
+    tokenLink: {
+      url: "https://manage.wix.com/account/api-keys",
+      label: "Create Wix API key",
+    },
+  },
 };
 
 export function SiteConnectionCard({
