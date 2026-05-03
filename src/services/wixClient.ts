@@ -69,44 +69,95 @@ export class WixClient {
 
   /**
    * List all pages on the site. Used to find the page that matches an audited URL.
+   *
+   * Wix has multiple page-listing endpoints depending on how the site was built. We try
+   * them in order until one returns pages. Returns an empty array AND a diagnostic
+   * string when nothing works, so the caller can surface a useful error.
    */
-  async listPages(): Promise<WixPage[]> {
-    const res = await this.fetch(`/site-pages/v1/pages`);
-    if (!res.ok) return [];
-    const data = await res.json();
-    const pages: WixPage[] = (data.pages ?? []).map((p: { id?: string; pageId?: string; title?: string; pageUriSEO?: string; visible?: boolean }) => ({
-      id: p.id ?? p.pageId ?? "",
-      title: p.title,
-      pageUriSEO: p.pageUriSEO,
-      isVisible: p.visible !== false,
-    }));
-    return pages.filter((p) => p.id);
+  async listPages(): Promise<{ pages: WixPage[]; diagnostic?: string }> {
+    // Endpoint 1: site-pages v1 (older sites)
+    const candidates = [
+      "/site-pages/v1/pages",
+      "/wix-site-pages/v1/pages",
+      "/headless/v1/pages",
+    ];
+
+    const errors: string[] = [];
+    for (const path of candidates) {
+      try {
+        const res = await this.fetch(path);
+        if (!res.ok) {
+          errors.push(`${path} → ${res.status}`);
+          continue;
+        }
+        const data = await res.json() as { pages?: Array<{ id?: string; pageId?: string; title?: string; pageUriSEO?: string; visible?: boolean }> };
+        const raw = data.pages ?? [];
+        const parsed = raw.map((p) => ({
+          id: p.id ?? p.pageId ?? "",
+          title: p.title,
+          pageUriSEO: p.pageUriSEO,
+          isVisible: p.visible !== false,
+        })).filter((p) => p.id);
+        if (parsed.length > 0) {
+          return { pages: parsed };
+        }
+        errors.push(`${path} → 200 but 0 pages`);
+      } catch (e) {
+        errors.push(`${path} → ${e instanceof Error ? e.message : "error"}`);
+      }
+    }
+
+    return { pages: [], diagnostic: errors.join(" | ") };
   }
 
   /**
    * Find a page by URL — matches by slug (last path segment).
-   * Wix homepage typically has pageUriSEO of empty string or "home".
+   *
+   * Wix has TWO URL patterns we need to handle:
+   *   - Free tier: `username.wixsite.com/sitename[/page-slug]`
+   *     — first path segment is the SITE identifier, not a page slug
+   *     — page slug is the SECOND path segment, or empty for homepage
+   *   - Custom domain: `customdomain.com/[page-slug]`
+   *     — first path segment IS the page slug
+   *     — empty path is homepage
+   *
+   * Wix homepage's pageUriSEO is typically empty string, "home", or matches the site
+   * name. We try several matching strategies before giving up.
    */
-  async findPageByUrl(pageUrl: string): Promise<WixPage | null> {
+  async findPageByUrl(pageUrl: string): Promise<{ page: WixPage | null; diagnostic?: string }> {
     let slug: string;
+    let pathSegments: string[];
     try {
-      const path = new URL(pageUrl).pathname.replace(/^\/+|\/+$/g, "");
-      slug = path === "" ? "home" : path.split("/").pop() ?? "home";
+      const u = new URL(pageUrl);
+      const path = u.pathname.replace(/^\/+|\/+$/g, "");
+      pathSegments = path === "" ? [] : path.split("/");
+
+      // Free Wix subdomain detection: the first path segment is the site identifier.
+      // The actual page slug is whatever comes AFTER it.
+      const isFreeWixDomain = u.hostname.endsWith(".wixsite.com") || u.hostname.endsWith(".editorx.io");
+      if (isFreeWixDomain) {
+        pathSegments = pathSegments.slice(1);
+      }
+
+      slug = pathSegments.length === 0 ? "" : (pathSegments[pathSegments.length - 1] ?? "");
     } catch {
-      return null;
+      return { page: null, diagnostic: "URL parse failed" };
     }
 
-    const pages = await this.listPages();
-    if (pages.length === 0) return null;
+    const { pages, diagnostic } = await this.listPages();
+    if (pages.length === 0) {
+      return { page: null, diagnostic: diagnostic ?? "No pages returned by Wix API" };
+    }
 
-    if (slug === "home" || slug === "") {
-      // Find homepage — typically empty pageUriSEO or "home"
+    if (slug === "" || slug === "home") {
       const home = pages.find((p) => !p.pageUriSEO || p.pageUriSEO === "" || p.pageUriSEO.toLowerCase() === "home");
-      return home ?? pages[0];
+      return { page: home ?? pages[0] };
     }
 
     const exact = pages.find((p) => p.pageUriSEO?.toLowerCase() === slug.toLowerCase());
-    return exact ?? null;
+    if (exact) return { page: exact };
+
+    return { page: null, diagnostic: `Slug "${slug}" not found among ${pages.length} pages: ${pages.map((p) => p.pageUriSEO || "(home)").slice(0, 5).join(", ")}` };
   }
 
   /**

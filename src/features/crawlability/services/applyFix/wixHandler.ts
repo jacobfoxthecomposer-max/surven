@@ -94,11 +94,11 @@ async function applyMetaDescFix(
   pageUrl: string,
   payload: Extract<HtmlInjectPayload, { kind: "meta_desc" }>,
 ): Promise<HtmlInjectResult> {
-  const page = await client.findPageByUrl(pageUrl);
+  const { page, diagnostic } = await client.findPageByUrl(pageUrl);
   if (!page) {
     return {
       ok: false,
-      error: "Couldn't find a page matching this URL on your Wix site. The audited URL may use a slug we don't recognize.",
+      error: `Couldn't find a matching page on your Wix site. ${diagnostic ?? "Unknown reason."}`,
     };
   }
 
@@ -119,11 +119,11 @@ async function applyTitleFix(
   pageUrl: string,
   payload: Extract<HtmlInjectPayload, { kind: "title_tag" }>,
 ): Promise<HtmlInjectResult> {
-  const page = await client.findPageByUrl(pageUrl);
+  const { page, diagnostic } = await client.findPageByUrl(pageUrl);
   if (!page) {
     return {
       ok: false,
-      error: "Couldn't find a page matching this URL on your Wix site.",
+      error: `Couldn't find a matching page on your Wix site. ${diagnostic ?? "Unknown reason."}`,
     };
   }
 
