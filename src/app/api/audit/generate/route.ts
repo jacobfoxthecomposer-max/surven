@@ -343,7 +343,7 @@ export async function POST(request: NextRequest) {
         origin: request.nextUrl.origin,
         ipAddress: ipFromRequest(request),
       });
-      return NextResponse.json({ ...commitResult, replacements });
+      return NextResponse.json(withManagedPlanCta({ ...commitResult, replacements }));
     }
 
     if (!images || images.length === 0) {
