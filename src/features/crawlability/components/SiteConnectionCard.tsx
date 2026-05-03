@@ -378,6 +378,15 @@ export function SiteConnectionCard({
                   {platform === "wix" && (
                     <>
                       <Input
+                        label="Site URL"
+                        type="url"
+                        value={siteUrl}
+                        onChange={(e) => setSiteUrl(e.target.value)}
+                        placeholder="https://yoursite.wixsite.com/your-site"
+                        required
+                        disabled={submitting}
+                      />
+                      <Input
                         label="API Key"
                         type="password"
                         value={apiKey}
