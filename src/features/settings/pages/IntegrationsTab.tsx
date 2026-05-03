@@ -65,7 +65,7 @@ export function IntegrationsTab() {
                   Site Connections is a Premium feature
                 </p>
                 <p className="text-xs text-[var(--color-fg-secondary)] leading-relaxed">
-                  Connect GitHub, Vercel, WordPress, or Webflow to apply crawlability fixes
+                  Connect GitHub, Vercel, WordPress, Wix, or Webflow to apply crawlability fixes
                   automatically — no copy-pasting required.
                 </p>
               </div>
