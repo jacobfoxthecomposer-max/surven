@@ -436,6 +436,38 @@ export function SiteConnectionCard({
                     </>
                   )}
 
+                  {platform === "shopify" && (
+                    <>
+                      <Input
+                        label="Shop Domain"
+                        type="text"
+                        value={shopDomain}
+                        onChange={(e) => setShopDomain(e.target.value)}
+                        placeholder="mystore.myshopify.com"
+                        required
+                        disabled={submitting}
+                      />
+                      <Input
+                        label="Client ID"
+                        type="text"
+                        value={clientId}
+                        onChange={(e) => setClientId(e.target.value)}
+                        placeholder="Find in your Shopify app's API credentials tab"
+                        required
+                        disabled={submitting}
+                      />
+                      <Input
+                        label="Client Secret"
+                        type="password"
+                        value={clientSecret}
+                        onChange={(e) => setClientSecret(e.target.value)}
+                        placeholder="Reveal once in API credentials tab"
+                        required
+                        disabled={submitting}
+                      />
+                    </>
+                  )}
+
                   {error && (
                     <div
                       className="text-sm rounded-md p-3 border-l-4"
