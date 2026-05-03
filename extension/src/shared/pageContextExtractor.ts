@@ -164,10 +164,15 @@ function detectPageAmbiguity(): AmbiguityResult {
     reasons.push(`${addressCount} different street addresses on this page — looks like a directory`);
   }
 
-  // Auth chrome
+  // Auth chrome — but EXCLUDE buttons inside known CMS admin bars. A WordPress site's
+  // public front-end shows a "Log Out" link in #wpadminbar when an admin is viewing it,
+  // but that doesn't make the page a SaaS dashboard — it's still the real public page.
   const authButtons = Array.from(document.querySelectorAll("button, a")).filter((el) => {
     const text = (el as HTMLElement).innerText?.trim().toLowerCase() ?? "";
-    return /^(sign\s*out|log\s*out|logout|signout)$/i.test(text);
+    if (!/^(sign\s*out|log\s*out|logout|signout)$/i.test(text)) return false;
+    // Skip if inside a CMS admin bar (WordPress, Shopify preview bar, Webflow Designer, etc.)
+    if (el.closest("#wpadminbar, #shopify-section-header, [class*='admin-bar'], [class*='admin_bar']")) return false;
+    return true;
   });
   if (authButtons.length > 0) {
     reasons.push("Page has a sign-out button — looks like an authenticated app");

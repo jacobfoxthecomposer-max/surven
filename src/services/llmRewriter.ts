@@ -245,7 +245,7 @@ export async function generateAltText(imageUrl: string, context?: { surroundingT
 
   const alt = (result.data.alt ?? "").trim().replace(/^["']|["']$/g, "");
   if (alt.length < 10) {
-    return { ok: false, error: "Generated alt text was too short" };
+    return { ok: false, error: "Image was too unclear or low-resolution for AI to describe confidently. Add alt text manually for this one." };
   }
   if (alt.length > 200) {
     return { ok: true, data: { alt: alt.slice(0, 130).trim() } };
