@@ -9,6 +9,7 @@ import {
   validateVercel,
   validateWordpress,
   validateWebflow,
+  validateWix,
 } from "@/utils/platformValidators";
 import { enqueueJob } from "@/services/jobQueue";
 import { writeAuditLog, ipFromRequest } from "@/services/auditLog";
