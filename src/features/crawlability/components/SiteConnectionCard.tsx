@@ -542,6 +542,9 @@ function ConnectedView({
         {platform === "wix" && (
           <Field label="Site ID" value={connection.site_id ?? "—"} />
         )}
+        {platform === "shopify" && (
+          <Field label="Shop Domain" value={connection.site_id ?? "—"} />
+        )}
         <Field label="Last verified" value={verifiedAt} />
       </div>
 
