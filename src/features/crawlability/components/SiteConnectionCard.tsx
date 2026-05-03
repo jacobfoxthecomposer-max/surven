@@ -145,6 +145,8 @@ export function SiteConnectionCard({
       };
     } else if (platform === "wix") {
       payload = { platform, businessId, apiKey, siteId, accountId, siteUrl };
+    } else if (platform === "shopify") {
+      payload = { platform, businessId, shopDomain, clientId, clientSecret };
     } else {
       payload = { platform, businessId, token, siteId };
     }
