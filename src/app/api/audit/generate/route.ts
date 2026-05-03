@@ -214,7 +214,7 @@ export async function POST(request: NextRequest) {
       origin: request.nextUrl.origin,
       ipAddress: ipFromRequest(request),
     });
-    return NextResponse.json({ ...commitResult, snippet: result.jsonLd, schemaType });
+    return NextResponse.json(withManagedPlanCta({ ...commitResult, snippet: result.jsonLd, schemaType }));
   }
 
   if (kind === "meta_desc") {
