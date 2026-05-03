@@ -19,6 +19,7 @@ import { createServerClient } from "@/services/supabaseServer";
 import { decryptCredentials } from "@/utils/credentialsEncryption";
 import { applyHtmlInject } from "@/features/crawlability/services/applyFix/htmlInjectHandler";
 import { applyFixToWordpress } from "@/features/crawlability/services/applyFix/wordpressHandler";
+import { applyFixToWix } from "@/features/crawlability/services/applyFix/wixHandler";
 import { generateSchema, type SchemaKind, type PageContext } from "@/services/schemaGenerator";
 import { rewriteMetaDescription, rewriteTitleTag, generateFaqPairs, generateAltText } from "@/services/llmRewriter";
 import { writeAuditLog, ipFromRequest } from "@/services/auditLog";
