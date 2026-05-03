@@ -230,27 +230,80 @@ export class WordPressClient {
   }
 
   /**
-   * Inject JSON-LD schema. WordPress doesn't have a built-in "site head injection" REST endpoint,
-   * so we rely on SEO plugins:
-   *   - Yoast lets you set per-page schema via `_yoast_wpseo_schema_*` meta keys
-   *   - RankMath has its own schema fields
+   * Inject JSON-LD schema directly into a WordPress page or post by appending the
+   * <script type="application/ld+json"> tag to the page content via REST API.
    *
-   * If no plugin is installed, returns ok:false with a manual fallback message — the user can
-   * install "Insert Headers and Footers" plugin or paste the snippet manually.
+   * Approach:
+   *   1. Detect if the page already contains JSON-LD of the same @type — refuse if so
+   *      (don't double-inject)
+   *   2. Fetch current page content (raw, not rendered)
+   *   3. Append the new <script> block at the end
+   *   4. PATCH via /wp/v2/{type}/{id}
+   *   5. Verify the script wasn't stripped by WordPress's kses filter (some configurations
+   *      strip script tags even from admin-authored content)
+   *
+   * Schema.org allows JSON-LD anywhere on the page — head is preferred but body works.
+   * AI engines pick it up regardless of position. This approach works on every WordPress
+   * install with no plugin required.
    */
-  async injectJsonLd(_page: WordPressPageOrPost, _jsonLd: string, _schemaType: string, plugin: SeoPlugin): Promise<{ ok: boolean; error?: string; manualNote?: string; editUrl?: string }> {
-    if (!plugin) {
+  async injectJsonLd(page: WordPressPageOrPost, jsonLd: string, schemaType: string, plugin: SeoPlugin): Promise<{ ok: boolean; error?: string; manualNote?: string; editUrl?: string }> {
+    void plugin; // SEO plugin presence doesn't change our approach — we inject directly into content
+
+    // Step 1: Fetch current content
+    const fetchRes = await this.fetch(`/wp-json/wp/v2/${page.type}s/${page.id}?context=edit&_fields=content,id`);
+    if (!fetchRes.ok) {
+      return { ok: false, error: `Couldn't fetch page content (status ${fetchRes.status})` };
+    }
+    const fetched = await fetchRes.json() as { content?: { raw?: string; rendered?: string } };
+    const currentContent = fetched.content?.raw ?? "";
+
+    // Step 2: Refuse to inject if a JSON-LD of the same @type is already in the content.
+    // We check both the raw content (what we're about to update) and rendered content
+    // (which might include schema injected by SEO plugins via separate hooks).
+    const escapedType = schemaType.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const existingPattern = new RegExp(
+      `<script[^>]*type=["']application\\/ld\\+json["'][^>]*>[\\s\\S]*?"@type"\\s*:\\s*["']${escapedType}["'][\\s\\S]*?<\\/script>`,
+      "i",
+    );
+    const renderedContent = fetched.content?.rendered ?? "";
+    if (existingPattern.test(currentContent) || existingPattern.test(renderedContent)) {
       return {
         ok: false,
-        manualNote: "WordPress doesn't expose a built-in REST endpoint for injecting raw <head> code. Install Yoast SEO, RankMath, or 'Insert Headers and Footers' (free plugins), then re-run.",
+        error: `${schemaType} schema is already present on this page. Remove the existing one first if you want to replace it.`,
       };
     }
 
-    // For now, return manual fallback even with plugins — plugin-specific schema injection
-    // requires careful per-plugin work. Sprint 2.5: per-plugin schema injection.
+    // Step 3: Append schema to content
+    const newContent = `${currentContent.trimEnd()}\n\n${jsonLd.trim()}\n`;
+
+    // Step 4: PATCH the page
+    const updateRes = await this.fetch(`/wp-json/wp/v2/${page.type}s/${page.id}`, {
+      method: "POST",
+      body: JSON.stringify({ content: newContent }),
+    });
+    if (!updateRes.ok) {
+      const errText = await updateRes.text().catch(() => "");
+      return { ok: false, error: `WP returned ${updateRes.status}: ${errText.slice(0, 200)}` };
+    }
+
+    // Step 5: Verify the script tag wasn't stripped. WordPress's kses filter strips <script>
+    // by default for users without the unfiltered_html capability. Most admins on single-site
+    // WP have this, but multisite installs sometimes don't. If stripped, fall back to manual.
+    const verifyRes = await this.fetch(`/wp-json/wp/v2/${page.type}s/${page.id}?context=edit&_fields=content`);
+    if (verifyRes.ok) {
+      const verified = await verifyRes.json() as { content?: { raw?: string } };
+      const verifiedRaw = verified.content?.raw ?? "";
+      if (!verifiedRaw.includes("application/ld+json")) {
+        return {
+          ok: false,
+          manualNote: "WordPress stripped the script tag from your page content (this happens on multisite installs where admins don't have unfiltered_html capability). Copy the snippet and add it via 'Insert Headers and Footers' plugin → Scripts in Header → Save.",
+        };
+      }
+    }
+
     return {
-      ok: false,
-      manualNote: `JSON-LD schema injection on WordPress (with ${plugin}) requires plugin-specific REST endpoints we haven't built yet. For now: copy the snippet, then in WP admin install "Insert Headers and Footers" plugin → paste into "Scripts in Header" → Save.`,
+      ok: true,
+      editUrl: `${this.base}/wp-admin/post.php?post=${page.id}&action=edit`,
     };
   }
 }
