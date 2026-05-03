@@ -49,6 +49,7 @@ const ConnectSchema = z.discriminatedUnion("platform", [
     apiKey: z.string().min(10),
     siteId: z.string().min(1),
     accountId: z.string().min(1),
+    siteUrl: z.string().url(),
   }),
 ]);
 
