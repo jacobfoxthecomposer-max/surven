@@ -22,6 +22,7 @@ import { CompetitorGaps } from "@/features/competitor-comparison/CompetitorGaps"
 import { CompetitorCitedDomains } from "@/features/competitor-comparison/CompetitorCitedDomains";
 import { FooterDiagnostic } from "@/features/competitor-comparison/FooterDiagnostic";
 import { ExportModal } from "@/features/competitor-comparison/ExportModal";
+import { RecommendedCompetitorsCard } from "@/features/competitor-comparison/RecommendedCompetitorsCard";
 import { AI_MODELS } from "@/utils/constants";
 
 type TimeRange = "14d" | "30d" | "90d" | "ytd" | "all";
