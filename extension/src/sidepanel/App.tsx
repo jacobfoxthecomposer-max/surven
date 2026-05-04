@@ -372,11 +372,12 @@ export default function App() {
 
     setFixStates((s) => ({ ...s, [finding.id]: { status: "applying" } }));
 
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) {
-      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: "No active tab found" } }));
+    const guard = await guardActiveTab(siteUrl);
+    if (!guard.ok) {
+      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: guard.message } }));
       return;
     }
+    const tab = guard.tab;
 
     let pageContext: unknown;
     try {
@@ -509,11 +510,12 @@ export default function App() {
 
     setFixStates((s) => ({ ...s, [finding.id]: { status: "applying" } }));
 
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) {
-      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: "No active tab found" } }));
+    const guard = await guardActiveTab(siteUrl);
+    if (!guard.ok) {
+      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: guard.message } }));
       return;
     }
+    const tab = guard.tab;
 
     let pageContext: unknown;
     try {
@@ -598,11 +600,12 @@ export default function App() {
 
     setFixStates((s) => ({ ...s, [finding.id]: { status: "applying" } }));
 
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) {
-      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: "No active tab found" } }));
+    const guard = await guardActiveTab(siteUrl);
+    if (!guard.ok) {
+      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: guard.message } }));
       return;
     }
+    const tab = guard.tab;
 
     let pageContext: unknown;
     try {
@@ -679,11 +682,12 @@ export default function App() {
     if (!settings?.apiUrl || !settings?.apiKey) return;
     setFixStates((s) => ({ ...s, [finding.id]: { status: "applying" } }));
 
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) {
-      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: "No active tab found" } }));
+    const guard = await guardActiveTab(siteUrl);
+    if (!guard.ok) {
+      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: guard.message } }));
       return;
     }
+    const tab = guard.tab;
 
     let pageContext: unknown;
     try {
@@ -747,11 +751,12 @@ export default function App() {
     const { pairs } = current;
     setFixStates((s) => ({ ...s, [finding.id]: { status: "applying" } }));
 
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) {
-      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: "No active tab found" } }));
+    const guard = await guardActiveTab(siteUrl);
+    if (!guard.ok) {
+      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: guard.message } }));
       return;
     }
+    const tab = guard.tab;
 
     let pageContext: unknown;
     try {
@@ -814,11 +819,12 @@ export default function App() {
     if (!settings?.apiUrl || !settings?.apiKey) return;
     setFixStates((s) => ({ ...s, [finding.id]: { status: "applying" } }));
 
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) {
-      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: "No active tab found" } }));
+    const guard = await guardActiveTab(siteUrl);
+    if (!guard.ok) {
+      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: guard.message } }));
       return;
     }
+    const tab = guard.tab;
 
     let pageContext: unknown;
     let imagesNeedingAlt: Array<{ src: string; surroundingText?: string }> = [];
