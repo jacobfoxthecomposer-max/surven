@@ -12,15 +12,37 @@ export const metadata: Metadata = {
 
   openGraph: { url: "https://surven.vercel.app/pricing", type: "website" },
 };
-const plans = [
+type PlanCard =
+  | {
+      name: "Plus" | "Premium";
+      price: string;
+      period: string;
+      description: string;
+      ctaVariant: "primary" | "outline";
+      features: string[];
+      highlight: boolean;
+      badge?: string;
+    }
+  | {
+      name: "Managed";
+      price: string;
+      period: string;
+      description: string;
+      ctaExternal: true;
+      cta: string;
+      ctaHref: string;
+      features: string[];
+      highlight: boolean;
+      badge?: string;
+    };
+
+const plans: PlanCard[] = [
   {
     name: "Plus",
     price: "$49",
     period: "/mo",
     description: "For businesses serious about showing up in AI search.",
-    cta: "Start Free Trial",
-    ctaHref: "/signup",
-    ctaVariant: "primary" as const,
+    ctaVariant: "primary",
     features: [
       "7-day free trial",
       "5 AI visibility scans / day",
@@ -37,9 +59,7 @@ const plans = [
     price: "$199",
     period: "/mo",
     description: "For agencies and teams tracking multiple clients.",
-    cta: "Start Free Trial",
-    ctaHref: "/signup",
-    ctaVariant: "outline" as const,
+    ctaVariant: "outline",
     features: [
       "7-day free trial",
       "20 AI visibility scans / day",
@@ -59,7 +79,6 @@ const plans = [
     description: "We handle the optimization for you — fully done for you.",
     cta: "Book a Call",
     ctaHref: "https://calendly.com/surven/managed-intro",
-    ctaVariant: "outline" as const,
     ctaExternal: true,
     features: [
       "Everything in Premium",
