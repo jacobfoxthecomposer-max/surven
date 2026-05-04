@@ -13,6 +13,9 @@
  * Adding more frameworks later: implement a per-framework `prepareEdit` function.
  */
 
+import { GithubClient } from "@/services/github/githubClient";
+import { pickJsxFilesFromTree, applyAltReplacements } from "@/services/nextJsImageAltWriter";
+
 const GITHUB_API = "https://api.github.com";
 const TIMEOUT_MS = 25_000;
 
