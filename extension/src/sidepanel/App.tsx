@@ -969,6 +969,18 @@ export default function App() {
       apiKey: draftSettings.apiKey.trim(),
       showBadge: draftSettings.showBadge ?? true,
     };
+
+    const urlError = validateAuditUrl(trimmed.apiUrl);
+    if (urlError) {
+      setSettingsError(urlError);
+      return;
+    }
+    if (!trimmed.apiKey) {
+      setSettingsError("Paste your Surven API key.");
+      return;
+    }
+
+    setSettingsError(null);
     await chrome.storage.local.set({ surven_settings: trimmed });
     setSettings(trimmed);
     setSettingsOpen(false);
