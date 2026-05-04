@@ -330,8 +330,8 @@ export function CompetitorFixActions({
               <Sparkles className="h-4 w-4" style={{ color: COLORS.primary }} />
             </div>
             <SectionHeading
-              text="4 ways to take the lead"
-              info="The four highest-impact moves for closing the gap on your competitors, derived from your scan."
+              text="Ways to take the lead"
+              info="The highest-impact moves for closing the gap on your competitors, derived from your scan."
             />
           </div>
           <p

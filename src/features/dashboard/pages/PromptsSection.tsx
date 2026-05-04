@@ -2850,7 +2850,7 @@ function PromptsTable({
                     <td className="py-2 pr-4">
                       <div className="flex items-center gap-2.5">
                         <div
-                          className="relative rounded-full bg-[var(--color-surface-alt)]"
+                          className="relative rounded-full bg-[var(--color-border)]"
                           style={{ width: 110, height: 7 }}
                         >
                           <div
@@ -3803,7 +3803,7 @@ function HighlightsTable({
                       <td className="py-2 pr-2 align-middle">
                         <div className="flex items-center gap-2">
                           <div
-                            className="relative rounded-full bg-[var(--color-surface-alt)]"
+                            className="relative rounded-full bg-[var(--color-border)]"
                             style={{ width: 64, height: 6 }}
                           >
                             <div
@@ -4115,7 +4115,7 @@ function CitationSourcesCard({ items }: { items: CitationSource[] }) {
               >
                 {s.source}
               </span>
-              <div className="relative h-2 rounded-full bg-[var(--color-surface-alt)] overflow-hidden">
+              <div className="relative h-2 rounded-full bg-[var(--color-border)] overflow-hidden">
                 <div
                   className="absolute inset-y-0 left-0 rounded-full"
                   style={{
@@ -4211,7 +4211,7 @@ function SentimentByTypeCard({ items }: { items: SentimentByType[] }) {
             >
               {row.type}
             </span>
-            <div className="flex h-2 rounded-full overflow-hidden bg-[var(--color-surface-alt)]">
+            <div className="flex h-2 rounded-full overflow-hidden bg-[var(--color-border)]">
               <div
                 style={{
                   width: `${row.positive}%`,

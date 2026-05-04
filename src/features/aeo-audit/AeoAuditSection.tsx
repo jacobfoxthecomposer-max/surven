@@ -1338,7 +1338,7 @@ function PillarBarRow({
         </div>
       </HoverHint>
       {/* Stacked segment bar: pass / partial / critical. */}
-      <div className="h-3 rounded-full overflow-hidden flex bg-[var(--color-surface-alt)]">
+      <div className="h-3 rounded-full overflow-hidden flex bg-[var(--color-border)]">
         {passPct > 0 && (
           <motion.div
             className="h-full"
@@ -1654,7 +1654,7 @@ function PillarCard({
       {/* Body */}
       <div className="px-5 py-4 flex flex-col gap-3 flex-1">
         <div
-          className="rounded-full bg-[var(--color-surface-alt)] overflow-hidden"
+          className="rounded-full bg-[var(--color-border)] overflow-hidden"
           style={{ height: 8 }}
         >
           <motion.div
@@ -2184,7 +2184,7 @@ function CheckRow({ check }: { check: CheckResult }) {
             </span>
           </span>
           <div
-            className="rounded-full bg-[var(--color-surface-alt)] overflow-hidden"
+            className="rounded-full bg-[var(--color-border)] overflow-hidden"
             style={{ width: 64, height: 4 }}
           >
             <div

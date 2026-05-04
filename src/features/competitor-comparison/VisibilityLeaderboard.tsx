@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Crown, Plus, Trophy } from "lucide-react";
+import { AIOverview } from "@/components/atoms/AIOverview";
 import { BadgeDelta } from "@/components/atoms/BadgeDelta";
 import { SectionHeading } from "@/components/atoms/SectionHeading";
 import { COMPETITOR_PALETTE } from "@/utils/constants";
@@ -10,7 +11,19 @@ import type { Scan, ScanResult, UserProfile } from "@/types/database";
 
 const ease = [0.16, 1, 0.3, 1] as const;
 
-const YOU_COLOR = "#96A283"; // sage primary — locked
+// Use the darker sage-family token (matches `--color-primary-hover` /
+// growth-text) so the YOU bar reads with real contrast against the warm
+// surface-alt track. Light sage primary `#96A283` was too close in value
+// to the track and the bar nearly disappeared.
+const YOU_COLOR = "#7D8E6C";
+
+// Value-based bar gradient — same rust→amber→sage→deep-sage tier ramp used by
+// the PromptsSection gauge. The gradient is sized to span the full track
+// width regardless of bar fill, so a 25% bar shows just rust, an 80% bar
+// shows rust→amber→sage. Tier color of the bar communicates "where in
+// relation to 100%" at a glance.
+const BAR_GRADIENT =
+  "linear-gradient(to right, #B54631 0%, #C97B45 33%, #96A283 66%, #5E7250 100%)";
 const MAX_COMPETITORS = 5; // Premium cap. Leaderboard shows up to 6 rows total
                            // (you + 5 competitor slots, filled or empty CTA).
 
@@ -122,21 +135,29 @@ export function VisibilityLeaderboard({
     return [youRow, ...compRows].sort((a, b) => b.visibility - a.visibility);
   }, [results, businessName, competitors]);
 
-  // Average across competitors (excludes you) — used for the delta on your row.
-  // Must run before any early return.
-  const compAvg = useMemo(() => {
-    const comps = rows.filter((r) => !r.isYou);
-    if (comps.length === 0) return null;
-    return Math.round(
-      comps.reduce((s, r) => s + r.visibility, 0) / comps.length,
-    );
-  }, [rows]);
-
   if (rows.length === 0) return null;
 
   const yourRank = rows.findIndex((r) => r.isYou) + 1;
   const yourRow = rows.find((r) => r.isYou)!;
-  const youDelta = compAvg == null ? null : yourRow.visibility - compAvg;
+  const leader = rows[0];
+
+  // Real-data-derived AI summary — never placeholder, per the locked rule.
+  const insight = (() => {
+    if (yourRank === 1) {
+      const next = rows[1];
+      return next
+        ? `Leading the pack at ${yourRow.visibility}% visibility. ${next.name} trails at ${next.visibility}% — keep building citations to hold the lead.`
+        : `Leading the pack at ${yourRow.visibility}% visibility — the only brand AI is naming on your prompts.`;
+    }
+    const tier =
+      yourRank === 2
+        ? "Solid runner-up"
+        : yourRank === 3
+          ? "Solid mid-pack"
+          : "Trailing position";
+    const gap = leader.visibility - yourRow.visibility;
+    return `${tier} at ${yourRow.visibility}% visibility. Push to close the ${gap}% gap on ${leader.name}.`;
+  })();
 
   // Empty-slot calculation. `totalCompetitorCount` reflects the unfiltered
   // count (so toggling a chip off doesn't suddenly turn that row into an
@@ -157,7 +178,7 @@ export function VisibilityLeaderboard({
       transition={{ duration: 0.45, ease, delay: 0.12 }}
       className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5"
     >
-      <div className="mb-3 pb-2 border-b border-[var(--color-border)] flex items-center justify-between flex-wrap gap-2">
+      <div className="mb-3 pb-2 border-b border-[var(--color-border)] flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Trophy
             className="h-4 w-4"
@@ -168,38 +189,28 @@ export function VisibilityLeaderboard({
             info="Brands ranked by how often AI mentions them across every scanned prompt."
           />
         </div>
-        <p
-          className="text-[var(--color-fg-secondary)]"
-          style={{ fontSize: 13 }}
-        >
-          You&apos;re ranked{" "}
-          <span
-            className="font-semibold tabular-nums"
-            style={{ color: "var(--color-primary)" }}
-          >
-            #{yourRank}
-          </span>{" "}
-          of {rows.length}
-          {youDelta != null && (
-            <>
-              {" — "}
-              <span className="inline-flex items-center align-middle">
-                <BadgeDelta
-                  deltaType={
-                    youDelta > 0
-                      ? "increase"
-                      : youDelta < 0
-                        ? "decrease"
-                        : "neutral"
-                  }
-                  value={`${youDelta > 0 ? "+" : ""}${youDelta}%`}
-                  variant="solid"
-                />
-              </span>{" "}
-              vs. competitor avg
-            </>
-          )}
-        </p>
+        <div className="shrink-0">
+          <BadgeDelta
+            variant="solid"
+            deltaType={
+              Math.abs(your90dDelta) <= 0.04
+                ? "neutral"
+                : your90dDelta > 0
+                  ? "increase"
+                  : "decrease"
+            }
+            value={`${your90dDelta > 0 ? "+" : ""}${your90dDelta.toFixed(1)}%`}
+            title={
+              Math.abs(your90dDelta) <= 0.04
+                ? "No change in your visibility over the last 90 days."
+                : `${your90dDelta > 0 ? "Up" : "Down"} ${Math.abs(your90dDelta).toFixed(1)}% over the last 90 days.`
+            }
+          />
+        </div>
+      </div>
+
+      <div className="mb-3">
+        <AIOverview text={insight} size="sm" gradient />
       </div>
 
       <ol className="space-y-1">
@@ -256,10 +267,18 @@ export function VisibilityLeaderboard({
                   )}
                 </span>
               </span>
-              <div className="flex-1 h-2 rounded-full bg-[var(--color-surface-alt)] overflow-hidden">
+              <div className="flex-1 h-2 rounded-full bg-[var(--color-border)] overflow-hidden">
                 <motion.div
                   className="h-full rounded-full"
-                  style={{ backgroundColor: r.color }}
+                  style={{
+                    backgroundImage: BAR_GRADIENT,
+                    // Anchor the gradient to the OUTER track width so a
+                    // partial-fill bar only reveals the leftmost portion of
+                    // the rust→sage ramp.
+                    backgroundSize: `${(100 / Math.max(r.visibility, 1)) * 100}% 100%`,
+                    backgroundPosition: "left top",
+                    backgroundRepeat: "no-repeat",
+                  }}
                   initial={{ width: 0 }}
                   animate={{ width: `${r.visibility}%` }}
                   transition={{ duration: 0.7, ease, delay: 0.05 * i }}

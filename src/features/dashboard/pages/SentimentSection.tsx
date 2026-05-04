@@ -57,7 +57,7 @@ export function SentimentSection({ results }: SentimentSectionProps) {
               return (
                 <div key={s} className="flex items-center gap-3">
                   <span className={`text-xs w-16 shrink-0 ${cfg.text}`}>{cfg.label}</span>
-                  <div className="flex-1 h-2 rounded-full bg-[var(--color-surface-alt)]">
+                  <div className="flex-1 h-2 rounded-full bg-[var(--color-border)]">
                     <motion.div
                       className="h-2 rounded-full"
                       style={{ backgroundColor: cfg.color }}

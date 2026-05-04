@@ -51,6 +51,14 @@ export function CompetitorVisibilityChart() {
       title="Competitors' visibility over time vs you"
       titleInfo="Daily mention rate for you and every tracked competitor across all AI tools. Higher = more visibility."
       defaultMode="full"
+      // Medium-size variant — chart canvas trimmed from the source 460px so
+      // the card pairs height-wise with the leaderboard underneath. Insight
+      // callout + Focus/Full toggle stay on since this is the primary
+      // top-of-page chart for the comparison view. Optimization markers
+      // (the colored dots on the YOU line) are off — those are scoped to
+      // the AI Visibility Tracker page only.
+      chartHeight={320}
+      showOptimizationMarkers={false}
     />
   );
 }

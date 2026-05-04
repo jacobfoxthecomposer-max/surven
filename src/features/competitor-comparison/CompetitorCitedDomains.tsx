@@ -180,7 +180,7 @@ export function CompetitorCitedDomains({
                                 ))}
                               </div>
                             </div>
-                            <div className="h-1.5 rounded-full bg-[var(--color-surface-alt)]">
+                            <div className="h-1.5 rounded-full bg-[var(--color-border)]">
                               <motion.div
                                 className="h-1.5 rounded-full bg-[var(--color-primary)]"
                                 initial={{ width: 0 }}

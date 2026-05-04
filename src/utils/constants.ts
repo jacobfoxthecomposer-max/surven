@@ -59,14 +59,18 @@ export const AI_MODELS = [
 ] as const;
 
 // Single source of truth for competitor visualization colors.
-// Used by ComparisonChart, BrandChip, and any chart legend.
+// Used by ComparisonChart, BrandChip, leaderboard bars + chip filter.
+// Order is intentional: warm tones first so the most common 1–3 competitor
+// scenarios pick colors that harmonize with sage/cream. The two cool tones
+// (slate, blue) sit at the end and only appear when a brand name happens to
+// hash to those slots.
 export const COMPETITOR_PALETTE = [
-  "#6BA3F5",
-  "#C97B45",
-  "#B8A030",
-  "#A07878",
-  "#7A8FA6",
-  "#9B7EC8",
+  "#C97B45", // amber
+  "#B8A030", // gold
+  "#A07878", // dusty rose
+  "#9B7EC8", // muted purple (categorical accent)
+  "#7A8FA6", // slate
+  "#6BA3F5", // blue
 ] as const;
 
 export const INDUSTRIES = [

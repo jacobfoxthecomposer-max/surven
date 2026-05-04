@@ -179,7 +179,7 @@ function DualBar({
         <div className="w-24 shrink-0">
           <BrandChip brand={YOU_DEF} size="sm" isYou />
         </div>
-        <div className="flex-1 h-1.5 rounded-full bg-[var(--color-surface-alt)]">
+        <div className="flex-1 h-1.5 rounded-full bg-[var(--color-border)]">
           <motion.div
             className="h-1.5 rounded-full"
             style={{ backgroundColor: YOU_DEF.color }}
@@ -194,7 +194,7 @@ function DualBar({
         <div className="w-24 shrink-0">
           <BrandChip brand={compDef} size="sm" />
         </div>
-        <div className="flex-1 h-1.5 rounded-full bg-[var(--color-surface-alt)]">
+        <div className="flex-1 h-1.5 rounded-full bg-[var(--color-border)]">
           <motion.div
             className="h-1.5 rounded-full"
             style={{ backgroundColor: compDef.color }}

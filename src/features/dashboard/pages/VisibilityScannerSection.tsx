@@ -1138,6 +1138,8 @@ function PositionEndLabelDot({
   value,
   delta,
   mode,
+  youLabelOverride,
+  hideEndLabelDelta = false,
 }: {
   cx?: number;
   cy?: number;
@@ -1147,6 +1149,11 @@ function PositionEndLabelDot({
   value: number;
   delta?: number;
   mode: RankSeriesMode;
+  /** When provided, replaces the default "valueStr  You" label. Pass "You" to
+   *  drop the rank value entirely. */
+  youLabelOverride?: string;
+  /** Hide the dual-pill delta (the small ±N% pill next to the YOU label). */
+  hideEndLabelDelta?: boolean;
 }) {
   if (cx == null || cy == null) return null;
   if (index !== totalPoints - 1) return <g />;
@@ -1157,7 +1164,7 @@ function PositionEndLabelDot({
 
   const valueStr =
     mode === "position" ? `#${value.toFixed(1)}` : `${value.toFixed(1)}%`;
-  const text = `${valueStr}  You`;
+  const text = youLabelOverride ?? `${valueStr}  You`;
   const charW = 6;
   const padX = 8;
   const W = Math.max(60, text.length * charW + padX * 2);
@@ -1168,7 +1175,10 @@ function PositionEndLabelDot({
   // For position mode: positive delta = improvement (lower rank #).
   // For share-of-voice: positive delta = gained share. Both are "good" when > 0.
   // Always show the dual pill on the YOU line so the user can see their growth at a glance.
-  const showDelta = delta != null && (brand.isYou || Math.abs(delta) > 0.04);
+  const showDelta =
+    !hideEndLabelDelta &&
+    delta != null &&
+    (brand.isYou || Math.abs(delta) > 0.04);
   const flat = (delta ?? 0) === 0 || Math.abs(delta ?? 0) < 0.05;
   const grew = (delta ?? 0) > 0;
   const deltaSign = flat ? "" : grew ? "+" : "−";
@@ -1319,11 +1329,14 @@ function PositionTooltip({
 
   const W = 180;
   const margin = 14;
-  const cursorX = coordinate?.x ?? 0;
-  const placeLeft = cursorX > W + margin;
-  const transform = placeLeft
-    ? `translateX(calc(-100% - ${margin}px))`
-    : `translateX(${margin}px)`;
+  // Tooltip ALWAYS places to the left of the cursor — overrides the prior
+  // "default-LEFT, flip-RIGHT near left edge" locked behavior. When the
+  // chart sits in a narrow column (e.g. the half-width slot on
+  // /competitor-comparison) the cursor was constantly inside the
+  // flip-RIGHT threshold, parking the tooltip over the chart instead of
+  // off it. Pinning to LEFT keeps the tooltip out of the data path.
+  void coordinate;
+  const transform = `translateX(calc(-100% - ${margin}px))`;
 
   return (
     <div
@@ -1399,6 +1412,8 @@ function PositionChart({
   height = 240,
   rightMargin = 110,
   hoveredBrandId = null,
+  youLabelOverride,
+  hideEndLabelDelta = false,
 }: {
   data: ScannerData;
   stats: PositionStat[];
@@ -1406,6 +1421,8 @@ function PositionChart({
   height?: number;
   rightMargin?: number;
   hoveredBrandId?: string | null;
+  youLabelOverride?: string;
+  hideEndLabelDelta?: boolean;
 }) {
   const chartData = useMemo(() => buildPositionChartData(data, stats), [data, stats]);
 
@@ -1514,6 +1531,8 @@ function PositionChart({
                 value={s.current}
                 delta={s.delta}
                 mode={mode}
+                youLabelOverride={youLabelOverride}
+                hideEndLabelDelta={hideEndLabelDelta}
               />
             )}
             activeDot={{ r: s.brand.isYou ? 5 : 3, fill: s.brand.color, stroke: "#fff", strokeWidth: 1.5 }}
@@ -1533,11 +1552,15 @@ function PositionBrandRow({
   mode,
   onHover,
   isDimmed,
+  showDelta = true,
+  showRankValue = true,
 }: {
   stat: PositionStat;
   mode: RankSeriesMode;
   onHover?: (id: string | null) => void;
   isDimmed?: boolean;
+  showDelta?: boolean;
+  showRankValue?: boolean;
 }) {
   // For position: positive delta = improved (lower number), so increase
   // For SOV: positive delta = gained share, so increase
@@ -1566,46 +1589,49 @@ function PositionBrandRow({
       >
         {stat.brand.isYou ? "You" : stat.brand.name}
       </span>
-      <HoverHint
-        hint={
-          mode === "position"
-            ? "Average rank when mentioned. Lower is better — 1.00 = listed first."
-            : "Share of all brand mentions in AI answers."
-        }
-      >
-        <span
-          className="tabular-nums shrink-0"
-          style={{
-            fontFamily: "ui-monospace, monospace",
-            fontSize: 13,
-            fontWeight: 600,
-            color: "var(--color-fg)",
-          }}
+      {showRankValue && (
+        <HoverHint
+          hint={
+            mode === "position"
+              ? "Average rank when mentioned. Lower is better — 1.00 = listed first."
+              : "Share of all brand mentions in AI answers."
+          }
         >
-          {formatRankValueDetailed(stat.current, mode)}
-        </span>
-      </HoverHint>
-      {(() => {
-        const flat = Math.abs(stat.delta) <= 0.04;
-        const valueStr =
-          mode === "position"
-            ? Math.abs(stat.delta).toFixed(2)
-            : `${Math.abs(stat.delta).toFixed(1)}%`;
-        const hint = flat
-          ? "No change vs. the start of the range."
-          : mode === "position"
-          ? `${grew ? "Up" : "Down"} ${Math.abs(stat.delta).toFixed(2)} positions vs. the start of the range.`
-          : `${grew ? "Up" : "Down"} ${Math.abs(stat.delta).toFixed(1)}% vs. the start of the range.`;
-        return (
-          <HoverHint hint={hint}>
-            <BadgeDelta
-              variant="solid"
-              deltaType={flat ? "neutral" : grew ? "increase" : "decrease"}
-              value={valueStr}
-            />
-          </HoverHint>
-        );
-      })()}
+          <span
+            className="tabular-nums shrink-0"
+            style={{
+              fontFamily: "ui-monospace, monospace",
+              fontSize: 13,
+              fontWeight: 600,
+              color: "var(--color-fg)",
+            }}
+          >
+            {formatRankValueDetailed(stat.current, mode)}
+          </span>
+        </HoverHint>
+      )}
+      {showDelta &&
+        (() => {
+          const flat = Math.abs(stat.delta) <= 0.04;
+          const valueStr =
+            mode === "position"
+              ? Math.abs(stat.delta).toFixed(2)
+              : `${Math.abs(stat.delta).toFixed(1)}%`;
+          const hint = flat
+            ? "No change vs. the start of the range."
+            : mode === "position"
+              ? `${grew ? "Up" : "Down"} ${Math.abs(stat.delta).toFixed(2)} positions vs. the start of the range.`
+              : `${grew ? "Up" : "Down"} ${Math.abs(stat.delta).toFixed(1)}% vs. the start of the range.`;
+          return (
+            <HoverHint hint={hint}>
+              <BadgeDelta
+                variant="solid"
+                deltaType={flat ? "neutral" : grew ? "increase" : "decrease"}
+                value={valueStr}
+              />
+            </HoverHint>
+          );
+        })()}
     </div>
   );
 }
@@ -1702,6 +1728,11 @@ export function RankSeriesCard({
   listWidthPx,
   chartHeightPx,
   aiOverviewVariant = "V1",
+  showDelta = true,
+  showRankValue = true,
+  headerRight,
+  youLabelOverride,
+  hideEndLabelDelta = false,
 }: {
   title: string;
   titleInfo?: string;
@@ -1714,6 +1745,14 @@ export function RankSeriesCard({
   listWidthPx?: number;
   chartHeightPx?: number;
   aiOverviewVariant?: AIOverviewVariant;
+  showDelta?: boolean;
+  showRankValue?: boolean;
+  headerRight?: React.ReactNode;
+  /** Override the YOU end-of-line label (default: "valueStr  You"). Pass
+   *  "You" to drop the rank value pill on the chart canvas. */
+  youLabelOverride?: string;
+  /** Hide the dual-pill delta floating next to the YOU end label. */
+  hideEndLabelDelta?: boolean;
 }) {
   const sorted = useMemo(
     () =>
@@ -1735,6 +1774,9 @@ export function RankSeriesCard({
   const effectiveChartH = chartHeightPx ?? dims.chartH;
   const w = listWidthPx ?? 200;
   const gridColsClass =
+    w === 120 ? "lg:grid-cols-[120px_minmax(0,1fr)]" :
+    w === 140 ? "lg:grid-cols-[140px_minmax(0,1fr)]" :
+    w === 160 ? "lg:grid-cols-[160px_minmax(0,1fr)]" :
     w === 180 ? "lg:grid-cols-[180px_minmax(0,1fr)]" :
     w === 220 ? "lg:grid-cols-[220px_minmax(0,1fr)]" :
     w === 240 ? "lg:grid-cols-[240px_minmax(0,1fr)]" :
@@ -1749,6 +1791,8 @@ export function RankSeriesCard({
       height={effectiveChartH}
       rightMargin={140}
       hoveredBrandId={hoveredBrandId}
+      youLabelOverride={youLabelOverride}
+      hideEndLabelDelta={hideEndLabelDelta}
     />
   );
 
@@ -1761,6 +1805,8 @@ export function RankSeriesCard({
           mode={mode}
           onHover={setHoveredBrandId}
           isDimmed={hoveredBrandId != null && hoveredBrandId !== s.brand.id}
+          showDelta={showDelta}
+          showRankValue={showRankValue}
         />
       ))}
     </div>
@@ -1768,8 +1814,9 @@ export function RankSeriesCard({
 
   return (
     <div className={`rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] ${dims.pad} ${dims.spacing} min-w-0`}>
-      <div className="mb-1 pb-2 border-b border-[var(--color-border)]">
+      <div className="mb-1 pb-2 border-b border-[var(--color-border)] flex items-center justify-between gap-2">
         <SectionHeading text={title} info={titleInfo} />
+        {headerRight && <div className="shrink-0">{headerRight}</div>}
       </div>
       {dims.showInsight && (
         <AIOverview text={insight} variant={aiOverviewVariant} size="sm" />
@@ -2258,6 +2305,10 @@ export function ChartCard({
   title = "Your AI visibility over time",
   titleInfo = "Daily mention rate across all tracked AI tools. Higher = more visibility.",
   defaultMode = "focus",
+  chartHeight = 460,
+  showInsight = true,
+  showModeToggle = true,
+  showOptimizationMarkers = true,
 }: {
   data: ScannerData;
   treatment: Treatment;
@@ -2266,6 +2317,11 @@ export function ChartCard({
   title?: string;
   titleInfo?: string;
   defaultMode?: "focus" | "full";
+  chartHeight?: number;
+  showInsight?: boolean;
+  showModeToggle?: boolean;
+  /** When false, drops the inline optimization-event dots on the YOU line. */
+  showOptimizationMarkers?: boolean;
 }) {
   const [mode, setMode] = useState<"focus" | "full">(defaultMode);
   const focusMode: FocusMode = mode === "full" ? "full" : "tight";
@@ -2274,37 +2330,41 @@ export function ChartCard({
     <Card className="p-4 min-w-0">
       <div className="mb-3 pb-2 border-b border-[var(--color-border)]">
         <SectionHeading text={title} info={titleInfo} />
-        <div className="mt-2 mb-2">
-          <AIOverview
-            text={buildChartInsight(data)}
-            variant={aiOverviewVariant}
-            size="sm"
-          />
-        </div>
-        <div className="inline-flex rounded-lg border border-[var(--color-border)] overflow-hidden">
-          <button
-            onClick={() => setMode("focus")}
-            className={
-              "px-3 py-0.5 text-[13px] font-medium transition-colors " +
-              (mode === "focus"
-                ? "bg-[var(--color-primary)] text-white"
-                : "bg-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg-secondary)]")
-            }
-          >
-            Focus view
-          </button>
-          <button
-            onClick={() => setMode("full")}
-            className={
-              "px-3 py-0.5 text-[13px] font-medium transition-colors border-l border-[var(--color-border)] " +
-              (mode === "full"
-                ? "bg-[var(--color-primary)] text-white"
-                : "bg-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg-secondary)]")
-            }
-          >
-            Full view
-          </button>
-        </div>
+        {showInsight && (
+          <div className="mt-2 mb-2">
+            <AIOverview
+              text={buildChartInsight(data)}
+              variant={aiOverviewVariant}
+              size="sm"
+            />
+          </div>
+        )}
+        {showModeToggle && (
+          <div className="inline-flex rounded-lg border border-[var(--color-border)] overflow-hidden">
+            <button
+              onClick={() => setMode("focus")}
+              className={
+                "px-3 py-0.5 text-[13px] font-medium transition-colors " +
+                (mode === "focus"
+                  ? "bg-[var(--color-primary)] text-white"
+                  : "bg-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg-secondary)]")
+              }
+            >
+              Focus view
+            </button>
+            <button
+              onClick={() => setMode("full")}
+              className={
+                "px-3 py-0.5 text-[13px] font-medium transition-colors border-l border-[var(--color-border)] " +
+                (mode === "full"
+                  ? "bg-[var(--color-primary)] text-white"
+                  : "bg-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg-secondary)]")
+              }
+            >
+              Full view
+            </button>
+          </div>
+        )}
       </div>
       <motion.div
         key={focusMode}
@@ -2327,26 +2387,30 @@ export function ChartCard({
           endLabelStyle={treatment.endLabelStyle}
           endLabelGutter={treatment.endLabelGutter}
           lineType="linear"
-          height={460}
+          height={chartHeight}
           focusMode={focusMode}
-          optimizationMarkers={[
-            {
-              dateIndex: Math.round(data.dates.length * 0.18),
-              label: "FAQ schema added to top service pages",
-            },
-            {
-              dateIndex: Math.round(data.dates.length * 0.4),
-              label: "Reddit & BBB listings published",
-            },
-            {
-              dateIndex: Math.round(data.dates.length * 0.62),
-              label: "Page intros rewritten on 5 weakest pages",
-            },
-            {
-              dateIndex: Math.round(data.dates.length * 0.82),
-              label: "Pillar page deployed",
-            },
-          ]}
+          optimizationMarkers={
+            showOptimizationMarkers
+              ? [
+                  {
+                    dateIndex: Math.round(data.dates.length * 0.18),
+                    label: "FAQ schema added to top service pages",
+                  },
+                  {
+                    dateIndex: Math.round(data.dates.length * 0.4),
+                    label: "Reddit & BBB listings published",
+                  },
+                  {
+                    dateIndex: Math.round(data.dates.length * 0.62),
+                    label: "Page intros rewritten on 5 weakest pages",
+                  },
+                  {
+                    dateIndex: Math.round(data.dates.length * 0.82),
+                    label: "Pillar page deployed",
+                  },
+                ]
+              : []
+          }
         />
       </motion.div>
     </Card>

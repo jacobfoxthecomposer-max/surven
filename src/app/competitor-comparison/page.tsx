@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { GitCompare, Calendar, RefreshCw } from "lucide-react";
+import { Calendar, ChevronDown, GitCompare, RefreshCw } from "lucide-react";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Spinner } from "@/components/atoms/Spinner";
 import { Card } from "@/components/atoms/Card";
@@ -17,7 +17,6 @@ import { CompetitorHero } from "@/features/competitor-comparison/CompetitorHero"
 import { VisibilityLeaderboard } from "@/features/competitor-comparison/VisibilityLeaderboard";
 import { CompetitorVisibilityChart } from "@/features/competitor-comparison/CompetitorVisibilityChart";
 import { CompetitorFixActions } from "@/features/competitor-comparison/CompetitorFixActions";
-import { CompetitorRowTable } from "@/features/competitor-comparison/CompetitorRowTable";
 import { CompetitorHeatmap } from "@/features/competitor-comparison/CompetitorHeatmap";
 import { CompetitorGaps } from "@/features/competitor-comparison/CompetitorGaps";
 import { CompetitorCitedDomains } from "@/features/competitor-comparison/CompetitorCitedDomains";
@@ -27,14 +26,37 @@ import { FooterDiagnostic } from "@/features/competitor-comparison/FooterDiagnos
 import { BetaFeedbackFooter } from "@/components/organisms/BetaFeedbackFooter";
 import { AI_MODELS, COMPETITOR_PALETTE } from "@/utils/constants";
 
-type TimeRange = "14d" | "30d" | "90d" | "ytd" | "all";
-const TIME_RANGES: { key: TimeRange; label: string }[] = [
+type TimeRange = "14d" | "30d" | "90d" | "ytd" | "all" | "custom";
+const TIME_RANGES: { key: Exclude<TimeRange, "custom">; label: string }[] = [
   { key: "14d", label: "14d" },
   { key: "30d", label: "30d" },
   { key: "90d", label: "90d" },
   { key: "ytd", label: "YTD" },
   { key: "all", label: "All" },
 ];
+
+// "May 3" / "May 3, 2025" — drop the year only when the date is in the
+// current calendar year so labels stay compact for in-year ranges.
+function fmtCustomDate(iso: string): string {
+  const d = new Date(iso + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return "";
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
+  });
+}
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function daysAgoIso(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString().slice(0, 10);
+}
 
 const ease = [0.16, 1, 0.3, 1] as const;
 const reveal = {
@@ -53,7 +75,12 @@ export default function CompetitorComparisonPage() {
     business,
     competitors,
   );
-  const [timeRange, setTimeRange] = useState<TimeRange>("all");
+  const [timeRange, setTimeRange] = useState<TimeRange>("90d");
+  const [rangeMenuOpen, setRangeMenuOpen] = useState(false);
+  const [customFormOpen, setCustomFormOpen] = useState(false);
+  const [customFrom, setCustomFrom] = useState<string>(daysAgoIso(30));
+  const [customTo, setCustomTo] = useState<string>(todayIso());
+  const rangeMenuRef = useRef<HTMLDivElement | null>(null);
   const [selectedModels, setSelectedModels] = useState<Set<string>>(
     () => new Set(AI_MODELS.map((m) => m.id)),
   );
@@ -123,6 +150,21 @@ export default function CompetitorComparisonPage() {
       : 0;
   }, [filteredResults, competitorNames, hasResults]);
 
+  // Close the time-range dropdown when the user clicks anywhere outside it.
+  useEffect(() => {
+    if (!rangeMenuOpen) return;
+    function onDown(e: MouseEvent) {
+      if (
+        rangeMenuRef.current &&
+        !rangeMenuRef.current.contains(e.target as Node)
+      ) {
+        setRangeMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [rangeMenuOpen]);
+
   const toggleModel = (id: string) => {
     setSelectedModels((prev) => {
       const next = new Set(prev);
@@ -177,31 +219,150 @@ export default function CompetitorComparisonPage() {
                 transition={{ duration: 0.4, delay: 0.1, ease }}
                 className="flex flex-wrap items-center gap-2"
               >
-              <div className="inline-flex rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-1 gap-1">
-                {TIME_RANGES.map(({ key, label }) => (
-                  <button
-                    key={key}
-                    onClick={() => setTimeRange(key)}
+              {/* Time-range dropdown — collapsed pill cluster + Custom into a
+                  single button. Hover shows a tooltip; click opens a menu of
+                  every range. */}
+              <div className="relative" ref={rangeMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setRangeMenuOpen((o) => !o)}
+                  aria-haspopup="menu"
+                  aria-expanded={rangeMenuOpen}
+                  title="Adjust the time window for every chart on this page"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 font-medium rounded-[var(--radius-md)] border bg-[var(--color-surface)] text-[var(--color-fg-secondary)] border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition-colors"
+                  style={{ fontSize: 14 }}
+                >
+                  <Calendar className="h-4 w-4 text-[var(--color-primary)]" />
+                  {timeRange === "custom"
+                    ? `${fmtCustomDate(customFrom)} – ${fmtCustomDate(customTo)}`
+                    : (TIME_RANGES.find((r) => r.key === timeRange)?.label ??
+                      "All")}
+                  <ChevronDown
                     className={
-                      "px-3.5 py-2 font-medium rounded-[var(--radius-sm)] transition-colors " +
-                      (timeRange === key
-                        ? "bg-[var(--color-primary)] text-white"
-                        : "text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-alt)]")
+                      "h-3.5 w-3.5 text-[var(--color-fg-muted)] transition-transform " +
+                      (rangeMenuOpen ? "rotate-180" : "")
                     }
-                    style={{ fontSize: 14 }}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+                  />
+                </button>
 
-              <button
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 font-medium rounded-[var(--radius-md)] border transition-colors bg-[var(--color-surface)] text-[var(--color-fg-secondary)] border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]"
-                style={{ fontSize: 14 }}
-                title="Custom date range (coming soon)"
-              >
-                <Calendar className="h-4 w-4" /> Custom
-              </button>
+                {rangeMenuOpen && (
+                  <div
+                    role="menu"
+                    className="absolute left-0 top-full mt-1.5 z-20 min-w-[200px] rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-lg p-1"
+                  >
+                    {TIME_RANGES.map(({ key, label }) => {
+                      const active = timeRange === key;
+                      return (
+                        <button
+                          key={key}
+                          role="menuitemradio"
+                          aria-checked={active}
+                          onClick={() => {
+                            setTimeRange(key);
+                            setCustomFormOpen(false);
+                            setRangeMenuOpen(false);
+                          }}
+                          className={
+                            "w-full text-left px-3 py-1.5 rounded-[var(--radius-sm)] font-medium transition-colors " +
+                            (active
+                              ? "bg-[var(--color-primary)] text-white"
+                              : "text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-alt)]")
+                          }
+                          style={{ fontSize: 14 }}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                    <div className="my-1 border-t border-[var(--color-border)]" />
+                    <button
+                      role="menuitem"
+                      onClick={() => setCustomFormOpen((o) => !o)}
+                      aria-expanded={customFormOpen}
+                      className={
+                        "w-full text-left flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-sm)] font-medium transition-colors " +
+                        (timeRange === "custom"
+                          ? "bg-[var(--color-primary)] text-white"
+                          : "text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-alt)]")
+                      }
+                      style={{ fontSize: 14 }}
+                    >
+                      <Calendar className="h-3.5 w-3.5" /> Custom range
+                      <ChevronDown
+                        className={
+                          "h-3.5 w-3.5 ml-auto transition-transform " +
+                          (customFormOpen ? "rotate-180" : "")
+                        }
+                      />
+                    </button>
+
+                    {customFormOpen && (
+                      <div className="px-2 pt-2 pb-1.5 space-y-2 border-t border-[var(--color-border)] mt-1">
+                        <label className="block">
+                          <span
+                            className="block text-[var(--color-fg-muted)] mb-1 uppercase tracking-wider"
+                            style={{ fontSize: 10, fontWeight: 600 }}
+                          >
+                            From
+                          </span>
+                          <input
+                            type="date"
+                            value={customFrom}
+                            max={customTo || todayIso()}
+                            onChange={(e) => setCustomFrom(e.target.value)}
+                            className="w-full px-2.5 py-1.5 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] focus:outline-none focus:border-[var(--color-primary)] tabular-nums"
+                            style={{ fontSize: 13 }}
+                          />
+                        </label>
+                        <label className="block">
+                          <span
+                            className="block text-[var(--color-fg-muted)] mb-1 uppercase tracking-wider"
+                            style={{ fontSize: 10, fontWeight: 600 }}
+                          >
+                            To
+                          </span>
+                          <input
+                            type="date"
+                            value={customTo}
+                            min={customFrom || undefined}
+                            max={todayIso()}
+                            onChange={(e) => setCustomTo(e.target.value)}
+                            className="w-full px-2.5 py-1.5 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] focus:outline-none focus:border-[var(--color-primary)] tabular-nums"
+                            style={{ fontSize: 13 }}
+                          />
+                        </label>
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            disabled={
+                              !customFrom ||
+                              !customTo ||
+                              new Date(customFrom) > new Date(customTo)
+                            }
+                            onClick={() => {
+                              setTimeRange("custom");
+                              setCustomFormOpen(false);
+                              setRangeMenuOpen(false);
+                            }}
+                            className="flex-1 inline-flex items-center justify-center px-3 py-1.5 rounded-[var(--radius-sm)] font-semibold text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            style={{ fontSize: 13 }}
+                          >
+                            Apply
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCustomFormOpen(false)}
+                            className="px-3 py-1.5 rounded-[var(--radius-sm)] font-medium text-[var(--color-fg-muted)] hover:bg-[var(--color-surface-alt)] transition-colors"
+                            style={{ fontSize: 13 }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               <div className="h-4 w-px bg-[var(--color-border)]" />
 
@@ -312,21 +473,36 @@ export default function CompetitorComparisonPage() {
           <div className="border-t border-[var(--color-border)]" />
         )}
 
-        {/* Data row — left 2/3: engine bars + stretched diagnostic. Right 1/3: fix actions */}
+        {/* Data row — wide left col: visibility-over-time chart on top, then
+            the leaderboard below. Narrow right col: just the "Ways to take
+            the lead" panel pinned to the top-right corner, full height. */}
         {hasResults && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
             <div className="lg:col-span-2 flex flex-col gap-4 min-w-0">
               <CompetitorVisibilityChart />
-              <VisibilityLeaderboard
-                results={filteredResults}
-                businessName={business.name}
-                competitors={competitorNames}
-                history={history}
-                plan={plan}
-                totalCompetitorCount={allCompetitorNames.length}
-              />
+              {/* Half-width split: leaderboard on the left, average-rank
+                  chart on the right. items-stretch keeps both bottoms aligned
+                  per the locked side-by-side rule. */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+                <VisibilityLeaderboard
+                  results={filteredResults}
+                  businessName={business.name}
+                  competitors={competitorNames}
+                  history={history}
+                  plan={plan}
+                  totalCompetitorCount={allCompetitorNames.length}
+                />
+                <CompetitorRankChart
+                  results={filteredResults}
+                  businessName={business.name}
+                  competitors={competitorNames}
+                  history={history}
+                  plan={plan}
+                  totalCompetitorCount={allCompetitorNames.length}
+                />
+              </div>
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col min-w-0">
               <CompetitorFixActions
                 results={filteredResults}
                 businessName={business.name}
@@ -338,16 +514,6 @@ export default function CompetitorComparisonPage() {
 
         {hasResults && (
           <>
-            {/* Data-dense competitor rows with drawer */}
-            <motion.div {...reveal}>
-              <CompetitorRowTable
-                results={filteredResults}
-                businessName={business.name}
-                businessScore={score}
-                competitors={competitorNames}
-              />
-            </motion.div>
-
             {/* Heatmap (mid-page reference) */}
             <motion.div {...reveal}>
               <CompetitorHeatmap
@@ -356,11 +522,6 @@ export default function CompetitorComparisonPage() {
                 businessScore={score}
                 competitors={competitorNames}
               />
-            </motion.div>
-
-            {/* Average rank over time — cloned from AI Visibility Tracker */}
-            <motion.div {...reveal}>
-              <CompetitorRankChart />
             </motion.div>
 
             {/* Share of voice over time — cloned from AI Visibility Tracker */}
