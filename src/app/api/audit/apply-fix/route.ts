@@ -38,7 +38,16 @@ const Schema = z.object({
   fixType: z.string().min(1),
   fixCode: z.string().min(1),
   businessId: z.string().uuid().optional(),
+  /** URLs from the finding's `affectedUrls` field — required for per-page html fixes. */
+  affectedUrls: z.array(z.string().url()).optional(),
 });
+
+const MANAGED_PLAN_CTA = {
+  url: "https://surven.vercel.app/pricing",
+  headline: "Skip the paste — let our team handle this for you",
+  body: "Surven Managed deploys every fix to your site automatically, gets you listed on the directories AI engines cite most, and refreshes your content monthly so your visibility keeps climbing. You focus on the business — we focus on getting you cited.",
+  buttonLabel: "See Managed plans",
+} as const;
 
 const PAID_PLANS = ["plus", "premium", "admin"];
 
