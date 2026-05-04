@@ -61,6 +61,7 @@ type FixState =
   | { status: "preview-faq"; pairs: Array<{ question: string; answer: string }>; snippet: string }
   | { status: "preview-alt"; suggestions: Array<{ src: string; alt: string | null; error: string | null }> }
   | { status: "success"; commitUrl?: string; filePath?: string; snippet?: string; manualNote?: string; suggested?: string }
+  | { status: "success-per-page"; commitUrl?: string; perPageResult: PerPageFixResult; managedPlanCta?: ManagedPlanCta }
   | { status: "manual"; snippet?: string; suggested?: string; manualNote: string; rewriteKind?: "meta_desc" | "title_tag" | "faq_page" | "alt_text"; managedPlanCta?: ManagedPlanCta }
   | { status: "ambiguous"; reasons: string[] }
   | { status: "error"; message: string; connectUrl?: string; snippet?: string };
