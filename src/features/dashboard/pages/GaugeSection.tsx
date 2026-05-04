@@ -77,7 +77,7 @@ export function GaugeSection({
             />
           )}
         </AnimatePresence>
-        <VisibilityScoreGauge score={score} width={260} />
+        <VisibilityScoreGauge score={lastScanDate ? score : null} width={260} />
       </div>
 
       <div className="flex-1 text-center sm:text-left space-y-3 min-w-0">

@@ -71,6 +71,22 @@ export const COMPETITOR_PALETTE = [
 
 export const OTHER_INDUSTRY_OPTION = "Other (specify)";
 
+export const PROMPTS_PER_PLAN = {
+  free: 50,
+  plus: 150,
+  premium: 300,
+  managed: 300,
+  admin: 300,
+} as const;
+
+export function getPromptCountForPlan(plan?: string | null): number {
+  if (!plan) return PROMPTS_PER_PLAN.plus;
+  if (plan in PROMPTS_PER_PLAN) {
+    return PROMPTS_PER_PLAN[plan as keyof typeof PROMPTS_PER_PLAN];
+  }
+  return PROMPTS_PER_PLAN.plus;
+}
+
 export const INDUSTRIES = [
   "Dentist",
   "Restaurant",
