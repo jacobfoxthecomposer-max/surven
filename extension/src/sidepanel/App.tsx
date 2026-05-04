@@ -1217,6 +1217,14 @@ export default function App() {
               </div>
             </div>
           </label>
+          {settingsError && (
+            <div
+              role="alert"
+              style={{ padding: "10px", background: "#FEE2E2", border: "1px solid #B54631", borderRadius: "4px", fontSize: "12px", color: "#B54631" }}
+            >
+              {settingsError}
+            </div>
+          )}
           <button
             onClick={saveSettings}
             disabled={!draftSettings.apiUrl || !draftSettings.apiKey}
