@@ -235,3 +235,124 @@ function findHeadCloseIndex(html: string): number {
   if (!match || match.index === undefined) return -1;
   return match.index;
 }
+
+// ──────────────── Next.js per-page metadata injection ────────────────
+
+/**
+ * Per-page Next.js metadata injection.
+ *
+ * For each affected URL, finds the matching page.tsx (or layout.tsx) under
+ * src/app or app, parses its `export const metadata = { ... }` block, and
+ * injects the requested field. Single atomic commit for all touched files.
+ *
+ * Used by the same fix types as HTML injection (canonical, OG, etc.) but
+ * routed here when the repo is Next.js.
+ */
+export interface NextJsPageInjectionRequest {
+  url: string;
+  field: MetadataField;
+}
+
+export async function injectPerPageIntoNextJs(
+  client: GithubClient,
+  repo: string,
+  branch: string,
+  requests: NextJsPageInjectionRequest[],
+  commitMessage: string,
+  fileTreeIn?: Set<string>,
+): Promise<PerPageInjectResult> {
+  const result: PerPageInjectResult = {
+    total: requests.length,
+    succeeded: [],
+    skipped: [],
+    failed: [],
+  };
+
+  let fileTree: Set<string>;
+  try {
+    fileTree = fileTreeIn ?? (await client.getFileTree(branch));
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : "Couldn't read repo tree";
+    for (const r of requests) result.failed.push({ url: r.url, reason });
+    return result;
+  }
+
+  type Plan = { req: NextJsPageInjectionRequest; resolvedPath: string };
+  const plans: Plan[] = [];
+  for (const req of requests) {
+    const { candidates } = urlToPageCandidates(req.url);
+    if (candidates.length === 0) {
+      result.failed.push({ url: req.url, reason: "Couldn't parse URL" });
+      continue;
+    }
+    const found = candidates.find((p) => fileTree.has(p));
+    if (!found) {
+      result.failed.push({
+        url: req.url,
+        reason: `No page.tsx found for this route. Tried: ${candidates.slice(0, 4).join(", ")}`,
+      });
+      continue;
+    }
+    plans.push({ req, resolvedPath: found });
+  }
+
+  // Read each unique file once, in parallel.
+  const uniquePaths = Array.from(new Set(plans.map((p) => p.resolvedPath)));
+  const fileContents = new Map<string, string>();
+  await Promise.all(
+    uniquePaths.map(async (path) => {
+      const file = await client.getFile(path, branch).catch(() => null);
+      if (file?.content) fileContents.set(path, file.content);
+    }),
+  );
+
+  // Apply metadata edits. Multiple edits to the same file are merged sequentially.
+  const edits = new Map<string, { updated: string; urls: string[] }>();
+
+  for (const { req, resolvedPath } of plans) {
+    const sourceContent = edits.get(resolvedPath)?.updated ?? fileContents.get(resolvedPath);
+    if (!sourceContent) {
+      result.failed.push({ url: req.url, reason: `Couldn't read ${resolvedPath}` });
+      continue;
+    }
+
+    const injectResult = injectMetadataField(sourceContent, req.field);
+    if (!injectResult.ok) {
+      result.skipped.push({
+        url: req.url,
+        reason: injectResult.manualInstruction,
+        filePath: resolvedPath,
+      });
+      continue;
+    }
+
+    const existing = edits.get(resolvedPath);
+    if (existing) {
+      existing.updated = injectResult.updated;
+      existing.urls.push(req.url);
+    } else {
+      edits.set(resolvedPath, { updated: injectResult.updated, urls: [req.url] });
+    }
+    result.succeeded.push({ url: req.url, filePath: resolvedPath });
+  }
+
+  if (edits.size === 0) return result;
+
+  try {
+    const filesToCommit = Array.from(edits.entries()).map(([path, data]) => ({
+      path,
+      content: data.updated,
+    }));
+    const commitResult = await client.commitBatch(filesToCommit, branch, commitMessage);
+    result.commitSha = commitResult.commitSha;
+    result.commitUrl = `https://github.com/${repo}/commit/${commitResult.commitSha}`;
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : "Batch commit failed";
+    for (const succ of result.succeeded) {
+      result.failed.push({ url: succ.url, reason });
+    }
+    result.succeeded = [];
+  }
+
+  return result;
+}
