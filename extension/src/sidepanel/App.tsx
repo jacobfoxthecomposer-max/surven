@@ -923,9 +923,21 @@ export default function App() {
       }
 
       if (data.ok === false && data.manualNote) {
+        // For alt-text manual fallback, format the per-image replacements as a
+        // copy-pasteable snippet so users (e.g. on Wix/Squarespace) can see the
+        // generated alt text alongside the platform instructions.
+        const altSnippet = replacements
+          .map((r, i) => `${i + 1}. Image: ${r.src}\n   Alt text: ${r.alt}`)
+          .join("\n\n");
         setFixStates((s) => ({
           ...s,
-          [finding.id]: { status: "manual", manualNote: data.manualNote!, rewriteKind: "alt_text", managedPlanCta: (data as { managedPlanCta?: ManagedPlanCta }).managedPlanCta },
+          [finding.id]: {
+            status: "manual",
+            snippet: altSnippet,
+            manualNote: data.manualNote!,
+            rewriteKind: "alt_text",
+            managedPlanCta: (data as { managedPlanCta?: ManagedPlanCta }).managedPlanCta,
+          },
         }));
         return;
       }
