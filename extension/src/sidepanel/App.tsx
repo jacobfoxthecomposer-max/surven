@@ -1519,7 +1519,7 @@ export default function App() {
                                     <ul style={{ margin: "4px 0 0 18px", padding: 0, color: "#666" }}>
                                       {r.skipped.map((s, i) => (
                                         <li key={i} style={{ marginBottom: "2px" }}>
-                                          <code style={{ background: "#EDE8DC", padding: "1px 3px", borderRadius: "2px", fontSize: "10px" }}>{new URL(s.url).pathname}</code>: {s.reason}
+                                          <code style={{ background: "#EDE8DC", padding: "1px 3px", borderRadius: "2px", fontSize: "10px" }}>{safePathname(s.url)}</code>: {s.reason}
                                         </li>
                                       ))}
                                     </ul>
