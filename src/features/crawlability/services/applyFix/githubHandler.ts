@@ -180,3 +180,118 @@ export async function applyFixToGithub(opts: GithubApplyFixOptions): Promise<App
 export function isFixTypeSupportedForGithub(fixType: string | undefined): fixType is SupportedFixType {
   return fixType === "robots" || fixType === "sitemap" || fixType === "llms";
 }
+
+/**
+ * Per-finding HTML fix support. Each entry maps a crawlability finding ID to a
+ * per-URL injection plan. Currently only canonical_missing is wired; viewport
+ * and OG tags can follow the same pattern.
+ */
+const HTML_FIX_BUILDERS: Record<
+  string,
+  (url: string) => { snippet: string; existingMarker: RegExp }
+> = {
+  canonical_missing: (url) => ({
+    snippet: `<link rel="canonical" href="${escapeHtmlAttr(url)}" />`,
+    existingMarker: /<link\s+[^>]*rel\s*=\s*["']canonical["'][^>]*>/i,
+  }),
+};
+
+export function isHtmlFixSupportedForGithub(findingId: string): boolean {
+  return findingId in HTML_FIX_BUILDERS;
+}
+
+export interface ApplyHtmlFixOptions {
+  token: string;
+  repo: string;
+  branch: string;
+  findingId: string;
+  findingTitle: string;
+  /** URLs from the finding's `affectedUrls` field. */
+  affectedUrls: string[];
+}
+
+export interface ApplyHtmlFixResult {
+  ok: boolean;
+  perPageResult?: PerPageInjectResult;
+  error?: string;
+  manualNote?: string;
+  manualSnippet?: string;
+}
+
+/**
+ * Apply a per-page HTML fix (currently: canonical tag) across all affected pages.
+ * Returns a structured result so the UI can show "X of N pages fixed".
+ *
+ * Detects Next.js repos and bails to manual paste — Next.js per-page metadata
+ * exports are a separate code path (not yet wired).
+ */
+export async function applyHtmlFixToGithub(opts: ApplyHtmlFixOptions): Promise<ApplyHtmlFixResult> {
+  const builder = HTML_FIX_BUILDERS[opts.findingId];
+  if (!builder) {
+    return {
+      ok: false,
+      error: `No HTML fix builder for finding "${opts.findingId}".`,
+    };
+  }
+
+  if (opts.affectedUrls.length === 0) {
+    return {
+      ok: false,
+      error: "No affected URLs sent with this finding — re-scan and retry.",
+    };
+  }
+
+  const client = new GitHubClient(opts.token, opts.repo);
+
+  // Detect Next.js — if next.config.* exists, raw HTML editing won't apply.
+  const isNextJs = await detectNextJs(client, opts.branch);
+  if (isNextJs) {
+    return {
+      ok: false,
+      manualNote:
+        "This repo looks like Next.js. Add canonical URLs via per-page `metadata.alternates.canonical` exports in each route's page.tsx — automated Next.js per-page edits aren't wired yet.",
+      manualSnippet: opts.affectedUrls
+        .map((u) => `// In src/app${urlPathnameForNextJs(u)}/page.tsx\nexport const metadata = { alternates: { canonical: "${u}" } };`)
+        .join("\n\n"),
+    };
+  }
+
+  const requests: PageInjectionRequest[] = opts.affectedUrls.map((url) => {
+    const built = builder(url);
+    return { url, snippet: built.snippet, existingMarker: built.existingMarker };
+  });
+
+  const commitMessage = `fix(crawlability): ${opts.findingTitle}\n\nApplied via Surven Optimizer (finding: ${opts.findingId}, ${opts.affectedUrls.length} page(s))`;
+
+  const result = await injectPerPageIntoHtml(client, opts.repo, opts.branch, requests, commitMessage);
+
+  // Even if some pages were skipped (already had canonical) or failed (no HTML file
+  // found), we consider the operation successful as long as at least 1 page committed.
+  return {
+    ok: result.succeeded.length > 0,
+    perPageResult: result,
+    error: result.succeeded.length === 0 ? "No pages were updated — see per-page details." : undefined,
+  };
+}
+
+async function detectNextJs(client: GitHubClient, branch: string): Promise<boolean> {
+  const candidates = ["next.config.js", "next.config.mjs", "next.config.ts", "next.config.cjs"];
+  for (const name of candidates) {
+    const file = await client.getFile(name, branch).catch(() => null);
+    if (file?.content) return true;
+  }
+  return false;
+}
+
+function urlPathnameForNextJs(url: string): string {
+  try {
+    const p = new URL(url).pathname.replace(/\/+$/, "");
+    return p || "";
+  } catch {
+    return "";
+  }
+}
+
+function escapeHtmlAttr(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}
