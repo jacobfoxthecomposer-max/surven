@@ -351,13 +351,13 @@ export function IntentsTable({ intents, onSendToTracker }: IntentsTableProps) {
                         </td>
                       </tr>
                       {isExpanded && (
-                        <tr key={`${i.id}-variants`} className="border-b border-[var(--color-border)] last:border-b-0 bg-[var(--color-surface-alt)]/40">
+                        <tr className="border-b border-[var(--color-border)] last:border-b-0 bg-[var(--color-surface-alt)]/40">
                           <td colSpan={8} className="py-3 px-3">
                             <VariantList variants={i.variants} />
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })
               )}
