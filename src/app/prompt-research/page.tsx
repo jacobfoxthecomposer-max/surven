@@ -20,6 +20,7 @@ import { EntityGrid } from "@/features/prompt-research/EntityGrid";
 import { TaxonomyCoverage } from "@/features/prompt-research/TaxonomyCoverage";
 import { IntentDistribution } from "@/features/prompt-research/IntentDistribution";
 import { IntentsTable } from "@/features/prompt-research/IntentsTable";
+import { CustomPromptsSection } from "@/features/prompt-research/CustomPromptsSection";
 import { HowToRank } from "@/features/prompt-research/HowToRank";
 import { PromptResearchDiagnosticBand } from "@/features/prompt-research/PromptResearchDiagnosticBand";
 import { PromptResearchFixActions } from "@/features/prompt-research/PromptResearchFixActions";
