@@ -522,6 +522,7 @@ export default function App() {
           commitUrl: data.commitUrl,
           filePath: data.filePath,
           snippet: data.snippet,
+          platform: data.platform,
         },
       }));
     } catch (err) {
