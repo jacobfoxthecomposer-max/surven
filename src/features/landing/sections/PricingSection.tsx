@@ -6,6 +6,7 @@ import { ArrowRight, CircleCheck } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/utils/cn";
+import { useIsFirstTimeUser } from "@/features/auth/hooks/useIsFirstTimeUser";
 
 const plans = [
   {
