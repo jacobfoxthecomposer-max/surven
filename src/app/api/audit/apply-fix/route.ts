@@ -167,13 +167,20 @@ export async function POST(request: NextRequest) {
   }
 
   if (!connection) {
+    // No GitHub connection. WordPress users hitting GitHub-only fixes (canonical,
+    // viewport, OG, robots, sitemap, llms) land here too — give them the same
+    // friendly manual-paste card + Managed-plan upsell instead of a "connect
+    // GitHub" error that doesn't reflect their actual setup.
     return NextResponse.json(
       {
-        error: "no_connection",
-        message: "Connect GitHub to your Surven account first.",
+        error: "manual_required",
+        message: "Auto-deploy for this fix needs a GitHub connection. Copy the snippet below and paste it into your site, or upgrade to Managed and we'll do it for you.",
+        manualSnippet: fixCode,
+        manualNote: "This fix isn't auto-deployable on your current connection (it needs GitHub). Paste the snippet into your site's <head>, or let our Managed team handle it.",
         connectUrl: `${request.nextUrl.origin}/onboarding/connect`,
+        managedPlanCta: MANAGED_PLAN_CTA,
       },
-      { status: 400 }
+      { status: 422 }
     );
   }
 
