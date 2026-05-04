@@ -19,6 +19,11 @@
  */
 
 import { GithubClient } from "@/services/github/githubClient";
+import {
+  injectMetadataField,
+  urlToPageCandidates,
+  type MetadataField,
+} from "@/services/nextJsMetadataWriter";
 
 const HEAD_INJECT_INDENT = "  ";
 
