@@ -1591,7 +1591,7 @@ export default function App() {
                                     rel="noopener noreferrer"
                                     style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#96A283", textDecoration: "none" }}
                                   >
-                                    View commit on GitHub <ExternalLink size={11} />
+                                    {commitLinkLabel(fixState.platform)} <ExternalLink size={11} />
                                   </a>
                                 )}
                               </div>
@@ -1646,7 +1646,7 @@ export default function App() {
                                     rel="noopener noreferrer"
                                     style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#96A283", textDecoration: "none", fontSize: "11px" }}
                                   >
-                                    View commit on GitHub <ExternalLink size={11} />
+                                    {commitLinkLabel(fixState.platform)} <ExternalLink size={11} />
                                   </a>
                                 )}
                                 <ManagedPlanCard cta={fixState.managedPlanCta} />
@@ -1836,7 +1836,7 @@ export default function App() {
                                     rel="noopener noreferrer"
                                     style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#96A283", textDecoration: "none" }}
                                   >
-                                    View commit on GitHub <ExternalLink size={11} />
+                                    {commitLinkLabel(fixState.platform)} <ExternalLink size={11} />
                                   </a>
                                 )}
                               </div>
@@ -2090,7 +2090,7 @@ export default function App() {
                                     rel="noopener noreferrer"
                                     style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#96A283", textDecoration: "none", fontSize: "11px" }}
                                   >
-                                    View commit on GitHub <ExternalLink size={11} />
+                                    {commitLinkLabel(fixState.platform)} <ExternalLink size={11} />
                                   </a>
                                 )}
                               </div>
@@ -2268,7 +2268,7 @@ export default function App() {
                                 )}
                                 {fixState.commitUrl && (
                                   <a href={fixState.commitUrl} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#96A283", textDecoration: "none", fontSize: "11px" }}>
-                                    View commit on GitHub <ExternalLink size={11} />
+                                    {commitLinkLabel(fixState.platform)} <ExternalLink size={11} />
                                   </a>
                                 )}
                               </div>
@@ -2420,7 +2420,7 @@ export default function App() {
                                 </div>
                                 {fixState.commitUrl && (
                                   <a href={fixState.commitUrl} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#96A283", textDecoration: "none", fontSize: "11px" }}>
-                                    View commit on GitHub <ExternalLink size={11} />
+                                    {commitLinkLabel(fixState.platform)} <ExternalLink size={11} />
                                   </a>
                                 )}
                               </div>
