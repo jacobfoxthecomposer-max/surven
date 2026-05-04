@@ -9,6 +9,7 @@ import { useIsFirstTimeUser } from "@/features/auth/hooks/useIsFirstTimeUser";
 const PAID_PLANS = ["plus", "premium", "admin"];
 
 export function ApiKeysTab() {
+  const { isFirstTime } = useIsFirstTimeUser();
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [planLoading, setPlanLoading] = useState(true);
