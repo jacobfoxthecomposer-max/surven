@@ -5,6 +5,8 @@ export interface AuditFinding {
   title: string;
   severity: AuditSeverity;
   affectedPages: number;
+  /** URLs of the affected pages — used by per-page fixes (canonical_missing, etc.). */
+  affectedUrls?: string[];
   estimatedFixTime: number;
   estimatedImpact: number;
   whatIsIt: string;
