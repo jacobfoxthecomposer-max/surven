@@ -195,7 +195,11 @@ export async function POST(request: NextRequest) {
     token = creds.token;
   } catch {
     return NextResponse.json(
-      { error: "encryption_unavailable", message: "Stored credentials couldn't be decrypted. Reconnect GitHub." },
+      {
+        error: "encryption_unavailable",
+        message: "Stored credentials couldn't be decrypted. Reconnect GitHub.",
+        connectUrl: `${request.nextUrl.origin}/settings`,
+      },
       { status: 500 }
     );
   }
