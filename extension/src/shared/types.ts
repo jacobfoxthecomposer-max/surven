@@ -31,6 +31,22 @@ export interface CrawledPage {
   statusCode: number;
 }
 
+export interface ManagedPlanCta {
+  url: string;
+  headline: string;
+  body: string;
+  buttonLabel: string;
+}
+
+export interface PerPageFixResult {
+  total: number;
+  succeeded: Array<{ url: string; filePath: string }>;
+  skipped: Array<{ url: string; reason: string; filePath?: string }>;
+  failed: Array<{ url: string; reason: string }>;
+  commitSha?: string;
+  commitUrl?: string;
+}
+
 export interface ApplyFixResponse {
   ok: boolean;
   committedSha?: string;
@@ -39,6 +55,11 @@ export interface ApplyFixResponse {
   error?: string;
   message?: string;
   connectUrl?: string;
+  /** Present on per-page HTML fixes (canonical, etc.). */
+  perPageResult?: PerPageFixResult;
+  manualSnippet?: string;
+  manualNote?: string;
+  managedPlanCta?: ManagedPlanCta;
 }
 
 export interface ApplyFixRequest {
@@ -47,4 +68,6 @@ export interface ApplyFixRequest {
   findingTitle: string;
   fixType: NonNullable<AuditFinding["fixType"]>;
   fixCode: string;
+  /** URLs from the finding's affectedUrls — required by per-page HTML fixes. */
+  affectedUrls?: string[];
 }
