@@ -324,6 +324,7 @@ export async function applyHtmlFixToGithub(opts: ApplyHtmlFixOptions): Promise<A
     const requests: NextJsPageInjectionRequest[] = urlsToProcess.map((url) => ({
       url: spec.isSiteWide ? originForUrl(url) : url,
       field: spec.nextJsField!(url),
+      useRootLayout: spec.isSiteWide,
     }));
     const result = await injectPerPageIntoNextJs(
       client,
