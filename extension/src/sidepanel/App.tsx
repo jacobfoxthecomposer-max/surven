@@ -1531,7 +1531,7 @@ export default function App() {
                                     <ul style={{ margin: "4px 0 0 18px", padding: 0, color: "#666" }}>
                                       {r.failed.map((f, i) => (
                                         <li key={i} style={{ marginBottom: "2px" }}>
-                                          <code style={{ background: "#EDE8DC", padding: "1px 3px", borderRadius: "2px", fontSize: "10px" }}>{new URL(f.url).pathname}</code>: {f.reason}
+                                          <code style={{ background: "#EDE8DC", padding: "1px 3px", borderRadius: "2px", fontSize: "10px" }}>{safePathname(f.url)}</code>: {f.reason}
                                         </li>
                                       ))}
                                     </ul>
