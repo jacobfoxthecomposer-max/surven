@@ -371,15 +371,6 @@ function originForUrl(url: string): string {
 }
 
 
-function urlPathnameForNextJs(url: string): string {
-  try {
-    const p = new URL(url).pathname.replace(/\/+$/, "");
-    return p || "";
-  } catch {
-    return "";
-  }
-}
-
 function escapeHtmlAttr(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 }
