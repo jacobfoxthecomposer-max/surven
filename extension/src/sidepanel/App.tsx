@@ -711,7 +711,7 @@ export default function App() {
 
       setFixStates((s) => ({
         ...s,
-        [finding.id]: { status: "success", commitUrl: data.commitUrl, filePath: data.filePath, suggested },
+        [finding.id]: { status: "success", commitUrl: data.commitUrl, filePath: data.filePath, suggested, platform: data.platform },
       }));
     } catch (err) {
       setFixStates((s) => ({
