@@ -62,34 +62,55 @@ export async function injectPerPageIntoHtml(
     failed: [],
   };
 
-  // Collect file edits keyed by path so multiple URLs that resolve to the same
-  // file (rare but possible — e.g. canonical & og:url for the home page) are merged.
-  const edits = new Map<string, { original: string; updated: string; urls: string[] }>();
+  // Pull the entire file tree in a single API call. Beats N×4 probes per URL.
+  let fileTree: Set<string>;
+  try {
+    fileTree = await client.getFileTree(branch);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : "Couldn't read repo tree";
+    for (const r of requests) result.failed.push({ url: r.url, reason });
+    return result;
+  }
 
+  // Plan: resolve each URL → file path locally (no API call), then batch-read the
+  // unique resolved files in parallel.
+  type Plan = { req: PageInjectionRequest; resolvedPath: string };
+  const plans: Plan[] = [];
   for (const req of requests) {
     const candidatePaths = resolveCandidatePaths(req.url);
     if (candidatePaths.length === 0) {
       result.failed.push({ url: req.url, reason: "Couldn't parse URL" });
       continue;
     }
-
-    let resolvedPath: string | null = null;
-    let resolvedContent: string | null = null;
-
-    for (const candidate of candidatePaths) {
-      const file = await client.getFile(candidate, branch).catch(() => null);
-      if (file?.content) {
-        resolvedPath = candidate;
-        resolvedContent = file.content;
-        break;
-      }
-    }
-
-    if (!resolvedPath || !resolvedContent) {
+    const found = candidatePaths.find((p) => fileTree.has(p));
+    if (!found) {
       result.failed.push({
         url: req.url,
-        reason: `No HTML file found for this URL. Tried: ${candidatePaths.slice(0, 3).join(", ")}`,
+        reason: `No HTML file found in repo for this URL. Tried: ${candidatePaths.slice(0, 3).join(", ")}`,
       });
+      continue;
+    }
+    plans.push({ req, resolvedPath: found });
+  }
+
+  // Read each unique file once, in parallel.
+  const uniquePaths = Array.from(new Set(plans.map((p) => p.resolvedPath)));
+  const fileContents = new Map<string, string>();
+  await Promise.all(
+    uniquePaths.map(async (path) => {
+      const file = await client.getFile(path, branch).catch(() => null);
+      if (file?.content) fileContents.set(path, file.content);
+    }),
+  );
+
+  // Collect file edits keyed by path so multiple URLs resolving to the same file
+  // (rare but possible — e.g. canonical & og:url for the home page) are merged.
+  const edits = new Map<string, { original: string; updated: string; urls: string[] }>();
+
+  for (const { req, resolvedPath } of plans) {
+    const resolvedContent = fileContents.get(resolvedPath);
+    if (!resolvedContent) {
+      result.failed.push({ url: req.url, reason: `Couldn't read ${resolvedPath}` });
       continue;
     }
 
