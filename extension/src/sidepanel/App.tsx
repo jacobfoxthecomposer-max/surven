@@ -105,6 +105,61 @@ function getGenerateUrl(auditUrl: string): string {
   return auditUrl.replace(/\/api\/audit\/run\/?$/, "/api/audit/generate");
 }
 
+/**
+ * Validates that the configured audit URL is well-formed and ends with the
+ * expected /api/audit/run path. Returns null if valid, or an error message.
+ */
+function validateAuditUrl(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return "Enter your Surven API URL.";
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return "That's not a valid URL — paste the full https://… link.";
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return "URL must use http:// or https://.";
+  }
+  if (!/\/api\/audit\/run\/?$/.test(parsed.pathname)) {
+    return "URL should end in /api/audit/run.";
+  }
+  return null;
+}
+
+/**
+ * Returns true for tabs the extension can audit (http/https pages).
+ * chrome://, about:, file://, view-source: pages can't be reached by content
+ * scripts so we refuse early with a clear message.
+ */
+function isInjectableUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  return /^https?:\/\//i.test(url);
+}
+
+/**
+ * Safe URL.pathname — returns input unchanged if URL parsing fails.
+ * Used in render paths where a bad URL must not crash the React tree.
+ */
+function safePathname(url: string): string {
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * Safe URL.hostname — same idea as safePathname but for the host.
+ */
+function safeHostname(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+}
+
 const WHAT_IS_IT: Record<string, string> = {
   org_schema_missing: "Schema markup is invisible code added to your website's <head> that acts like a structured business card only AI and search engines can read. Organization schema specifically tells AI systems your business name, website URL, phone number, logo, and service area — in a format they can understand without guessing.",
   local_business_schema_missing: "LocalBusiness schema is invisible code in your website's <head> that tells AI systems you are a physical, location-based business. It includes your address, phone number, hours, and what type of business you are (restaurant, plumber, dentist, etc.). Without it, AI can't confidently connect your website to a specific location.",
@@ -901,9 +956,29 @@ export default function App() {
         setState({ loading: false, findings: [], error: "No active tab found", fromCache: false });
         return;
       }
+      if (!isInjectableUrl(tab.url)) {
+        setState({
+          loading: false,
+          findings: [],
+          error: "Open a regular http(s) page first — Surven can't audit chrome:// or extension pages.",
+          fromCache: false,
+        });
+        return;
+      }
+      // Don't audit while the page is still loading — DOM is incomplete and
+      // the cached findings would be stale for 24h.
+      if (tab.status && tab.status !== "complete") {
+        setState({
+          loading: false,
+          findings: [],
+          error: "Page is still loading. Wait for it to finish, then re-scan.",
+          fromCache: false,
+        });
+        return;
+      }
 
       setSiteUrl(tab.url);
-      const hostname = new URL(tab.url).hostname;
+      const hostname = safeHostname(tab.url);
       const cacheKey = `audit_${hostname}`;
 
       // Check cache
