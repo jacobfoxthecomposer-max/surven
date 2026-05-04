@@ -84,6 +84,8 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           <PageTransition key={pathname}>{children}</PageTransition>
         </main>
       </div>
+
+      <PostPurchaseIntegrationsModal />
     </div>
   );
 }
