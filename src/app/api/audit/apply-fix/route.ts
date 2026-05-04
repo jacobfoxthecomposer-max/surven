@@ -28,6 +28,7 @@ import {
   isHtmlFixSupportedForGithub,
 } from "@/features/crawlability/services/applyFix/githubHandler";
 import { writeAuditLog, ipFromRequest } from "@/services/auditLog";
+import { MANAGED_PLAN_CTA, PAID_PLANS } from "@/utils/managedPlanCta";
 
 export const maxDuration = 30;
 
