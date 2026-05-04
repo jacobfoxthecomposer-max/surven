@@ -956,10 +956,19 @@ export default function App() {
 
   useEffect(() => {
     chrome.storage.local.get("surven_settings", (data) => {
-      if (data.surven_settings) {
-        setSettings(data.surven_settings as Settings);
-        setDraftSettings(data.surven_settings as Settings);
+      if (!data.surven_settings) return;
+      const stored = data.surven_settings as Settings;
+      // Validate stored apiUrl. If it's malformed (older extension version,
+      // hand-edited storage), treat as no-settings and force re-entry.
+      const urlError = validateAuditUrl(stored.apiUrl ?? "");
+      if (urlError) {
+        setDraftSettings(stored);
+        setSettingsError(urlError);
+        // Leave settings null so the settings panel renders.
+        return;
       }
+      setSettings(stored);
+      setDraftSettings(stored);
     });
   }, []);
 
