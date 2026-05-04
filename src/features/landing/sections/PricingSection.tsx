@@ -66,6 +66,7 @@ const plans = [
 
 export function PricingSection() {
   const [isYearly, setIsYearly] = useState(false);
+  const { isFirstTime } = useIsFirstTimeUser();
 
   return (
     <section className="py-24 px-6">
