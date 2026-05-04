@@ -535,13 +535,13 @@ const ENGINES = [
 
 // ─── DATA HOOK ─────────────────────────────────────────────────────────────
 
-interface PromptResponse {
+export interface PromptResponse {
   engine: string;
   cited: boolean;
   excerpt: string;
 }
 
-interface PromptRow {
+export interface PromptRow {
   id: string;
   text: string;
   type: "branded" | "unbranded";
@@ -554,7 +554,7 @@ interface PromptRow {
   responses: PromptResponse[];
 }
 
-interface IntentCoverage {
+export interface IntentCoverage {
   intent: string;
   promptCount: number;
   coveragePct: number;
@@ -564,13 +564,13 @@ interface IntentCoverage {
   positiveSentimentPct: number; // % of mentions that read positive
 }
 
-interface CitationSource {
+export interface CitationSource {
   source: string;
   pct: number;
   count: number;
 }
 
-interface SentimentByType {
+export interface SentimentByType {
   type: string;
   positive: number;
   neutral: number;
@@ -578,7 +578,7 @@ interface SentimentByType {
   total: number;
 }
 
-type InsightIconKey =
+export type InsightIconKey =
   | "crown"
   | "trend-up"
   | "check"
@@ -586,14 +586,14 @@ type InsightIconKey =
   | "trend-down"
   | "alert";
 
-interface InsightItemData {
+export interface InsightItemData {
   iconKey: InsightIconKey;
   title: string;
   description: string;
   cta: { label: string; href: string };
 }
 
-interface PromptsData {
+export interface PromptsData {
   trendWord: string;
   trendDirection: "up" | "down" | "flat";
 
@@ -4494,8 +4494,9 @@ function applyFilters(
 
 // ─── MAIN EXPORT ───────────────────────────────────────────────────────────
 
-export function PromptsSection() {
-  const baseData = usePromptsData();
+export function PromptsSection({ data: dataOverride }: { data?: PromptsData } = {}) {
+  const fallbackData = usePromptsData();
+  const baseData = dataOverride ?? fallbackData;
   const [range, setRange] = useState<Range>("90d");
   const [enabledEngines, setEnabledEngines] = useState<Set<string>>(
     new Set(ENGINES.map((e) => e.id)),
