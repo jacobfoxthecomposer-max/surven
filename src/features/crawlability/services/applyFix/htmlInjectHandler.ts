@@ -260,10 +260,6 @@ async function applyNextJsInject(
       commitSubject = "fix(seo): update title in Next.js metadata";
       break;
     }
-    case "alt_text": {
-      // Handled above before layout fetch.
-      return { ok: false, error: "alt_text dispatch reached layout switch — should be impossible" };
-    }
   }
 
   if (updatedContent === layout.content) {
@@ -482,5 +478,84 @@ export async function applyHtmlInject(options: HtmlInjectOptions): Promise<HtmlI
     committedSha,
     commitUrl,
     filePath: file.path,
+  };
+}
+
+/**
+ * Edit `<Image>` / `<img>` JSX tags across page.tsx / component.tsx files in
+ * a Next.js repo. Uses the GitHub Git Data API for atomic multi-file commit.
+ */
+async function applyNextJsAltText(
+  repo: string,
+  branch: string,
+  token: string,
+  payload: Extract<HtmlInjectPayload, { kind: "alt_text" }>,
+  findingId: string,
+  findingTitle: string,
+): Promise<HtmlInjectResult> {
+  if (payload.replacements.length === 0) {
+    return { ok: false, error: "No alt text replacements provided" };
+  }
+
+  const client = new GithubClient(token, repo);
+
+  let fileTree: Set<string>;
+  try {
+    fileTree = await client.getFileTree(branch);
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Couldn't read repo tree",
+    };
+  }
+
+  const candidatePaths = pickJsxFilesFromTree(fileTree);
+  if (candidatePaths.length === 0) {
+    return {
+      ok: false,
+      manualNote:
+        "No .tsx/.jsx files found under src/app, app, or src/components. Update each Image's alt prop manually.",
+    };
+  }
+
+  // Read all candidate files in parallel.
+  const fileContents = new Map<string, string>();
+  await Promise.all(
+    candidatePaths.map(async (path) => {
+      const file = await client.getFile(path, branch).catch(() => null);
+      if (file?.content) fileContents.set(path, file.content);
+    }),
+  );
+
+  const { edits, unmatched } = applyAltReplacements(fileContents, payload.replacements);
+
+  if (edits.size === 0) {
+    return {
+      ok: false,
+      error: `Couldn't find any <Image> or <img> tags matching the ${payload.replacements.length} image source(s) we generated alt text for.`,
+      manualNote:
+        "Surven scanned your tsx/jsx files but couldn't auto-match these images. Update each <Image> component's alt prop manually.",
+    };
+  }
+
+  const filesToCommit = Array.from(edits.entries()).map(([path, content]) => ({ path, content }));
+  const commitMessage = `fix(a11y): update alt text on ${edits.size} file(s)\n\nApplied via Surven Optimizer (finding: ${findingId} — ${findingTitle}, ${payload.replacements.length - unmatched.length} of ${payload.replacements.length} images matched)`;
+
+  let commitSha: string;
+  try {
+    ({ commitSha } = await client.commitBatch(filesToCommit, branch, commitMessage));
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Batch commit failed",
+    };
+  }
+
+  const matchedCount = payload.replacements.length - unmatched.length;
+  return {
+    ok: true,
+    committedSha: commitSha,
+    commitUrl: `https://github.com/${repo}/commit/${commitSha}`,
+    filePath: `${matchedCount} of ${payload.replacements.length} image(s) across ${edits.size} file(s)`,
   };
 }
