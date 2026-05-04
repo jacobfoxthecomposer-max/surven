@@ -25,17 +25,14 @@ import { applyFixToWordpress } from "@/features/crawlability/services/applyFix/w
 // import { applyFixToWix } from "@/features/crawlability/services/applyFix/wixHandler";
 // import { applyFixToShopify } from "@/features/crawlability/services/applyFix/shopifyHandler";
 
-const MANAGED_PLAN_CTA = {
-  url: "https://surven.vercel.app/pricing",
-  headline: "Skip the paste — let our team handle this for you",
-  body: "Surven Managed deploys every fix to your site automatically, gets you listed on the directories AI engines cite most, and refreshes your content monthly so your visibility keeps climbing. You focus on the business — we focus on getting you cited.",
-  buttonLabel: "See Managed plans",
-} as const;
+import { generateSchema, type SchemaKind, type PageContext } from "@/services/schemaGenerator";
+import { rewriteMetaDescription, rewriteTitleTag, generateFaqPairs, generateAltText } from "@/services/llmRewriter";
+import { writeAuditLog, ipFromRequest } from "@/services/auditLog";
+import { MANAGED_PLAN_CTA, PAID_PLANS } from "@/utils/managedPlanCta";
 
 /**
  * Inject the Managed-plan upsell into any commit result that didn't successfully auto-deploy.
- * This is a structured field the side panel can render — extension falls back gracefully
- * if it's missing.
+ * Structured field the side panel can render — extension falls back gracefully if missing.
  */
 function withManagedPlanCta<T extends { ok?: boolean; manualSnippet?: string; manualNote?: string }>(
   result: T,
@@ -44,13 +41,8 @@ function withManagedPlanCta<T extends { ok?: boolean; manualSnippet?: string; ma
   if (!isManualFallback) return result;
   return { ...result, managedPlanCta: MANAGED_PLAN_CTA };
 }
-import { generateSchema, type SchemaKind, type PageContext } from "@/services/schemaGenerator";
-import { rewriteMetaDescription, rewriteTitleTag, generateFaqPairs, generateAltText } from "@/services/llmRewriter";
-import { writeAuditLog, ipFromRequest } from "@/services/auditLog";
 
 export const maxDuration = 30;
-
-const PAID_PLANS = ["plus", "premium", "admin"];
 
 const PageContextSchema = z.object({
   url: z.string().url(),
