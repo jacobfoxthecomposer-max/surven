@@ -7,6 +7,7 @@ import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Spinner } from "@/components/atoms/Spinner";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { NextScanCard } from "@/components/atoms/NextScanCard";
+import { CustomDatePopover } from "@/components/atoms/CustomDatePopover";
 import { Calendar, AlertTriangle, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -27,8 +28,9 @@ import { SURVEN_SEMANTIC } from "@/utils/brandColors";
 import { AI_MODELS } from "@/utils/constants";
 import type { ModelName } from "@/types/database";
 
-type TimeRange = "14d" | "30d" | "90d" | "ytd" | "all";
-const TIME_RANGES: { key: TimeRange; label: string }[] = [
+import type { TimeRange } from "@/utils/timeRange";
+
+const TIME_RANGES: { key: Exclude<TimeRange, "custom">; label: string }[] = [
   { key: "14d", label: "14d" },
   { key: "30d", label: "30d" },
   { key: "90d", label: "90d" },
@@ -55,6 +57,9 @@ export default function SentimentPage() {
   const router = useRouter();
 
   const [timeRange, setTimeRange] = useState<TimeRange>("all");
+  const [customStart, setCustomStart] = useState<Date | null>(null);
+  const [customEnd, setCustomEnd] = useState<Date | null>(null);
+  const [customOpen, setCustomOpen] = useState(false);
   const [selectedModels, setSelectedModels] = useState<Set<string>>(
     () => new Set(AI_MODELS.map((m) => m.id))
   );
@@ -79,8 +84,13 @@ export default function SentimentPage() {
       const jan1 = new Date(now.getFullYear(), 0, 1).toISOString();
       return sentimentHistory.filter((d) => d.date >= jan1);
     }
+    if (timeRange === "custom" && customStart && customEnd) {
+      const startIso = customStart.toISOString();
+      const endIso = customEnd.toISOString();
+      return sentimentHistory.filter((d) => d.date >= startIso && d.date <= endIso);
+    }
     return sentimentHistory;
-  }, [timeRange, sentimentHistory]);
+  }, [timeRange, sentimentHistory, customStart, customEnd]);
 
   // Headline word + warning detection
   const { dominant, sentimentColor, sentimentWord, warning } = useMemo(() => {
@@ -213,14 +223,34 @@ export default function SentimentPage() {
             ))}
           </div>
 
-          <button
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 font-medium rounded-[var(--radius-md)] border transition-colors bg-[var(--color-surface)] text-[var(--color-fg-secondary)] border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]"
-            style={{ fontSize: 14 }}
-            title="Custom date range (coming soon)"
-          >
-            <Calendar className="h-4 w-4" />
-            Custom
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setCustomOpen((o) => !o)}
+              className={
+                "inline-flex items-center gap-1.5 px-3.5 py-2 font-medium rounded-[var(--radius-md)] border transition-colors " +
+                (timeRange === "custom"
+                  ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                  : "bg-[var(--color-surface)] text-[var(--color-fg-secondary)] border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]")
+              }
+              style={{ fontSize: 14 }}
+            >
+              <Calendar className="h-4 w-4" />
+              {timeRange === "custom" && customStart && customEnd
+                ? `${customStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${customEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                : "Custom"}
+            </button>
+            <CustomDatePopover
+              open={customOpen}
+              onClose={() => setCustomOpen(false)}
+              initialStart={customStart ?? new Date(Date.now() - 30 * 86400000)}
+              initialEnd={customEnd ?? new Date()}
+              onApply={(s, e) => {
+                setCustomStart(s);
+                setCustomEnd(e);
+                setTimeRange("custom");
+              }}
+            />
+          </div>
 
           <div className="h-4 w-px bg-[var(--color-border)]" />
 

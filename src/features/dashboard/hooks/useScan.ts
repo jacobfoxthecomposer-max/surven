@@ -6,9 +6,11 @@ import {
   getLatestScan,
   getScanHistory,
   createScanForBusiness,
+  getScansWithResultsInRange,
 } from "@/features/dashboard/services/scanService";
 import { useSearchPrompts } from "@/features/business/hooks/useSearchPrompts";
 import type { Business, Competitor, ScanWithResults, Scan } from "@/types/database";
+import { getRangeBounds, type TimeRange } from "@/utils/timeRange";
 
 export function useScan(business: Business | null, competitors: Competitor[]) {
   const { prompts } = useSearchPrompts(business?.id);
@@ -64,5 +66,34 @@ export function useScan(business: Business | null, competitors: Competitor[]) {
     scanError,
     isLoading: latestScanQuery.isLoading,
     runScan,
+  };
+}
+
+export function useRangedScans(
+  business: Business | null,
+  range: TimeRange,
+  customStart?: Date | null,
+  customEnd?: Date | null,
+) {
+  const bounds = getRangeBounds(range, customStart, customEnd);
+  const startKey = bounds.start?.toISOString() ?? null;
+  const endKey = bounds.end?.toISOString() ?? null;
+
+  const query = useQuery<ScanWithResults[]>({
+    queryKey: ["rangedScans", business?.id, range, startKey, endKey],
+    queryFn: () =>
+      business
+        ? getScansWithResultsInRange(business.id, bounds.start, bounds.end)
+        : Promise.resolve([]),
+    enabled: !!business,
+  });
+
+  const scans = query.data ?? [];
+  const aggregatedResults = scans.flatMap((s) => s.results);
+
+  return {
+    scans,
+    results: aggregatedResults,
+    isLoading: query.isLoading,
   };
 }

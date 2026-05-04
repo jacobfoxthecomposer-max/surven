@@ -69,6 +69,8 @@ export const COMPETITOR_PALETTE = [
   "#9B7EC8",
 ] as const;
 
+export const OTHER_INDUSTRY_OPTION = "Other (specify)";
+
 export const INDUSTRIES = [
   "Dentist",
   "Restaurant",
@@ -90,6 +92,8 @@ export const INDUSTRIES = [
   "Landscaper",
   "Personal Trainer",
   "Therapist",
+  "Ecommerce",
+  OTHER_INDUSTRY_OPTION,
 ] as const;
 
 export const US_STATES = [

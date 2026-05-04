@@ -1,6 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Spinner } from "@/components/atoms/Spinner";
@@ -54,6 +55,7 @@ function buildDashboardInsight(results: ScanResult[]): string | null {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const { business, competitors, isLoading: bizLoading } = useBusiness();
   const { latestScan, history, scanning, isLoading: scanLoading, runScan } = useScan(
@@ -61,6 +63,7 @@ export default function DashboardPage() {
     competitors
   );
   const { toast } = useToast();
+  const firstScanTriggered = useRef(false);
 
   function handleExport() {
     if (!latestScan || !business) return;
@@ -76,6 +79,25 @@ export default function DashboardPage() {
       toast(err instanceof Error ? err.message : "Scan failed. Please try again.", "error");
     }
   }
+
+  // Auto-run first scan after onboarding (?firstScan=1).
+  useEffect(() => {
+    if (firstScanTriggered.current) return;
+    if (searchParams?.get("firstScan") !== "1") return;
+    if (!business || scanning || scanLoading) return;
+    if (latestScan) {
+      router.replace("/dashboard");
+      return;
+    }
+    firstScanTriggered.current = true;
+    toast("Running your first scan — querying AI models...", "info");
+    runScan()
+      .then(() => toast("Scan complete!", "success"))
+      .catch((err) =>
+        toast(err instanceof Error ? err.message : "Scan failed.", "error"),
+      )
+      .finally(() => router.replace("/dashboard"));
+  }, [business, latestScan, scanning, scanLoading, searchParams, router, runScan, toast]);
 
   // Auth protection
   if (!user && !authLoading) {

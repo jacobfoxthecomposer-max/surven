@@ -21,9 +21,10 @@ import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { AIOverview } from "@/components/atoms/AIOverview";
 import { NextScanCard } from "@/components/atoms/NextScanCard";
+import { CustomDatePopover } from "@/components/atoms/CustomDatePopover";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
-import { useScan } from "@/features/dashboard/hooks/useScan";
+import { useScan, useRangedScans } from "@/features/dashboard/hooks/useScan";
 import { CitationGapSection } from "@/features/dashboard/pages/CitationGapSection";
 import { AuthorityBreakdown } from "@/features/citation-insights/AuthorityBreakdown";
 import { SourceCategoryBreakdown } from "@/features/citation-insights/SourceCategoryBreakdown";
@@ -35,9 +36,9 @@ import { CitationFooterDiagnostic } from "@/features/citation-insights/CitationF
 import { AI_MODELS } from "@/utils/constants";
 import { getAuthority } from "@/utils/citationAuthority";
 import { colorForValue, SURVEN_THRESHOLDS } from "@/utils/brandColors";
+import type { TimeRange } from "@/utils/timeRange";
 
-type TimeRange = "14d" | "30d" | "90d" | "ytd" | "all";
-const TIME_RANGES: { key: TimeRange; label: string }[] = [
+const TIME_RANGES: { key: Exclude<TimeRange, "custom">; label: string }[] = [
   { key: "14d", label: "14d" },
   { key: "30d", label: "30d" },
   { key: "90d", label: "90d" },
@@ -57,6 +58,9 @@ export default function CitationInsightsPage() {
   const router = useRouter();
 
   const [timeRange, setTimeRange] = useState<TimeRange>("all");
+  const [customStart, setCustomStart] = useState<Date | null>(null);
+  const [customEnd, setCustomEnd] = useState<Date | null>(null);
+  const [customOpen, setCustomOpen] = useState(false);
   const [selectedModels, setSelectedModels] = useState<Set<string>>(
     () => new Set(AI_MODELS.map((m) => m.id))
   );
@@ -64,6 +68,12 @@ export default function CitationInsightsPage() {
   const { user, loading: authLoading } = useAuth();
   const { business, competitors, isLoading: bizLoading } = useBusiness();
   const { latestScan, isLoading: scanLoading } = useScan(business, competitors);
+  const { results: rangedResults, isLoading: rangeLoading } = useRangedScans(
+    business,
+    timeRange,
+    customStart,
+    customEnd,
+  );
 
   const toggleModel = (id: string) => {
     setSelectedModels((prev) => {
@@ -78,7 +88,8 @@ export default function CitationInsightsPage() {
     });
   };
 
-  const allResults = latestScan?.results ?? [];
+  const allResults =
+    timeRange === "all" ? latestScan?.results ?? [] : rangedResults;
   const results = useMemo(
     () =>
       selectedModels.size === AI_MODELS.length
@@ -236,13 +247,34 @@ export default function CitationInsightsPage() {
                   ))}
                 </div>
 
-                <button
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 font-medium rounded-[var(--radius-md)] border transition-colors bg-[var(--color-surface)] text-[var(--color-fg-secondary)] border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]"
-                  style={{ fontSize: 14 }}
-                  title="Custom date range (coming soon)"
-                >
-                  <Calendar className="h-4 w-4" /> Custom
-                </button>
+                <div className="relative">
+                  <button
+                    onClick={() => setCustomOpen((o) => !o)}
+                    className={
+                      "inline-flex items-center gap-1.5 px-3.5 py-2 font-medium rounded-[var(--radius-md)] border transition-colors " +
+                      (timeRange === "custom"
+                        ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                        : "bg-[var(--color-surface)] text-[var(--color-fg-secondary)] border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]")
+                    }
+                    style={{ fontSize: 14 }}
+                  >
+                    <Calendar className="h-4 w-4" />
+                    {timeRange === "custom" && customStart && customEnd
+                      ? `${customStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${customEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                      : "Custom"}
+                  </button>
+                  <CustomDatePopover
+                    open={customOpen}
+                    onClose={() => setCustomOpen(false)}
+                    initialStart={customStart ?? new Date(Date.now() - 30 * 86400000)}
+                    initialEnd={customEnd ?? new Date()}
+                    onApply={(s, e) => {
+                      setCustomStart(s);
+                      setCustomEnd(e);
+                      setTimeRange("custom");
+                    }}
+                  />
+                </div>
 
                 <div className="h-4 w-px bg-[var(--color-border)]" />
 
@@ -298,7 +330,7 @@ export default function CitationInsightsPage() {
         </div>
 
         {/* Loading / empty / content */}
-        {scanLoading ? (
+        {scanLoading || rangeLoading ? (
           <div className="flex items-center justify-center min-h-[40vh]">
             <Spinner size="lg" />
           </div>
@@ -309,12 +341,25 @@ export default function CitationInsightsPage() {
             transition={{ duration: 0.5, delay: 0.2, ease }}
             className="text-center py-20"
           >
-            <p className="text-lg text-[var(--color-fg-secondary)]">
-              No scan data yet
-            </p>
-            <p className="text-sm text-[var(--color-fg-muted)] mt-2">
-              Run a scan from the Dashboard to see citation insights.
-            </p>
+            {latestScan ? (
+              <>
+                <p className="text-lg text-[var(--color-fg-secondary)]">
+                  No scans in this range
+                </p>
+                <p className="text-sm text-[var(--color-fg-muted)] mt-2">
+                  Try a wider range or switch back to All.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-lg text-[var(--color-fg-secondary)]">
+                  No scan data yet
+                </p>
+                <p className="text-sm text-[var(--color-fg-muted)] mt-2">
+                  Run a scan from the Dashboard to see citation insights.
+                </p>
+              </>
+            )}
           </motion.div>
         ) : (
           <>

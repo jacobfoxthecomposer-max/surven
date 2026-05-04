@@ -9,9 +9,11 @@ import { Spinner } from "@/components/atoms/Spinner";
 import { Card } from "@/components/atoms/Card";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { NextScanCard } from "@/components/atoms/NextScanCard";
+import { CustomDatePopover } from "@/components/atoms/CustomDatePopover";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
-import { useScan } from "@/features/dashboard/hooks/useScan";
+import { useScan, useRangedScans } from "@/features/dashboard/hooks/useScan";
+import type { TimeRange } from "@/utils/timeRange";
 import { CompetitorHero } from "@/features/competitor-comparison/CompetitorHero";
 import { EngineComparisonBars } from "@/features/competitor-comparison/EngineComparisonBars";
 import { DiagnosticBand } from "@/features/competitor-comparison/DiagnosticBand";
@@ -25,8 +27,7 @@ import { ExportModal } from "@/features/competitor-comparison/ExportModal";
 import { RecommendedCompetitorsCard } from "@/features/competitor-comparison/RecommendedCompetitorsCard";
 import { AI_MODELS } from "@/utils/constants";
 
-type TimeRange = "14d" | "30d" | "90d" | "ytd" | "all";
-const TIME_RANGES: { key: TimeRange; label: string }[] = [
+const TIME_RANGES: { key: Exclude<TimeRange, "custom">; label: string }[] = [
   { key: "14d", label: "14d" },
   { key: "30d", label: "30d" },
   { key: "90d", label: "90d" },
@@ -49,11 +50,21 @@ export default function CompetitorComparisonPage() {
   const { latestScan, isLoading: scanLoading } = useScan(business, competitors);
   const [exportOpen, setExportOpen] = useState(false);
   const [timeRange, setTimeRange] = useState<TimeRange>("all");
+  const [customStart, setCustomStart] = useState<Date | null>(null);
+  const [customEnd, setCustomEnd] = useState<Date | null>(null);
+  const [customOpen, setCustomOpen] = useState(false);
+  const { results: rangedResults, isLoading: rangeLoading } = useRangedScans(
+    business,
+    timeRange,
+    customStart,
+    customEnd,
+  );
   const [selectedModels, setSelectedModels] = useState<Set<string>>(
     () => new Set(AI_MODELS.map((m) => m.id)),
   );
 
-  const results = latestScan?.results ?? [];
+  const results =
+    timeRange === "all" ? latestScan?.results ?? [] : rangedResults;
   const score = latestScan?.visibility_score ?? 0;
   const competitorNames = useMemo(
     () => competitors.map((c) => c.name),
@@ -156,13 +167,34 @@ export default function CompetitorComparisonPage() {
                 ))}
               </div>
 
-              <button
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 font-medium rounded-[var(--radius-md)] border transition-colors bg-[var(--color-surface)] text-[var(--color-fg-secondary)] border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]"
-                style={{ fontSize: 14 }}
-                title="Custom date range (coming soon)"
-              >
-                <Calendar className="h-4 w-4" /> Custom
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setCustomOpen((o) => !o)}
+                  className={
+                    "inline-flex items-center gap-1.5 px-3.5 py-2 font-medium rounded-[var(--radius-md)] border transition-colors " +
+                    (timeRange === "custom"
+                      ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                      : "bg-[var(--color-surface)] text-[var(--color-fg-secondary)] border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]")
+                  }
+                  style={{ fontSize: 14 }}
+                >
+                  <Calendar className="h-4 w-4" />
+                  {timeRange === "custom" && customStart && customEnd
+                    ? `${customStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${customEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                    : "Custom"}
+                </button>
+                <CustomDatePopover
+                  open={customOpen}
+                  onClose={() => setCustomOpen(false)}
+                  initialStart={customStart ?? new Date(Date.now() - 30 * 86400000)}
+                  initialEnd={customEnd ?? new Date()}
+                  onApply={(s, e) => {
+                    setCustomStart(s);
+                    setCustomEnd(e);
+                    setTimeRange("custom");
+                  }}
+                />
+              </div>
 
               <div className="h-4 w-px bg-[var(--color-border)]" />
 
@@ -319,25 +351,38 @@ export default function CompetitorComparisonPage() {
           </motion.div>
         )}
 
-        {competitorNames.length > 0 && results.length === 0 && !scanLoading && (
+        {competitorNames.length > 0 && results.length === 0 && !scanLoading && !rangeLoading && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
             <Card className="text-center py-16 space-y-2">
-              <p className="text-[var(--color-fg-secondary)] font-medium">
-                No scan data yet
-              </p>
-              <p className="text-sm text-[var(--color-fg-muted)]">
-                Run a scan from the Dashboard — competitor data will appear
-                here automatically.
-              </p>
+              {latestScan ? (
+                <>
+                  <p className="text-[var(--color-fg-secondary)] font-medium">
+                    No scans in this range
+                  </p>
+                  <p className="text-sm text-[var(--color-fg-muted)]">
+                    Try a wider range or switch back to All.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-[var(--color-fg-secondary)] font-medium">
+                    No scan data yet
+                  </p>
+                  <p className="text-sm text-[var(--color-fg-muted)]">
+                    Run a scan from the Dashboard — competitor data will appear
+                    here automatically.
+                  </p>
+                </>
+              )}
             </Card>
           </motion.div>
         )}
 
-        {scanLoading && (
+        {(scanLoading || rangeLoading) && (
           <div className="flex items-center justify-center py-16">
             <Spinner size="lg" />
           </div>

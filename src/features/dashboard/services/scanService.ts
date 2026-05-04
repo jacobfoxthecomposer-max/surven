@@ -111,3 +111,39 @@ export async function getScanResults(scanId: string): Promise<ScanResult[]> {
   if (error) throw error;
   return data ?? [];
 }
+
+export async function getScansWithResultsInRange(
+  businessId: string,
+  start: Date | null,
+  end: Date | null,
+): Promise<ScanWithResults[]> {
+  let query = supabase
+    .from("scans")
+    .select("*")
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: false });
+
+  if (start) query = query.gte("created_at", start.toISOString());
+  if (end) query = query.lte("created_at", end.toISOString());
+
+  const { data: scans, error } = await query;
+  if (error) throw error;
+  if (!scans || scans.length === 0) return [];
+
+  const scanIds = scans.map((s) => s.id);
+  const { data: results, error: resultsError } = await supabase
+    .from("scan_results")
+    .select("*")
+    .in("scan_id", scanIds);
+
+  if (resultsError) throw resultsError;
+
+  const resultsByScan = new Map<string, ScanResult[]>();
+  for (const r of results ?? []) {
+    const existing = resultsByScan.get(r.scan_id);
+    if (existing) existing.push(r);
+    else resultsByScan.set(r.scan_id, [r]);
+  }
+
+  return scans.map((s) => ({ ...s, results: resultsByScan.get(s.id) ?? [] }));
+}
