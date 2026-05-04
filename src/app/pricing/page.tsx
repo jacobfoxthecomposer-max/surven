@@ -9,6 +9,8 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://surven.vercel.app/pricing",
   },
+
+  openGraph: { url: "https://surven.vercel.app/pricing", type: "website" },
 };
 const plans = [
   {

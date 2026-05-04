@@ -14,6 +14,8 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://surven.vercel.app/",
   },
+
+  openGraph: { url: "https://surven.vercel.app/", type: "website" },
 };
 export default function LandingPage() {
   return (

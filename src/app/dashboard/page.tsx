@@ -29,6 +29,8 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://surven.vercel.app/dashboard",
   },
+
+  openGraph: { url: "https://surven.vercel.app/dashboard", type: "website" },
 };
 const MODEL_LABELS: Record<ScanResult["model_name"], string> = {
   chatgpt: "ChatGPT",

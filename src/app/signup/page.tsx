@@ -18,6 +18,8 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://surven.vercel.app/signup",
   },
+
+  openGraph: { url: "https://surven.vercel.app/signup", type: "website" },
 };
 export default function SignUpPage() {
   const router = useRouter();
