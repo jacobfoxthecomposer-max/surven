@@ -11,6 +11,7 @@ import { BusinessSwitcher } from "@/components/organisms/BusinessSwitcher";
 import { Sidebar } from "@/components/organisms/Sidebar";
 import { SurvenLogo } from "@/components/atoms/SurvenLogo";
 import { useSidebarContext } from "@/features/sidebar/context/SidebarContext";
+import { PostPurchaseIntegrationsModal } from "@/features/onboarding/PostPurchaseIntegrationsModal";
 import { cn } from "@/utils/cn";
 
 const navItems = [
