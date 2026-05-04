@@ -401,6 +401,11 @@ export default function PromptResearchPage() {
               />
             </motion.div>
 
+            {/* Custom prompts (Premium-gated) */}
+            <motion.div {...reveal}>
+              <CustomPromptsSection businessId={business.id} />
+            </motion.div>
+
             {/* How to rank — playbook bottom section */}
             <motion.div {...reveal}>
               <HowToRank />
