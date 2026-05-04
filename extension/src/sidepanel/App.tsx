@@ -106,6 +106,26 @@ function getGenerateUrl(auditUrl: string): string {
 }
 
 /**
+ * Maps the backend's `platform` field on a successful fix response to the
+ * link label shown on the success card. Defaults to GitHub since that's
+ * where most auto-deploys land. WordPress success returns the post edit URL,
+ * not a commit URL — labelling it "View commit on GitHub" was misleading.
+ */
+function commitLinkLabel(platform?: string): string {
+  switch (platform) {
+    case "wordpress":
+      return "View in WordPress admin";
+    case "wix":
+      return "View in Wix Dashboard";
+    case "shopify":
+      return "View in Shopify admin";
+    case "github":
+    default:
+      return "View commit on GitHub";
+  }
+}
+
+/**
  * Validates that the configured audit URL is well-formed and ends with the
  * expected /api/audit/run path. Returns null if valid, or an error message.
  */
