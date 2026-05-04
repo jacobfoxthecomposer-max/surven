@@ -52,7 +52,7 @@ export function ComparisonSection({
               <BarChart3 className="h-4 w-4 text-[#566A47]" />
             </div>
             <h3 className="text-sm font-semibold text-[var(--color-fg)]">Visibility Score by Platform</h3>
-            <HoverHint hint="Your AI visibility score compared to each competitor across all platforms.">
+            <HoverHint hint="Your AI visibility score next to each competitor's. Aim to lead the field — being mentioned more often than rivals signals authority to AI engines.">
               <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
             </HoverHint>
           </div>
