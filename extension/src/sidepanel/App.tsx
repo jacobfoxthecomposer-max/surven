@@ -467,6 +467,7 @@ export default function App() {
         error?: string;
         message?: string;
         connectUrl?: string;
+        platform?: string;
       } = {};
       if (rawText) {
         try {
