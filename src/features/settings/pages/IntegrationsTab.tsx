@@ -76,7 +76,7 @@ export function IntegrationsTab() {
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium text-sm shadow-md transition-colors"
               >
                 <Crown className="h-4 w-4" />
-                Upgrade to Premium
+                {isFirstTime ? "Try Free Trial" : "Upgrade to Premium"}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
