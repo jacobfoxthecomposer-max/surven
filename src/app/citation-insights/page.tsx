@@ -395,7 +395,7 @@ export default function CitationInsightsPage() {
                             <p className="text-xs text-[var(--color-fg-muted)]">
                               Unique Sources
                             </p>
-                            <HoverHint hint="Number of distinct domains AI models cited about your business.">
+                            <HoverHint hint="How many different sources AI engines pulled from when describing you. More variety means broader trust — under 5 sources signals a thin authority footprint.">
                               <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
                             </HoverHint>
                           </div>
