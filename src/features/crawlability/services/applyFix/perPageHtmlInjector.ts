@@ -283,7 +283,9 @@ export async function injectPerPageIntoNextJs(
   type Plan = { req: NextJsPageInjectionRequest; resolvedPath: string };
   const plans: Plan[] = [];
   for (const req of requests) {
-    const { candidates } = urlToPageCandidates(req.url);
+    const candidates = req.useRootLayout
+      ? rootLayoutCandidates()
+      : urlToPageCandidates(req.url).candidates;
     if (candidates.length === 0) {
       result.failed.push({ url: req.url, reason: "Couldn't parse URL" });
       continue;
@@ -292,7 +294,9 @@ export async function injectPerPageIntoNextJs(
     if (!found) {
       result.failed.push({
         url: req.url,
-        reason: `No page.tsx found for this route. Tried: ${candidates.slice(0, 4).join(", ")}`,
+        reason: req.useRootLayout
+          ? `No root layout.tsx found. Tried: ${candidates.slice(0, 4).join(", ")}`
+          : `No page.tsx found for this route. Tried: ${candidates.slice(0, 4).join(", ")}`,
       });
       continue;
     }
