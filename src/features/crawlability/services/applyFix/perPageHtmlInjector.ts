@@ -50,6 +50,7 @@ export interface PageInjectionRequest {
 
 export async function injectPerPageIntoHtml(
   client: GitHubClient,
+  repo: string,
   branch: string,
   requests: PageInjectionRequest[],
   commitMessage: string,
