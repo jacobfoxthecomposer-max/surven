@@ -1379,6 +1379,62 @@ export default function App() {
                               </div>
                             );
                           }
+                          if (fixState.status === "success-per-page") {
+                            const r = fixState.perPageResult;
+                            const allSucceeded = r.failed.length === 0 && r.skipped.length === 0;
+                            return (
+                              <div
+                                style={{
+                                  padding: "10px",
+                                  background: allSucceeded ? "#F0FDF4" : "#FEF3C7",
+                                  border: `1px solid ${allSucceeded ? "#96A283" : "#C97B45"}`,
+                                  borderRadius: "4px",
+                                  fontSize: "12px",
+                                  color: "#3D3F3D",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "6px" }}>
+                                  <CheckCircle2 size={14} style={{ color: allSucceeded ? "#96A283" : "#C97B45" }} />
+                                  {r.succeeded.length} of {r.total} page(s) updated
+                                </div>
+                                {r.skipped.length > 0 && (
+                                  <details style={{ marginBottom: "6px", fontSize: "11px" }}>
+                                    <summary style={{ cursor: "pointer", color: "#7C5800", fontWeight: 500 }}>{r.skipped.length} skipped</summary>
+                                    <ul style={{ margin: "4px 0 0 18px", padding: 0, color: "#666" }}>
+                                      {r.skipped.map((s, i) => (
+                                        <li key={i} style={{ marginBottom: "2px" }}>
+                                          <code style={{ background: "#EDE8DC", padding: "1px 3px", borderRadius: "2px", fontSize: "10px" }}>{new URL(s.url).pathname}</code>: {s.reason}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </details>
+                                )}
+                                {r.failed.length > 0 && (
+                                  <details style={{ marginBottom: "6px", fontSize: "11px" }}>
+                                    <summary style={{ cursor: "pointer", color: "#B54631", fontWeight: 500 }}>{r.failed.length} couldn&apos;t be updated</summary>
+                                    <ul style={{ margin: "4px 0 0 18px", padding: 0, color: "#666" }}>
+                                      {r.failed.map((f, i) => (
+                                        <li key={i} style={{ marginBottom: "2px" }}>
+                                          <code style={{ background: "#EDE8DC", padding: "1px 3px", borderRadius: "2px", fontSize: "10px" }}>{new URL(f.url).pathname}</code>: {f.reason}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </details>
+                                )}
+                                {fixState.commitUrl && (
+                                  <a
+                                    href={fixState.commitUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#96A283", textDecoration: "none", fontSize: "11px" }}
+                                  >
+                                    View commit on GitHub <ExternalLink size={11} />
+                                  </a>
+                                )}
+                                <ManagedPlanCard cta={fixState.managedPlanCta} />
+                              </div>
+                            );
+                          }
                           if (fixState.status === "ambiguous") {
                             return (
                               <div style={{ padding: "12px", background: "#FEF3C7", border: "1px solid #C97B45", borderRadius: "6px", fontSize: "12px", color: "#3D3F3D" }}>
