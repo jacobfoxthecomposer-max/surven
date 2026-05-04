@@ -146,7 +146,7 @@ function StatsBlock({ stats }: { stats: VisibilityStats }) {
           color={ACCENTS.orange}
           icon={TargetIcon}
           label={`#${stats.avgRank.toFixed(1)} rank`}
-          hint="Your average rank among tracked brands."
+          hint="Your average rank among tracked brands when AI mentions someone. Lower is better — rank 1 means you're cited first."
         />
         <Chip
           color={ACCENTS.sage}
