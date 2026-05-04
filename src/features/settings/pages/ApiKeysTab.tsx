@@ -107,7 +107,9 @@ export function ApiKeysTab() {
         <div>
           <h2 className="text-lg font-semibold mb-2">Chrome Extension API Key</h2>
           <p className="text-[var(--color-fg-secondary)]">
-            Upgrade to premium to use the Surven Chrome Extension and generate API keys.
+            {isFirstTime
+              ? "Try the free trial to use the Surven Chrome Extension and generate API keys."
+              : "Upgrade to premium to use the Surven Chrome Extension and generate API keys."}
           </p>
         </div>
 
@@ -117,9 +119,12 @@ export function ApiKeysTab() {
           </p>
         </div>
 
-        <button className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 transition-opacity">
-          Upgrade to Premium
-        </button>
+        <Link
+          href="/pricing"
+          className="inline-block px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 transition-opacity"
+        >
+          {isFirstTime ? "Try Free Trial" : "Upgrade to Premium"}
+        </Link>
       </div>
     );
   }
