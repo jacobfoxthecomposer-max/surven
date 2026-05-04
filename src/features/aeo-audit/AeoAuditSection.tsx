@@ -1112,7 +1112,7 @@ function PriorityFixCards({ checks }: { checks: CheckResult[] }) {
             <Sparkles className="h-4.5 w-4.5" style={{ color: COLORS.primary, height: 18, width: 18 }} />
           </div>
           <SectionHeading text="Fix these first" />
-          <HoverHint hint="Highest-impact non-passing checks across all pillars, ranked by points recoverable. Use the arrows to page through.">
+          <HoverHint hint="Top fixes ranked by score points you'd reclaim. Tackle these first — each one adds the most to your AI-readiness score. Use the arrows to scroll.">
             <Info
               className="h-3.5 w-3.5 text-[var(--color-fg-muted)] hover:text-[var(--color-fg-secondary)] cursor-help transition-colors"
               aria-label="What this card shows"
