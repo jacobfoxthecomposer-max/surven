@@ -1846,7 +1846,7 @@ function StatStrip({ data }: { data: PromptsData }) {
       <StatCard
         icon={ListChecks}
         label="Prompts Tracked"
-        hint="Total prompts Surven is actively monitoring across all AI engines."
+        hint="Total prompts Surven runs against every AI engine on your behalf. More tracked prompts = wider visibility coverage. 50+ is healthy for a single brand."
         value={data.promptsTracked.toString()}
         centerStat={{
           value: data.promptsLanding,
