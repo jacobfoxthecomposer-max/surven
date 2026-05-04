@@ -960,7 +960,7 @@ export default function App() {
       });
 
       const rawText = await res.text();
-      let data: { ok?: boolean; commitUrl?: string; filePath?: string; manualNote?: string; error?: string; message?: string; connectUrl?: string } = {};
+      let data: { ok?: boolean; commitUrl?: string; filePath?: string; manualNote?: string; error?: string; message?: string; connectUrl?: string; platform?: string } = {};
       try { data = rawText ? JSON.parse(rawText) : {}; } catch {
         setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: `Server returned an unparseable response (status ${res.status}).` } }));
         return;
