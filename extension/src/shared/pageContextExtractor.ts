@@ -564,10 +564,13 @@ function extractFaqItems(): ExtractedPageContext["faqItems"] {
     const summary = det.querySelector("summary");
     if (!summary) continue;
     const q = (summary as HTMLElement).innerText.trim();
-    const summaryClone = summary.cloneNode(true);
-    summary.remove();
-    const a = (det as HTMLElement).innerText.trim();
-    summary.appendChild(summaryClone);
+    // Clone the entire <details> to a detached DocumentFragment so we can
+    // safely strip the summary and read just the answer body. Mutating the
+    // live DOM here would damage the user's page.
+    const detClone = det.cloneNode(true) as HTMLDetailsElement;
+    const clonedSummary = detClone.querySelector("summary");
+    if (clonedSummary) clonedSummary.remove();
+    const a = (detClone as HTMLElement).innerText.trim();
     if (q && a && q.length < 200 && a.length > 10) items.push({ question: q, answer: a });
   }
 
@@ -797,10 +800,11 @@ function findValueInTypedNode(node: unknown, path: string[], allowedTypes: Set<s
     const v = findValueInTypedNode(obj["@graph"], path, allowedTypes);
     if (v !== undefined) return v;
   }
-  if (obj["mainEntity"]) {
-    const v = findValueInTypedNode(obj["mainEntity"], path, allowedTypes);
-    if (v !== undefined) return v;
-  }
+  // We deliberately do NOT recurse into `mainEntity`. On dashboard / directory
+  // pages, mainEntity often points to a featured third-party business, and
+  // following it would return that business's name when the caller asked for
+  // the host site's. JSON-LD that wants to expose a typed entity should
+  // declare it at top level or inside @graph.
 
   return undefined;
 }
