@@ -45,6 +45,25 @@ export class GithubClient {
     return res.json() as Promise<T>;
   }
 
+  /**
+   * Get the full recursive file tree of a branch. Returns a Set of all file paths.
+   * Makes a single API call instead of N file probes.
+   */
+  async getFileTree(branch: string): Promise<Set<string>> {
+    const branchSha = await this.getBranchSha(branch);
+    const data = await this.ghFetch<{
+      tree?: Array<{ path?: string; type?: string }>;
+      truncated?: boolean;
+    }>(`/repos/${this.repo}/git/trees/${branchSha}?recursive=1`);
+    const paths = new Set<string>();
+    for (const node of data.tree ?? []) {
+      if (node.type === "blob" && typeof node.path === "string") {
+        paths.add(node.path);
+      }
+    }
+    return paths;
+  }
+
   async getDefaultBranch(): Promise<string> {
     const data = await this.ghFetch<{ default_branch: string }>(`/repos/${this.repo}`);
     return data.default_branch;
