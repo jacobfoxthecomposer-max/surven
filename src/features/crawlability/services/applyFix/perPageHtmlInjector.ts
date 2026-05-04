@@ -54,6 +54,8 @@ export async function injectPerPageIntoHtml(
   branch: string,
   requests: PageInjectionRequest[],
   commitMessage: string,
+  /** Optional pre-fetched file tree to avoid a redundant API call. */
+  fileTreeIn?: Set<string>,
 ): Promise<PerPageInjectResult> {
   const result: PerPageInjectResult = {
     total: requests.length,
@@ -65,7 +67,7 @@ export async function injectPerPageIntoHtml(
   // Pull the entire file tree in a single API call. Beats N×4 probes per URL.
   let fileTree: Set<string>;
   try {
-    fileTree = await client.getFileTree(branch);
+    fileTree = fileTreeIn ?? (await client.getFileTree(branch));
   } catch (err) {
     const reason = err instanceof Error ? err.message : "Couldn't read repo tree";
     for (const r of requests) result.failed.push({ url: r.url, reason });
