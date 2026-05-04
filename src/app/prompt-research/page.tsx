@@ -14,6 +14,7 @@ import { AIOverview } from "@/components/atoms/AIOverview";
 import { NextScanCard } from "@/components/atoms/NextScanCard";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
+import { useScan } from "@/features/dashboard/hooks/useScan";
 import { generatePromptResearchData } from "@/features/prompt-research/mockData";
 import { EntityGrid } from "@/features/prompt-research/EntityGrid";
 import { TaxonomyCoverage } from "@/features/prompt-research/TaxonomyCoverage";
@@ -47,6 +48,7 @@ export default function PromptResearchPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { business, competitors, isLoading: bizLoading } = useBusiness();
+  const { latestScan } = useScan(business, competitors);
 
   const [timeRange, setTimeRange] = useState<TimeRange>("all");
   const [selectedModels, setSelectedModels] = useState<Set<string>>(
@@ -69,14 +71,15 @@ export default function PromptResearchPage() {
 
   const data = useMemo(() => {
     if (!business) return null;
+    const seedKey = `${business.id}-${latestScan?.id ?? "noscan"}`;
     return generatePromptResearchData(
-      business.id,
+      seedKey,
       business.name,
       business.industry,
       business.city,
       competitors
     );
-  }, [business, competitors]);
+  }, [business, competitors, latestScan?.id]);
 
   const insights = useMemo(() => {
     if (!data) return null;
