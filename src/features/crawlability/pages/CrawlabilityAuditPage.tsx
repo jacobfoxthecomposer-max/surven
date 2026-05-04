@@ -280,7 +280,7 @@ export function CrawlabilityAuditPage({
                 className="inline-flex items-center gap-2 px-5 py-3 rounded-[var(--radius-md)] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium text-sm shadow-md transition-colors"
               >
                 <Crown className="h-4 w-4" />
-                Upgrade to Plus
+                {isFirstTime ? "Try Free Trial" : "Upgrade to Plus"}
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <p className="text-xs text-[var(--color-fg-muted)]">
