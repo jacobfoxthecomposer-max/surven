@@ -27,6 +27,7 @@ const futureIntegrations = [
 export function IntegrationsTab() {
   const { business, isLoading: bizLoading } = useBusiness();
   const { plan, isLoading: profileLoading } = useUserProfile();
+  const { isFirstTime } = useIsFirstTimeUser();
   const { connections, loading, connect, disconnect } = useSiteConnections(business?.id);
 
   const isPremium = plan === "premium" || plan === "admin";
