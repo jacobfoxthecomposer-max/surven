@@ -252,6 +252,8 @@ function findHeadCloseIndex(html: string): number {
 export interface NextJsPageInjectionRequest {
   url: string;
   field: MetadataField;
+  /** If true, target src/app/layout.tsx (root layout) instead of the URL's page.tsx. Used for site-wide fixes. */
+  useRootLayout?: boolean;
 }
 
 export async function injectPerPageIntoNextJs(
