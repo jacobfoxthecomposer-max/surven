@@ -369,7 +369,7 @@ const SCHEMA_INSTRUCTIONS: Record<CmsPlatform, PlatformInstructions> = {
       "Use dangerouslySetInnerHTML={{ __html: JSON.stringify({...}) }}",
       "Commit and push",
     ],
-    note: "Sprint 1.5 will auto-commit this for you.",
+    note: "Surven can auto-commit this for you when your repo is connected — check Settings → Integrations.",
   },
   static: {
     platformName: "your site",
