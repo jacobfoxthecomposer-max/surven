@@ -248,6 +248,7 @@ export default function App() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [draftSettings, setDraftSettings] = useState<Settings>({ apiUrl: "", apiKey: "" });
+  const [settingsError, setSettingsError] = useState<string | null>(null);
   const [state, setState] = useState<AuditState>({ loading: false, findings: [], fromCache: false });
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [whatIsItId, setWhatIsItId] = useState<string | null>(null);
