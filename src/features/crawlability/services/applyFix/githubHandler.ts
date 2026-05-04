@@ -278,7 +278,7 @@ export async function applyHtmlFixToGithub(opts: ApplyHtmlFixOptions): Promise<A
 
   const commitMessage = `fix(crawlability): ${opts.findingTitle}\n\nApplied via Surven Optimizer (finding: ${opts.findingId}, ${opts.affectedUrls.length} page(s))`;
 
-  const result = await injectPerPageIntoHtml(client, opts.repo, opts.branch, requests, commitMessage);
+  const result = await injectPerPageIntoHtml(client, opts.repo, opts.branch, requests, commitMessage, fileTree);
 
   // Even if some pages were skipped (already had canonical) or failed (no HTML file
   // found), we consider the operation successful as long as at least 1 page committed.
