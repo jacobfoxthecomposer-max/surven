@@ -23,7 +23,9 @@ import { createServerClient } from "@/services/supabaseServer";
 import { decryptCredentials } from "@/utils/credentialsEncryption";
 import {
   applyFixToGithub,
+  applyHtmlFixToGithub,
   isFixTypeSupportedForGithub,
+  isHtmlFixSupportedForGithub,
 } from "@/features/crawlability/services/applyFix/githubHandler";
 import { writeAuditLog, ipFromRequest } from "@/services/auditLog";
 
