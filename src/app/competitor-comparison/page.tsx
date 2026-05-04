@@ -216,6 +216,11 @@ export default function CompetitorComparisonPage() {
           </div>
         </div>
 
+        {/* Recommended competitors — shown whenever a scan exists */}
+        {results.length > 0 && (
+          <RecommendedCompetitorsCard businessId={business.id} />
+        )}
+
         {/* Divider line — sits between filter/action row and the data row below */}
         {hasResults && (
           <div className="border-t border-[var(--color-border)]" />
