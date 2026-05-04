@@ -395,6 +395,96 @@ export function IntentsTable({ intents, onSendToTracker }: IntentsTableProps) {
   );
 }
 
+const ENGINE_LABELS: Record<EngineId, string> = {
+  chatgpt: "ChatGPT",
+  claude: "Claude",
+  gemini: "Gemini",
+  google_ai: "Google AI",
+};
+
+const ENGINE_ORDER: EngineId[] = ["chatgpt", "claude", "gemini", "google_ai"];
+
+function coverageColor(pct: number): string {
+  if (pct >= 60) return "#7D8E6C";
+  if (pct >= 30) return "#B8A030";
+  return "#B54631";
+}
+
+function VariantList({ variants }: { variants: Variant[] }) {
+  if (variants.length === 0) {
+    return (
+      <p className="text-xs text-[var(--color-fg-muted)] italic">
+        No variants yet.
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      <p
+        className="uppercase tracking-wider font-semibold text-[var(--color-fg-muted)]"
+        style={{ fontSize: 10 }}
+      >
+        All variants ({variants.length})
+      </p>
+      <ul className="space-y-2">
+        {variants.map((v, idx) => (
+          <li
+            key={v.id}
+            className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] p-3"
+          >
+            <div className="flex items-start gap-2.5">
+              <span
+                className="shrink-0 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-surface-alt)] text-[var(--color-fg-muted)] font-semibold"
+                style={{ fontSize: 10 }}
+              >
+                {idx + 1}
+              </span>
+              <p
+                className="flex-1 text-[var(--color-fg)] leading-snug"
+                style={{ fontSize: 13 }}
+              >
+                {v.text}
+              </p>
+            </div>
+            <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2 pl-7">
+              {ENGINE_ORDER.map((engine) => {
+                const pct = Math.round(v.coverage[engine] ?? 0);
+                return (
+                  <div key={engine} className="space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className="text-[var(--color-fg-muted)]"
+                        style={{ fontSize: 10 }}
+                      >
+                        {ENGINE_LABELS[engine]}
+                      </span>
+                      <span
+                        className="font-medium"
+                        style={{ fontSize: 11, color: coverageColor(pct) }}
+                      >
+                        {pct}%
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-[var(--color-surface-alt)] overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${Math.min(100, Math.max(0, pct))}%`,
+                          backgroundColor: coverageColor(pct),
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function SortHeader({
   label,
   k,
