@@ -833,6 +833,7 @@ export default function App() {
         error?: string;
         message?: string;
         connectUrl?: string;
+        platform?: string;
       } = {};
       try { data = rawText ? JSON.parse(rawText) : {}; } catch {
         setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: `Server returned an unparseable response (status ${res.status}).` } }));
@@ -852,7 +853,7 @@ export default function App() {
         return;
       }
 
-      setFixStates((s) => ({ ...s, [finding.id]: { status: "success", commitUrl: data.commitUrl, filePath: data.filePath, snippet: data.snippet } }));
+      setFixStates((s) => ({ ...s, [finding.id]: { status: "success", commitUrl: data.commitUrl, filePath: data.filePath, snippet: data.snippet, platform: data.platform } }));
     } catch (err) {
       setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: err instanceof Error ? err.message : "Network error" } }));
     }
