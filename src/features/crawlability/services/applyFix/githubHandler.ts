@@ -185,18 +185,54 @@ export function isFixTypeSupportedForGithub(fixType: string | undefined): fixTyp
 }
 
 /**
- * Per-finding HTML fix support. Each entry maps a crawlability finding ID to a
- * per-URL injection plan. Currently only canonical_missing is wired; viewport
- * and OG tags can follow the same pattern.
+ * Per-finding HTML fix support. Each entry pairs a crawlability finding ID with:
+ *   - htmlBuilder: produces the snippet + idempotency marker for plain-HTML repos
+ *   - nextJsField: produces the metadata field path + value literal for Next.js repos
+ *
+ * Either or both may be present. Currently every wired finding supports both.
  */
-const HTML_FIX_BUILDERS: Record<
-  string,
-  (url: string) => { snippet: string; existingMarker: RegExp }
-> = {
-  canonical_missing: (url) => ({
-    snippet: `<link rel="canonical" href="${escapeHtmlAttr(url)}" />`,
-    existingMarker: /<link\s+[^>]*rel\s*=\s*["']canonical["'][^>]*>/i,
-  }),
+interface HtmlFixSpec {
+  htmlBuilder?: (url: string) => { snippet: string; existingMarker: RegExp };
+  nextJsField?: (url: string) => MetadataField;
+  /** If true, injects into root layout.tsx once (site-wide) instead of per-page. */
+  isSiteWide?: boolean;
+}
+
+const HTML_FIX_BUILDERS: Record<string, HtmlFixSpec> = {
+  canonical_missing: {
+    htmlBuilder: (url) => ({
+      snippet: `<link rel="canonical" href="${escapeHtmlAttr(url)}" />`,
+      existingMarker: /<link\s+[^>]*rel\s*=\s*["']canonical["'][^>]*>/i,
+    }),
+    nextJsField: (url) => ({
+      path: ["alternates", "canonical"],
+      valueLiteral: JSON.stringify(url),
+    }),
+  },
+  viewport_meta_missing: {
+    htmlBuilder: () => ({
+      snippet: `<meta name="viewport" content="width=device-width, initial-scale=1" />`,
+      existingMarker: /<meta\s+[^>]*name\s*=\s*["']viewport["'][^>]*>/i,
+    }),
+    nextJsField: () => ({
+      path: ["viewport"],
+      valueLiteral: `{ width: "device-width", initialScale: 1 }`,
+    }),
+    isSiteWide: true,
+  },
+  og_tags_missing: {
+    htmlBuilder: (url) => ({
+      // Inject minimal OG block. Per-page url + reasonable defaults.
+      // og:title and og:description fall back to page title / meta description if absent
+      // on the resulting page; this keeps the snippet concise.
+      snippet: `<meta property="og:url" content="${escapeHtmlAttr(url)}" />\n  <meta property="og:type" content="website" />`,
+      existingMarker: /<meta\s+[^>]*property\s*=\s*["']og:url["'][^>]*>/i,
+    }),
+    nextJsField: (url) => ({
+      path: ["openGraph"],
+      valueLiteral: `{ url: ${JSON.stringify(url)}, type: "website" }`,
+    }),
+  },
 };
 
 export function isHtmlFixSupportedForGithub(findingId: string): boolean {
