@@ -68,7 +68,7 @@ export function RecommendedCompetitorsCard({
               className="mt-3 inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-primary)] px-3.5 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)]"
             >
               <Sparkles className="h-3.5 w-3.5" />
-              Upgrade to unlock
+              {isFirstTime ? "Try Free Trial" : "Upgrade to unlock"}
             </a>
           </div>
         </div>
