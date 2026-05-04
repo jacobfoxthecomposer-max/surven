@@ -1095,6 +1095,17 @@ export default function App() {
       }
 
       if (!res.ok) {
+        // 401/403 → API key issue. Auto-open settings panel + clear message.
+        if (res.status === 401 || res.status === 403) {
+          setState({
+            loading: false,
+            findings: [],
+            error: "Your Surven API key was rejected — it may have expired or been revoked. Open Settings to paste a fresh key.",
+            fromCache: false,
+          });
+          setSettingsOpen(true);
+          return;
+        }
         const fallback =
           res.status === 504
             ? "Audit timed out. Try a smaller site or re-scan to retry."
