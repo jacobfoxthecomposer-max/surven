@@ -276,9 +276,8 @@ export function IntentsTable({ intents, onSendToTracker }: IntentsTableProps) {
                       ? "#B8A030"
                       : "#B54631";
                   return (
-                    <>
+                    <Fragment key={i.id}>
                       <tr
-                        key={i.id}
                         className={
                           "border-b border-[var(--color-border)] transition-colors " +
                           (isExpanded ? "bg-[var(--color-surface-alt)]/30 " : "") +
