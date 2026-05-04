@@ -2232,13 +2232,19 @@ export default function App() {
                                   This page looks like a dashboard or directory. AI-generated FAQs would describe the wrong business. Open the actual website you want to optimize.
                                 </div>
                                 {fixState.reasons.length > 0 && (
-                                  <details style={{ fontSize: "11px" }}>
+                                  <details style={{ fontSize: "11px", marginBottom: "8px" }}>
                                     <summary style={{ cursor: "pointer", color: "#666", fontWeight: 500 }}>Why we think so</summary>
                                     <ul style={{ margin: "4px 0 0 18px", padding: 0, color: "#666" }}>
                                       {fixState.reasons.map((r, i) => <li key={i} style={{ marginBottom: "2px" }}>{r}</li>)}
                                     </ul>
                                   </details>
                                 )}
+                                <button
+                                  onClick={() => setFixStates((s) => { const next = { ...s }; delete next[finding.id]; return next; })}
+                                  style={{ padding: "6px 10px", background: "transparent", border: "1px solid #C97B45", color: "#C97B45", borderRadius: "4px", fontSize: "11px", cursor: "pointer", fontWeight: 500 }}
+                                >
+                                  Dismiss
+                                </button>
                               </div>
                             );
                           }
