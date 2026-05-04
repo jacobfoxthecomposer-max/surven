@@ -13,8 +13,9 @@ import {
   ArrowDown,
   CheckCircle2,
   ListChecks,
+  ChevronRight,
 } from "lucide-react";
-import type { Intent, TaxonomyCategory } from "./types";
+import type { EngineId, Intent, TaxonomyCategory, Variant } from "./types";
 import {
   TAXONOMY_LABEL,
   TAXONOMY_COLOR,
