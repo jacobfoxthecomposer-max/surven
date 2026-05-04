@@ -207,12 +207,104 @@ export async function POST(request: NextRequest) {
     .select("id")
     .single();
 
-  // Apply via GitHub
+  // Per-page HTML branch (canonical_missing + future viewport/og)
+  if (isHtmlFix) {
+    const urls = affectedUrls && affectedUrls.length > 0 ? affectedUrls : [siteUrl];
+    const htmlResult = await applyHtmlFixToGithub({
+      token,
+      repo: connection.repo,
+      branch: connection.branch ?? "main",
+      findingId,
+      findingTitle,
+      affectedUrls: urls,
+    });
+
+    // Next.js detection or no-results case → manual fallback with managed-plan CTA.
+    if (!htmlResult.ok) {
+      if (pendingRow) {
+        await supabaseAdmin
+          .from("applied_fixes")
+          .update({
+            status: htmlResult.manualSnippet ? "skipped" : "failed",
+            error_message: htmlResult.error ?? htmlResult.manualNote ?? null,
+          })
+          .eq("id", pendingRow.id);
+      }
+      await writeAuditLog({
+        eventType: "fix_failed",
+        source: "api/audit/apply-fix",
+        severity: "error",
+        userId,
+        businessId: connection.business_id,
+        connectionId: connection.id,
+        payload: { findingId, fixType, error: htmlResult.error, manualNote: htmlResult.manualNote, source: "extension" },
+        ipAddress: ipFromRequest(request),
+      });
+      return NextResponse.json(
+        {
+          error: htmlResult.manualSnippet ? "manual_required" : "apply_failed",
+          message: htmlResult.error ?? "Could not apply fix",
+          manualSnippet: htmlResult.manualSnippet,
+          manualNote: htmlResult.manualNote,
+          perPageResult: htmlResult.perPageResult,
+          managedPlanCta: MANAGED_PLAN_CTA,
+        },
+        { status: htmlResult.manualSnippet ? 422 : 502 },
+      );
+    }
+
+    const perPage = htmlResult.perPageResult!;
+    const commitUrl = perPage.commitUrl;
+    const commitSha = perPage.commitSha;
+
+    if (pendingRow) {
+      await supabaseAdmin
+        .from("applied_fixes")
+        .update({
+          status: "applied",
+          committed_sha: commitSha ?? null,
+          commit_url: commitUrl ?? null,
+          file_path: `${perPage.succeeded.length} HTML file(s)`,
+        })
+        .eq("id", pendingRow.id);
+    }
+
+    await writeAuditLog({
+      eventType: "fix_applied",
+      source: "api/audit/apply-fix",
+      userId,
+      businessId: connection.business_id,
+      connectionId: connection.id,
+      payload: {
+        findingId,
+        fixType,
+        commitSha,
+        commitUrl,
+        succeeded: perPage.succeeded.length,
+        skipped: perPage.skipped.length,
+        failed: perPage.failed.length,
+        total: perPage.total,
+        source: "extension",
+      },
+      ipAddress: ipFromRequest(request),
+    });
+
+    return NextResponse.json({
+      ok: true,
+      committedSha: commitSha,
+      commitUrl,
+      perPageResult: perPage,
+      // Show CTA when not all pages were updated — partial successes are an upsell moment.
+      managedPlanCta: perPage.failed.length > 0 || perPage.skipped.length > 0 ? MANAGED_PLAN_CTA : undefined,
+    });
+  }
+
+  // Single-file branch (robots, sitemap, llms)
   const result = await applyFixToGithub({
     token,
     repo: connection.repo,
     branch: connection.branch ?? "main",
-    fixType,
+    fixType: fixType as "robots" | "sitemap" | "llms",
     content: fixCode,
     findingId,
     findingTitle,
@@ -236,7 +328,7 @@ export async function POST(request: NextRequest) {
       ipAddress: ipFromRequest(request),
     });
     return NextResponse.json(
-      { error: "apply_failed", message: result.error ?? "Could not apply fix" },
+      { error: "apply_failed", message: result.error ?? "Could not apply fix", managedPlanCta: MANAGED_PLAN_CTA },
       { status: 502 }
     );
   }
