@@ -258,15 +258,19 @@ export interface ApplyHtmlFixResult {
 }
 
 /**
- * Apply a per-page HTML fix (currently: canonical tag) across all affected pages.
- * Returns a structured result so the UI can show "X of N pages fixed".
+ * Apply an HTML-class fix across affected pages.
  *
- * Detects Next.js repos and bails to manual paste — Next.js per-page metadata
- * exports are a separate code path (not yet wired).
+ * Dispatches by framework:
+ *   - Plain HTML repos → injects per-page snippets into <head> via perPageHtmlInjector
+ *   - Next.js repos    → writes per-route metadata fields via perPageNextJsInjector
+ *
+ * For site-wide fixes (e.g. viewport_meta_missing), targets the homepage URL
+ * for HTML and the root layout.tsx for Next.js, regardless of how many
+ * affectedUrls were sent.
  */
 export async function applyHtmlFixToGithub(opts: ApplyHtmlFixOptions): Promise<ApplyHtmlFixResult> {
-  const builder = HTML_FIX_BUILDERS[opts.findingId];
-  if (!builder) {
+  const spec = HTML_FIX_BUILDERS[opts.findingId];
+  if (!spec) {
     return {
       ok: false,
       error: `No HTML fix builder for finding "${opts.findingId}".`,
@@ -282,7 +286,6 @@ export async function applyHtmlFixToGithub(opts: ApplyHtmlFixOptions): Promise<A
 
   const client = new GithubClient(opts.token, opts.repo);
 
-  // Single tree fetch — used for both Next.js detection and per-page resolution.
   let fileTree: Set<string>;
   try {
     fileTree = await client.getFileTree(opts.branch);
@@ -299,33 +302,71 @@ export async function applyHtmlFixToGithub(opts: ApplyHtmlFixOptions): Promise<A
     fileTree.has("next.config.ts") ||
     fileTree.has("next.config.cjs");
 
+  // Resolve which URLs to actually edit. Site-wide fixes collapse to one URL
+  // (the home origin) so we don't redundantly write the same field N times.
+  const urlsToProcess = spec.isSiteWide
+    ? [originForUrl(opts.affectedUrls[0])]
+    : opts.affectedUrls;
+
+  const commitMessage = `fix(crawlability): ${opts.findingTitle}\n\nApplied via Surven Optimizer (finding: ${opts.findingId}, ${urlsToProcess.length} ${spec.isSiteWide ? "site-wide" : "page"} edit(s))`;
+
   if (isNextJs) {
+    if (!spec.nextJsField) {
+      return {
+        ok: false,
+        manualNote: "This repo is Next.js but Surven doesn't have a Next.js writer for this fix yet.",
+        manualSnippet: opts.affectedUrls
+          .map((u) => spec.htmlBuilder ? spec.htmlBuilder(u).snippet : "")
+          .filter(Boolean)
+          .join("\n"),
+      };
+    }
+    const requests: NextJsPageInjectionRequest[] = urlsToProcess.map((url) => ({
+      url: spec.isSiteWide ? originForUrl(url) : url,
+      field: spec.nextJsField!(url),
+    }));
+    const result = await injectPerPageIntoNextJs(
+      client,
+      opts.repo,
+      opts.branch,
+      requests,
+      commitMessage,
+      fileTree,
+    );
     return {
-      ok: false,
-      manualNote:
-        "This repo looks like Next.js. Add canonical URLs via per-page `metadata.alternates.canonical` exports in each route's page.tsx — automated Next.js per-page edits aren't wired yet.",
-      manualSnippet: opts.affectedUrls
-        .map((u) => `// In src/app${urlPathnameForNextJs(u)}/page.tsx\nexport const metadata = { alternates: { canonical: "${u}" } };`)
-        .join("\n\n"),
+      ok: result.succeeded.length > 0,
+      perPageResult: result,
+      error: result.succeeded.length === 0 ? "No routes were updated — see per-route details." : undefined,
     };
   }
 
-  const requests: PageInjectionRequest[] = opts.affectedUrls.map((url) => {
-    const built = builder(url);
+  // Plain HTML branch
+  if (!spec.htmlBuilder) {
+    return {
+      ok: false,
+      manualNote: "This fix is wired for Next.js only — open the file manually for plain HTML.",
+    };
+  }
+  const requests: PageInjectionRequest[] = urlsToProcess.map((url) => {
+    const built = spec.htmlBuilder!(url);
     return { url, snippet: built.snippet, existingMarker: built.existingMarker };
   });
 
-  const commitMessage = `fix(crawlability): ${opts.findingTitle}\n\nApplied via Surven Optimizer (finding: ${opts.findingId}, ${opts.affectedUrls.length} page(s))`;
-
   const result = await injectPerPageIntoHtml(client, opts.repo, opts.branch, requests, commitMessage, fileTree);
 
-  // Even if some pages were skipped (already had canonical) or failed (no HTML file
-  // found), we consider the operation successful as long as at least 1 page committed.
   return {
     ok: result.succeeded.length > 0,
     perPageResult: result,
     error: result.succeeded.length === 0 ? "No pages were updated — see per-page details." : undefined,
   };
+}
+
+function originForUrl(url: string): string {
+  try {
+    return new URL(url).origin + "/";
+  } catch {
+    return url;
+  }
 }
 
 
