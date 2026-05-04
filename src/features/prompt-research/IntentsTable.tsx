@@ -381,7 +381,7 @@ export function IntentsTable({ intents, onSendToTracker }: IntentsTableProps) {
             },
             {
               label: "Variants & Coverage",
-              body: "Variants is how many paraphrasings live under that intent. Coverage is the percent of those variants where AI mentions your brand. Coverage above 60% (sage) is strong, 30–60% (yellow) is mid-pack, under 30% (rust) is a gap.",
+              body: "Variants is how many paraphrasings live under that intent — click the count to expand the row and read every variant with its per-engine coverage. Coverage is the percent of those variants where AI mentions your brand. Coverage above 60% (sage) is strong, 30–60% (yellow) is mid-pack, under 30% (rust) is a gap.",
             },
             {
               label: "Importance & Tracked",
