@@ -12,7 +12,6 @@ import {
   Eye,
   GitCompare,
   BookOpen,
-  AlertCircle,
   Settings,
   ChevronRight,
   Upload,
@@ -52,17 +51,20 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
       { label: "AI Visibility Tracker", href: "/ai-visibility-tracker", icon: TrendingUp },
       { label: "Brand Sentiment", href: "/sentiment", icon: Users },
       { label: "Competitor Comparison", href: "/competitor-comparison", icon: GitCompare },
-      { label: "AI Benchmark", href: "/dashboard", icon: BarChart3 },
-      { label: "Performance Trends", href: "/dashboard", icon: BarChart3 },
+    ],
+  },
+  {
+    title: "Prompts",
+    items: [
+      { label: "Tracked Prompts", href: "/prompts", icon: MessageSquare },
+      { label: "Prompt Research", href: "/prompt-research", icon: BookOpen },
     ],
   },
   {
     title: "Research & Insights",
     items: [
       { label: "Code Scanner", href: "/site-audit", icon: Search },
-      { label: "Tracked Prompts", href: "/prompts", icon: MessageSquare },
       { label: "Citation Insights", href: "/citation-insights", icon: Eye },
-      { label: "Prompt Research", href: "/prompt-research", icon: BookOpen },
     ],
   },
   {
@@ -70,7 +72,6 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
     items: [
       { label: "Website Audit", href: "/audit", icon: BarChart3 },
       { label: "Crawlability Audit", href: "/crawlability-audit", icon: Zap },
-      { label: "Alerts", href: "/dashboard", icon: AlertCircle },
     ],
   },
   {
