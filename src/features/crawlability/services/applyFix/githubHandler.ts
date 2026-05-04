@@ -275,12 +275,18 @@ export async function applyHtmlFixToGithub(opts: ApplyHtmlFixOptions): Promise<A
 }
 
 async function detectNextJs(client: GithubClient, branch: string): Promise<boolean> {
-  const candidates = ["next.config.js", "next.config.mjs", "next.config.ts", "next.config.cjs"];
-  for (const name of candidates) {
-    const file = await client.getFile(name, branch).catch(() => null);
-    if (file?.content) return true;
+  // Use the file tree (single API call) instead of 4 sequential probes.
+  try {
+    const tree = await client.getFileTree(branch);
+    return (
+      tree.has("next.config.js") ||
+      tree.has("next.config.mjs") ||
+      tree.has("next.config.ts") ||
+      tree.has("next.config.cjs")
+    );
+  } catch {
+    return false;
   }
-  return false;
 }
 
 function urlPathnameForNextJs(url: string): string {
