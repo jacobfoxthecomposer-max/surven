@@ -387,6 +387,7 @@ export default function App() {
             commitUrl: data.commitUrl,
             perPageResult: data.perPageResult!,
             managedPlanCta: data.managedPlanCta,
+            platform: data.platform,
           },
         }));
         return;
@@ -394,7 +395,7 @@ export default function App() {
 
       setFixStates((s) => ({
         ...s,
-        [finding.id]: { status: "success", commitUrl: data.commitUrl, filePath: data.filePath },
+        [finding.id]: { status: "success", commitUrl: data.commitUrl, filePath: data.filePath, platform: data.platform },
       }));
     } catch (err) {
       setFixStates((s) => ({
