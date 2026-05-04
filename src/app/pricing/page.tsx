@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { Check } from "lucide-react";
 import { LandingNav } from "@/features/landing/sections/LandingNav";
 import { Footer } from "@/features/landing/sections/Footer";
+import { PlanCTA } from "@/features/landing/PlanCTA";
 
 
 import type { Metadata } from "next";
