@@ -7,9 +7,12 @@
 import { GithubClient } from "@/services/github/githubClient";
 import {
   injectPerPageIntoHtml,
+  injectPerPageIntoNextJs,
   type PerPageInjectResult,
   type PageInjectionRequest,
+  type NextJsPageInjectionRequest,
 } from "./perPageHtmlInjector";
+import type { MetadataField } from "@/services/nextJsMetadataWriter";
 
 const GITHUB_API = "https://api.github.com";
 const TIMEOUT_MS = 15_000;
