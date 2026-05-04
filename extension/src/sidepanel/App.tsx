@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Search, ChevronDown, X, Settings, ArrowLeft, Wrench, ExternalLink, CheckCircle2, AlertCircle, Loader2, Flame, Code2 } from "lucide-react";
-import type { AuditFinding, ApplyFixResponse } from "../shared/types";
+import type { AuditFinding, ApplyFixResponse, PerPageFixResult } from "../shared/types";
 import { computeVisibilityScore } from "../shared/scoring";
 import { getInstructionsForPlatform, getDisplayName, type CmsPlatform, type FixKind } from "../shared/platformInstructions";
 import "./styles.css";
