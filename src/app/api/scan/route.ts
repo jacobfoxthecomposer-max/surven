@@ -411,7 +411,7 @@ export async function POST(request: NextRequest) {
   const hasGemini = !!process.env.GOOGLE_GEMINI_API_KEY;
   const hasGoogleAI = !!process.env.GOOGLE_AI_OVERVIEW_API_KEY;
 
-  if (!hasOpenAI && !hasClaude && !hasGemini && !hasGoogleAI) {
+  if (!hasOpenAI || !hasClaude || !hasGemini || !hasGoogleAI) {
     return NextResponse.json({ useMock: true });
   }
 
