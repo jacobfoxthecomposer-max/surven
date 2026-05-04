@@ -476,7 +476,12 @@ async function runGithubCommit(
     const creds = decryptCredentials<{ token: string }>(connection.credentials);
     token = creds.token;
   } catch {
-    return { ok: false, error: "encryption_unavailable", message: "Stored credentials couldn't be decrypted. Reconnect GitHub." };
+    return {
+      ok: false,
+      error: "encryption_unavailable",
+      message: "Stored credentials couldn't be decrypted. Reconnect GitHub.",
+      connectUrl: `${args.origin}/settings`,
+    };
   }
 
   const { data: pendingRow } = await supabaseAdmin
