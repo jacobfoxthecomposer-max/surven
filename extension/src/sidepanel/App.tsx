@@ -170,6 +170,7 @@ function safeHostname(url: string): string {
  *   if (state.status === "applying" || state.status === "preview" || …) return …;
  *   return assertHandled(state);  // TS error if any FixState variant unmatched
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function assertHandled(_unhandled: never): null {
   return null;
 }
