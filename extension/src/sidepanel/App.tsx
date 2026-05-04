@@ -1458,6 +1458,33 @@ export default function App() {
                               </div>
                             );
                           }
+                          if (fixState.status === "manual") {
+                            return (
+                              <div style={{ padding: "12px", background: "#FEF3C7", border: "1px solid #C97B45", borderRadius: "6px", fontSize: "12px", color: "#3D3F3D" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "6px", color: "#C97B45" }}>
+                                  <AlertCircle size={14} /> Auto-deploy not available
+                                </div>
+                                <div style={{ marginBottom: "10px", lineHeight: "1.4", fontSize: "11px", color: "#666" }}>
+                                  {fixState.manualNote}
+                                </div>
+                                {fixState.snippet && (
+                                  <details style={{ marginBottom: "8px" }}>
+                                    <summary style={{ cursor: "pointer", fontWeight: 500, color: "#3D3F3D", fontSize: "11px" }}>Preview the snippet</summary>
+                                    <pre style={{ marginTop: "6px", padding: "8px", background: "#1A1C1A", color: "#F2EEE3", borderRadius: "4px", fontSize: "10px", overflow: "auto", maxHeight: "200px", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{fixState.snippet}</pre>
+                                  </details>
+                                )}
+                                {fixState.snippet && (
+                                  <button
+                                    onClick={() => copyToClipboard(fixState.snippet ?? "")}
+                                    style={{ padding: "8px 12px", background: "#C97B45", border: "none", color: "white", borderRadius: "4px", fontSize: "12px", cursor: "pointer", fontWeight: 600, width: "100%" }}
+                                  >
+                                    📋 Copy snippet to clipboard
+                                  </button>
+                                )}
+                                <ManagedPlanCard cta={fixState.managedPlanCta} />
+                              </div>
+                            );
+                          }
                           if (fixState.status === "error") {
                             return (
                               <div
