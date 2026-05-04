@@ -6,6 +6,7 @@ import { Badge } from "@/components/atoms/Badge";
 import { Spinner } from "@/components/atoms/Spinner";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
 import { useUserProfile } from "@/features/auth/hooks/useUserProfile";
+import { useIsFirstTimeUser } from "@/features/auth/hooks/useIsFirstTimeUser";
 import { useSiteConnections } from "@/features/crawlability/hooks/useSiteConnections";
 import { SiteConnectionCard } from "@/features/crawlability/components/SiteConnectionCard";
 import type { Platform } from "@/features/crawlability/hooks/useSiteConnections";
