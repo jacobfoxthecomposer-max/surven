@@ -12,6 +12,13 @@ import { useToast } from "@/components/molecules/Toast";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { signUpSchema, type SignUpInput } from "@/types/auth";
 
+
+import type { Metadata } from "next";
+export const metadata: Metadata = {
+  alternates: {
+    canonical: "https://surven.vercel.app/signup",
+  },
+};
 export default function SignUpPage() {
   const router = useRouter();
   const { signUp } = useAuth();

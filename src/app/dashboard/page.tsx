@@ -23,6 +23,13 @@ import { Button } from "@/components/atoms/Button";
 import { Download } from "lucide-react";
 import type { ScanResult } from "@/types/database";
 
+
+import type { Metadata } from "next";
+export const metadata: Metadata = {
+  alternates: {
+    canonical: "https://surven.vercel.app/dashboard",
+  },
+};
 const MODEL_LABELS: Record<ScanResult["model_name"], string> = {
   chatgpt: "ChatGPT",
   claude: "Claude",

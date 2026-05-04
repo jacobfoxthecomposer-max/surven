@@ -3,6 +3,13 @@ import { Check } from "lucide-react";
 import { LandingNav } from "@/features/landing/sections/LandingNav";
 import { Footer } from "@/features/landing/sections/Footer";
 
+
+import type { Metadata } from "next";
+export const metadata: Metadata = {
+  alternates: {
+    canonical: "https://surven.vercel.app/pricing",
+  },
+};
 const plans = [
   {
     name: "Plus",
