@@ -32,6 +32,7 @@ export function RecommendedCompetitorsCard({
   businessId: string;
 }) {
   const { plan, isLoading: planLoading } = useUserProfile();
+  const { isFirstTime } = useIsFirstTimeUser();
   const { addCompetitor, isAdding } = useCompetitors(businessId);
   const [added, setAdded] = useState<Set<string>>(new Set());
 
