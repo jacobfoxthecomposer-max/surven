@@ -341,7 +341,7 @@ export default function PromptResearchPage() {
                         : "bg-[var(--color-primary)]/10"
                     }
                     label="Coverage"
-                    hint="How often AI engines mention your brand across every prompt variant we test. Above 60% is strong AI presence. 30–60% is mid-pack — most phrasings surface you, but you have gaps. Below 30% means most paraphrasings don't pick you up."
+                    hint="How often AI engines mention you across every prompt variant. Above 60% is strong; 30–60% means gaps in some phrasings; under 30% means most don't pick you up."
                     value={`${insights.avgCoverage}%`}
                     subtitle="Avg mention rate"
                     detail={`Across ${AI_MODELS.length} engines`}
