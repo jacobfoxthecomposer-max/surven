@@ -140,7 +140,7 @@ export async function injectPerPageIntoHtml(
     }));
     const commitResult = await client.commitBatch(filesToCommit, branch, commitMessage);
     result.commitSha = commitResult.commitSha;
-    result.commitUrl = `https://github.com/${client.repoFullName()}/commit/${commitResult.commitSha}`;
+    result.commitUrl = `https://github.com/${repo}/commit/${commitResult.commitSha}`;
   } catch (err) {
     const reason = err instanceof Error ? err.message : "Batch commit failed";
     // Move all succeeded → failed since the commit didn't land.
