@@ -60,6 +60,8 @@ export interface ApplyFixResponse {
   manualSnippet?: string;
   manualNote?: string;
   managedPlanCta?: ManagedPlanCta;
+  /** Which integration handled the fix — drives the success-card link label. */
+  platform?: string;
 }
 
 export interface ApplyFixRequest {
