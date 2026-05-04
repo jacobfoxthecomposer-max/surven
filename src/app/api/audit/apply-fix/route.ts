@@ -94,13 +94,23 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { siteUrl, findingId, findingTitle, fixType, fixCode, businessId } = parse.data;
+  const { siteUrl, findingId, findingTitle, fixType, fixCode, businessId, affectedUrls } = parse.data;
 
-  if (!isFixTypeSupportedForGithub(fixType)) {
+  // Dispatch by fix type. Three branches:
+  //   1. Single-file fixes (robots, sitemap, llms) → applyFixToGithub
+  //   2. Per-page HTML fixes (canonical_missing, etc.) → applyHtmlFixToGithub
+  //   3. Anything else → manual paste with managed-plan upsell
+  const isSingleFile = isFixTypeSupportedForGithub(fixType);
+  const isHtmlFix = fixType === "html" && isHtmlFixSupportedForGithub(findingId);
+
+  if (!isSingleFile && !isHtmlFix) {
     return NextResponse.json(
       {
         error: "fix_type_not_supported",
         message: `Auto-apply for ${fixType} fixes isn't wired yet. Copy the code manually.`,
+        manualSnippet: fixCode,
+        manualNote: `${fixType} fixes need a per-page edit that isn't automated yet. Copy the snippet and paste it into your site, or upgrade to Managed and we'll do it for you.`,
+        managedPlanCta: MANAGED_PLAN_CTA,
       },
       { status: 422 }
     );
