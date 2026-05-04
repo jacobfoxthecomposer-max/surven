@@ -1054,13 +1054,17 @@ export default function App() {
 
   async function rerunAudit() {
     if (!settings?.apiUrl) return;
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab?.url) {
-      const hostname = new URL(tab.url).hostname;
-      await chrome.storage.local.remove(`audit_${hostname}`);
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab?.url && isInjectableUrl(tab.url)) {
+        const hostname = safeHostname(tab.url);
+        await chrome.storage.local.remove(`audit_${hostname}`);
+      }
+      setState({ loading: false, findings: [], fromCache: false });
+      runAudit();
+    } catch (err) {
+      setState({ loading: false, findings: [], error: err instanceof Error ? err.message : "Re-run failed", fromCache: false });
     }
-    setState({ loading: false, findings: [], fromCache: false });
-    runAudit();
   }
 
   // Settings screen
