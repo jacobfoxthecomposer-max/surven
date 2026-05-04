@@ -284,9 +284,15 @@ export default function App() {
 
   async function applyFix(finding: AuditFinding) {
     if (!settings?.apiUrl || !settings?.apiKey || !finding.fixCode || !finding.fixType) return;
-    const targetUrl = siteUrl ?? (await chrome.tabs.query({ active: true, currentWindow: true }))[0]?.url;
-    if (!targetUrl) return;
 
+    // Guard: refuse if active tab doesn't match the audited site.
+    const guard = await guardActiveTab(siteUrl);
+    if (!guard.ok) {
+      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: guard.message } }));
+      return;
+    }
+
+    const targetUrl = siteUrl ?? guard.tab.url!;
     setFixStates((s) => ({ ...s, [finding.id]: { status: "applying" } }));
 
     try {
