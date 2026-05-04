@@ -299,7 +299,7 @@ export default function PromptResearchPage() {
                     icon={<ListChecks className="h-5 w-5 text-[var(--color-primary)]" />}
                     iconBg="bg-[var(--color-primary)]/10"
                     label="Intents"
-                    hint="How many distinct prompt intents we've researched for you. Each intent rolls up multiple paraphrasings of the same question. The more we research, the more options you have for what to track in Tracker."
+                    hint="How many distinct prompt intents we've researched for you. Each intent rolls up multiple phrasings. More researched = more options to send to Tracker."
                     value={insights.totalIntents.toString()}
                     subtitle="Researched"
                     detail={`${insights.trackedCount} already in Tracker · ${untrackedCount} to add`}
