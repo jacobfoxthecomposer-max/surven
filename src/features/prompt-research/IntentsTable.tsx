@@ -36,8 +36,18 @@ export function IntentsTable({ intents, onSendToTracker }: IntentsTableProps) {
   const [taxonomyFilter, setTaxonomyFilter] = useState<TaxonomyCategory | "all">("all");
   const [trackerFilter, setTrackerFilter] = useState<"all" | "tracked" | "untracked">("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [sortKey, setSortKey] = useState<SortKey>("importance");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const toggleExpand = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
