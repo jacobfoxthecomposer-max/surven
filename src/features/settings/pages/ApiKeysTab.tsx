@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { Copy, Check, Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
 import { supabase } from "@/services/supabase";
+import { useIsFirstTimeUser } from "@/features/auth/hooks/useIsFirstTimeUser";
 
 const PAID_PLANS = ["plus", "premium", "admin"];
 
