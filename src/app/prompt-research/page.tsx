@@ -311,7 +311,7 @@ export default function PromptResearchPage() {
                     icon={<Layers className="h-5 w-5 text-[#3D7BC4]" />}
                     iconBg="bg-[#6BA3F5]/10"
                     label="Variants"
-                    hint="People phrase the same question 15 different ways, and AI gives different answers depending on the phrasing. We test multiple paraphrasings per intent so you get a real signal instead of one shaky data point. 5+ variants per intent is healthy."
+                    hint="How many ways we phrase each question. AI returns different answers per phrasing, so testing variants gives you a real signal instead of a shaky one. 5+ variants per intent is healthy."
                     value={insights.totalVariants.toString()}
                     subtitle="Paraphrasings"
                     detail={`~${Math.round(insights.totalVariants / Math.max(insights.totalIntents, 1))} avg per intent`}
