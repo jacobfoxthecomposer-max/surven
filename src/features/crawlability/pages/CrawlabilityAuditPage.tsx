@@ -56,6 +56,7 @@ export function CrawlabilityAuditPage({
 }: CrawlabilityAuditPageProps) {
   const [siteUrl, setSiteUrl] = useState("");
   const { scanning, result, error, runScan, reset, markFindingApplied } = useCrawlabilityAudit();
+  const { isFirstTime } = useIsFirstTimeUser();
 
   const isFree = plan === "free";
   const isPremium = plan === "premium" || plan === "admin";
