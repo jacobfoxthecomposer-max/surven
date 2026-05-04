@@ -243,8 +243,23 @@ export async function applyHtmlFixToGithub(opts: ApplyHtmlFixOptions): Promise<A
 
   const client = new GithubClient(opts.token, opts.repo);
 
-  // Detect Next.js — if next.config.* exists, raw HTML editing won't apply.
-  const isNextJs = await detectNextJs(client, opts.branch);
+  // Single tree fetch — used for both Next.js detection and per-page resolution.
+  let fileTree: Set<string>;
+  try {
+    fileTree = await client.getFileTree(opts.branch);
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Couldn't read repo file tree",
+    };
+  }
+
+  const isNextJs =
+    fileTree.has("next.config.js") ||
+    fileTree.has("next.config.mjs") ||
+    fileTree.has("next.config.ts") ||
+    fileTree.has("next.config.cjs");
+
   if (isNextJs) {
     return {
       ok: false,
