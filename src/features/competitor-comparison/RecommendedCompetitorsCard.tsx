@@ -6,6 +6,7 @@ import { Sparkles, Plus, Check, Lock } from "lucide-react";
 import { Card } from "@/components/atoms/Card";
 import { useCompetitors } from "@/features/business/hooks/useCompetitors";
 import { useUserProfile } from "@/features/auth/hooks/useUserProfile";
+import { useIsFirstTimeUser } from "@/features/auth/hooks/useIsFirstTimeUser";
 
 type Recommendation = { name: string; mentions: number };
 
