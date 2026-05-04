@@ -3,6 +3,7 @@ import { supabase } from "@/services/supabase";
 import { crawlWebsite } from "@/utils/crawler";
 import { analyzeWebsite } from "@/utils/analyzeWebsite";
 import { analyzeCrawlability } from "@/utils/analyzeCrawlability";
+import { PAID_PLANS } from "@/utils/managedPlanCta";
 
 export const maxDuration = 60;
 
@@ -21,9 +22,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const PAID_PLANS = ["plus", "premium", "admin"];
   const [keyData] = data;
-  if (!keyData.valid || !PAID_PLANS.includes(keyData.plan)) {
+  if (!keyData.valid || !(PAID_PLANS as readonly string[]).includes(keyData.plan)) {
     return NextResponse.json({ error: "Premium plan required" }, { status: 403 });
   }
 
