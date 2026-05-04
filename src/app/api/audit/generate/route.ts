@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const [keyData] = keyRows;
-  if (!keyData.valid || !PAID_PLANS.includes(keyData.plan)) {
+  if (!keyData.valid || !(PAID_PLANS as readonly string[]).includes(keyData.plan)) {
     return NextResponse.json({ error: "Premium plan required" }, { status: 403 });
   }
 
