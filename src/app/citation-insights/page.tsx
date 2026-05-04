@@ -450,7 +450,7 @@ export default function CitationInsightsPage() {
                             <p className="text-xs text-[var(--color-fg-muted)]">
                               Authority Mix
                             </p>
-                            <HoverHint hint="Share of your citations coming from high-authority sources like Yelp, Google, BBB, and major news.">
+                            <HoverHint hint="Share of citations from heavyweight sources (Yelp, Google, BBB, major news). Above 50% is strong; under 25% means AI is leaning on weak sources to describe you.">
                               <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
                             </HoverHint>
                           </div>
