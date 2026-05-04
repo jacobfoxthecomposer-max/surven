@@ -90,6 +90,15 @@ export interface MetadataField {
  *    corrupting the user's existing nested config.
  */
 export function injectMetadataField(content: string, field: MetadataField): InjectMetadataResult {
+  // Client Components ("use client") cannot export metadata in Next.js App Router.
+  // Injecting it would cause a build-time error. Bail to manual.
+  if (/^\s*["']use client["']\s*;?/m.test(content)) {
+    return {
+      ok: false,
+      reason: "dynamic_metadata",
+      manualInstruction: `This page is a Client Component ("use client") — Next.js doesn't allow exporting metadata here. Move the metadata to the parent server component (e.g. a layout.tsx in the same folder), or split this file into a server component that imports the client component. Then set ${formatPathKey(field.path)} = ${field.valueLiteral} on the server side.`,
+    };
+  }
   if (/\bgenerateMetadata\s*\(/.test(content)) {
     return {
       ok: false,
