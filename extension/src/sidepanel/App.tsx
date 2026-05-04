@@ -215,9 +215,24 @@ export default function App() {
           findingTitle: finding.title,
           fixType: finding.fixType,
           fixCode: finding.fixCode,
+          affectedUrls: finding.affectedUrls,
         }),
       });
       const data = (await res.json()) as ApplyFixResponse;
+
+      // Manual-required (e.g. Next.js detected) → render the manual paste card with CTA.
+      if (!res.ok && data.manualSnippet) {
+        setFixStates((s) => ({
+          ...s,
+          [finding.id]: {
+            status: "manual",
+            snippet: data.manualSnippet!,
+            manualNote: data.manualNote ?? "Auto-update isn't available for this fix. Paste manually.",
+            managedPlanCta: data.managedPlanCta,
+          },
+        }));
+        return;
+      }
 
       if (!res.ok) {
         setFixStates((s) => ({
@@ -226,6 +241,20 @@ export default function App() {
             status: "error",
             message: data.message ?? data.error ?? "Apply failed",
             connectUrl: data.connectUrl,
+          },
+        }));
+        return;
+      }
+
+      // Per-page HTML fix → use the per-page success state with detail.
+      if (data.perPageResult) {
+        setFixStates((s) => ({
+          ...s,
+          [finding.id]: {
+            status: "success-per-page",
+            commitUrl: data.commitUrl,
+            perPageResult: data.perPageResult!,
+            managedPlanCta: data.managedPlanCta,
           },
         }));
         return;
