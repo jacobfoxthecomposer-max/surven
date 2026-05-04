@@ -160,6 +160,37 @@ function safeHostname(url: string): string {
   }
 }
 
+/**
+ * Guard against tab navigation between audit and fix. If the user audited site
+ * A and then navigated to site B, applying a fix would send context from B to
+ * A's repo. We refuse with a clear message instead.
+ *
+ * Returns { ok: true, tab } when the active tab matches the audited site, or
+ * { ok: false, message } with a user-facing error otherwise.
+ */
+async function guardActiveTab(
+  auditedSiteUrl: string | null,
+): Promise<{ ok: true; tab: chrome.tabs.Tab } | { ok: false; message: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.url) {
+    return { ok: false, message: "No active tab. Open the page you audited and try again." };
+  }
+  if (!isInjectableUrl(tab.url)) {
+    return { ok: false, message: "Open the page you audited (an http(s) page), then retry." };
+  }
+  if (auditedSiteUrl) {
+    const auditedHost = safeHostname(auditedSiteUrl);
+    const currentHost = safeHostname(tab.url);
+    if (auditedHost !== currentHost) {
+      return {
+        ok: false,
+        message: `You audited ${auditedHost} but you're now on ${currentHost}. Re-scan to fix this site, or navigate back to ${auditedHost}.`,
+      };
+    }
+  }
+  return { ok: true, tab };
+}
+
 const WHAT_IS_IT: Record<string, string> = {
   org_schema_missing: "Schema markup is invisible code added to your website's <head> that acts like a structured business card only AI and search engines can read. Organization schema specifically tells AI systems your business name, website URL, phone number, logo, and service area — in a format they can understand without guessing.",
   local_business_schema_missing: "LocalBusiness schema is invisible code in your website's <head> that tells AI systems you are a physical, location-based business. It includes your address, phone number, hours, and what type of business you are (restaurant, plumber, dentist, etc.). Without it, AI can't confidently connect your website to a specific location.",
