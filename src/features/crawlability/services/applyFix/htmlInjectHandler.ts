@@ -258,10 +258,8 @@ async function applyNextJsInject(
       break;
     }
     case "alt_text": {
-      return {
-        ok: false,
-        manualNote: "Auto-update for alt text on Next.js images isn't wired yet — Next.js uses <Image> components and JSX-only image references. Update each image's alt prop manually.",
-      };
+      // Handled above before layout fetch.
+      return { ok: false, error: "alt_text dispatch reached layout switch — should be impossible" };
     }
   }
 
