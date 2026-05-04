@@ -166,7 +166,7 @@ export default function PricingPage() {
                   ))}
                 </ul>
 
-                {plan.ctaExternal ? (
+                {plan.name === "Managed" ? (
                   <a
                     href={plan.ctaHref}
                     target="_blank"
@@ -176,16 +176,7 @@ export default function PricingPage() {
                     {plan.cta}
                   </a>
                 ) : (
-                  <Link
-                    href={plan.ctaHref}
-                    className={`block text-center py-2.5 px-4 rounded-lg text-sm font-medium transition-colors ${
-                      plan.ctaVariant === "primary"
-                        ? "bg-[var(--color-primary)] text-white hover:opacity-90"
-                        : "border border-[var(--color-border)] hover:bg-[var(--color-bg)]"
-                    }`}
-                  >
-                    {plan.cta}
-                  </Link>
+                  <PlanCTA planName={plan.name} variant={plan.ctaVariant} />
                 )}
               </div>
             ))}
