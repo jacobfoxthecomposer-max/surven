@@ -681,6 +681,7 @@ export default function App() {
         error?: string;
         message?: string;
         connectUrl?: string;
+        platform?: string;
       } = {};
       try {
         data = rawText ? JSON.parse(rawText) : {};
