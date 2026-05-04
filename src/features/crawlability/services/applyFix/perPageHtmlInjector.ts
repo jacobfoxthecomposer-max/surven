@@ -22,6 +22,7 @@ import { GithubClient } from "@/services/github/githubClient";
 import {
   injectMetadataField,
   urlToPageCandidates,
+  rootLayoutCandidates,
   type MetadataField,
 } from "@/services/nextJsMetadataWriter";
 
