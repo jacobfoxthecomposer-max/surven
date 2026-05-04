@@ -184,9 +184,12 @@ function assertHandled(_unhandled: never): null {
  */
 async function guardActiveTab(
   auditedSiteUrl: string | null,
-): Promise<{ ok: true; tab: chrome.tabs.Tab } | { ok: false; message: string }> {
+): Promise<{ ok: true; tab: chrome.tabs.Tab & { id: number } } | { ok: false; message: string }> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.url) {
+  if (!tab?.id) {
+    return { ok: false, message: "No active tab. Open the page you audited and try again." };
+  }
+  if (!tab.url) {
     return { ok: false, message: "No active tab. Open the page you audited and try again." };
   }
   if (!isInjectableUrl(tab.url)) {
@@ -202,7 +205,7 @@ async function guardActiveTab(
       };
     }
   }
-  return { ok: true, tab };
+  return { ok: true, tab: tab as chrome.tabs.Tab & { id: number } };
 }
 
 const WHAT_IS_IT: Record<string, string> = {
