@@ -46,7 +46,7 @@ export function EntityGrid({ data }: EntityGridProps) {
     <Card className="p-5">
       <div className="flex items-center gap-1.5 mb-4">
         <h3 className="text-sm font-semibold text-[var(--color-fg)]">Entity grid</h3>
-        <HoverHint hint="The recipe behind every prompt — your brand, who you compete with, what's adjacent, and who you're for.">
+        <HoverHint hint="The four pieces every prompt is built from: your brand, your competitors, adjacent categories, and the audience. These shape which questions we test.">
           <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
         </HoverHint>
       </div>
