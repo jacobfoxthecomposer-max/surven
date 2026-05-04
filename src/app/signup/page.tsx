@@ -13,14 +13,6 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { signUpSchema, type SignUpInput } from "@/types/auth";
 
 
-import type { Metadata } from "next";
-export const metadata: Metadata = {
-  alternates: {
-    canonical: "https://surven.vercel.app/signup",
-  },
-
-  openGraph: { url: "https://surven.vercel.app/signup", type: "website" },
-};
 export default function SignUpPage() {
   const router = useRouter();
   const { signUp } = useAuth();
