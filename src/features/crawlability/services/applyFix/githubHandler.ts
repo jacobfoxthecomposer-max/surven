@@ -4,7 +4,7 @@
  * Vercel/Netlify auto-deploy triggers from the push.
  */
 
-import { GitHubClient } from "@/services/github/githubClient";
+import { GithubClient } from "@/services/github/githubClient";
 import {
   injectPerPageIntoHtml,
   type PerPageInjectResult,
@@ -241,7 +241,7 @@ export async function applyHtmlFixToGithub(opts: ApplyHtmlFixOptions): Promise<A
     };
   }
 
-  const client = new GitHubClient(opts.token, opts.repo);
+  const client = new GithubClient(opts.token, opts.repo);
 
   // Detect Next.js — if next.config.* exists, raw HTML editing won't apply.
   const isNextJs = await detectNextJs(client, opts.branch);
@@ -274,7 +274,7 @@ export async function applyHtmlFixToGithub(opts: ApplyHtmlFixOptions): Promise<A
   };
 }
 
-async function detectNextJs(client: GitHubClient, branch: string): Promise<boolean> {
+async function detectNextJs(client: GithubClient, branch: string): Promise<boolean> {
   const candidates = ["next.config.js", "next.config.mjs", "next.config.ts", "next.config.cjs"];
   for (const name of candidates) {
     const file = await client.getFile(name, branch).catch(() => null);

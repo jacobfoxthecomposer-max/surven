@@ -18,7 +18,7 @@
  *     the first that returns content.
  */
 
-import { GitHubClient } from "@/services/github/githubClient";
+import { GithubClient } from "@/services/github/githubClient";
 
 const HEAD_INJECT_INDENT = "  ";
 
@@ -49,7 +49,7 @@ export interface PageInjectionRequest {
 }
 
 export async function injectPerPageIntoHtml(
-  client: GitHubClient,
+  client: GithubClient,
   repo: string,
   branch: string,
   requests: PageInjectionRequest[],
