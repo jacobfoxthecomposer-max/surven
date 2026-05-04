@@ -4,6 +4,13 @@
  * Vercel/Netlify auto-deploy triggers from the push.
  */
 
+import { GitHubClient } from "@/services/github/githubClient";
+import {
+  injectPerPageIntoHtml,
+  type PerPageInjectResult,
+  type PageInjectionRequest,
+} from "./perPageHtmlInjector";
+
 const GITHUB_API = "https://api.github.com";
 const TIMEOUT_MS = 15_000;
 const COMMIT_AUTHOR = {
