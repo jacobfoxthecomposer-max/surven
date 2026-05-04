@@ -199,6 +199,11 @@ async function applyNextJsInject(
   findingId: string,
   findingTitle: string,
 ): Promise<HtmlInjectResult> {
+  // alt_text doesn't touch layout.tsx — image components live in page/component files.
+  if (payload.kind === "alt_text") {
+    return await applyNextJsAltText(repo, branch, token, payload, findingId, findingTitle);
+  }
+
   const layout = await findNextLayoutFile(repo, branch, token);
   if (!layout) {
     return {
