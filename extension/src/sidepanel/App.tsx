@@ -1593,6 +1593,15 @@ export default function App() {
                             );
                           }
                           if (fixState.status === "manual") {
+                            // Map the finding's fix type into the platform-instructions FixKind
+                            // so the user gets concrete steps tailored to their CMS.
+                            const platformFixKind: FixKind | null =
+                              finding.fixType === "html" || finding.fixType === "config"
+                                ? "schema_org"  // closest existing instruction set for head injection
+                                : finding.fixType === "robots" || finding.fixType === "sitemap" || finding.fixType === "llms"
+                                  ? null  // these are file-level — no per-CMS paste UI
+                                  : null;
+                            const instructions = platformFixKind ? getInstructionsForPlatform(detectedPlatform, platformFixKind) : null;
                             return (
                               <div style={{ padding: "12px", background: "#FEF3C7", border: "1px solid #C97B45", borderRadius: "6px", fontSize: "12px", color: "#3D3F3D" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "6px", color: "#C97B45" }}>
@@ -1601,6 +1610,21 @@ export default function App() {
                                 <div style={{ marginBottom: "10px", lineHeight: "1.4", fontSize: "11px", color: "#666" }}>
                                   {fixState.manualNote}
                                 </div>
+                                {instructions && (
+                                  <div style={{ background: "white", border: "1px solid #E5D8B8", borderRadius: "4px", padding: "10px", marginBottom: "10px" }}>
+                                    <div style={{ fontWeight: 600, fontSize: "11px", marginBottom: "6px", color: "#3D3F3D" }}>Steps for {instructions.platformName}:</div>
+                                    <ol style={{ margin: 0, paddingLeft: "18px", fontSize: "11px", lineHeight: "1.55" }}>
+                                      {instructions.steps.map((step, i) => (
+                                        <li key={i} style={{ marginBottom: "3px" }}>{step}</li>
+                                      ))}
+                                    </ol>
+                                    {instructions.note && (
+                                      <div style={{ marginTop: "8px", padding: "6px 8px", background: "#FFF8E1", borderRadius: "3px", fontSize: "10px", color: "#7C5800", fontStyle: "italic" }}>
+                                        💡 {instructions.note}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                                 {fixState.snippet && (
                                   <details style={{ marginBottom: "8px" }}>
                                     <summary style={{ cursor: "pointer", fontWeight: 500, color: "#3D3F3D", fontSize: "11px" }}>Preview the snippet</summary>
