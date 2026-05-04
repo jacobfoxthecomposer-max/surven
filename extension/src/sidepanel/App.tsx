@@ -991,7 +991,7 @@ export default function App() {
         return;
       }
 
-      setFixStates((s) => ({ ...s, [finding.id]: { status: "success", commitUrl: data.commitUrl, filePath: data.filePath } }));
+      setFixStates((s) => ({ ...s, [finding.id]: { status: "success", commitUrl: data.commitUrl, filePath: data.filePath, platform: data.platform } }));
     } catch (err) {
       setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: err instanceof Error ? err.message : "Network error" } }));
     }
