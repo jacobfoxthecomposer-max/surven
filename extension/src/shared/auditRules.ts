@@ -226,7 +226,7 @@ const checkCredentials: RuleCheck = (homepage) => {
   if (score === 0) {
     return findingBase(
       "credentials_missing",
-      "No Credentials or Authority Signals Found",
+      "Homepage Has No Credentials or Authority Signals",
       "medium",
       1,
       60,

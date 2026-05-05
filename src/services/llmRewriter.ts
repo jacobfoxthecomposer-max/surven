@@ -254,6 +254,176 @@ export async function generateAltText(imageUrl: string, context?: { surroundingT
   return { ok: true, data: { alt } };
 }
 
+/**
+ * Batch rewriter for duplicate <title> tags.
+ *
+ * Accepts N pages that currently share a title and asks the LLM to write a DISTINCT
+ * title for each — one call so the model can see all pages at once and differentiate.
+ * Without batching, calling rewriteTitleTag() N times can produce two pages with the
+ * same generated title (the model has no way to know what its sibling pages got).
+ */
+const DUP_TITLES_SYSTEM = `You rewrite multiple <title> tags at once for pages on the same site that currently share an identical title. Each page must end up with a DISTINCT, descriptive title that reflects what makes that specific page different from the others.
+
+CRITICAL RULES — NEVER VIOLATE:
+- The current shared title tells you the OVERALL website / entity. Each rewritten title MUST stay about that same entity / brand. You can rephrase, but NOT change the subject.
+- The page content (body excerpt) tells you what makes each page distinct (a service, location, blog topic, product line). Use that to differentiate.
+- NEVER invent facts not in the source data. NEVER add a city / state unless explicitly in BUSINESS DATA.
+- Output one title per input URL, in the same order. Don't return duplicates of each other.
+
+Style rules:
+- Each title: 50-65 characters total
+- Format: "[Specific Page Topic] | [Brand Name]" or "[Brand Name] — [Specific Page Topic]"
+- AVOID buzzwords ("best", "premier", "top-rated"), emoji, ALL CAPS
+- Read like clear human-written headlines
+
+Return ONLY JSON: {"titles": [{"url": "...", "title": "..."}, ...]}  with the SAME urls in the SAME order as the input.`;
+
+const DUP_METAS_SYSTEM = `You rewrite multiple meta descriptions at once for pages on the same site that currently share an identical description. Each page must end up with a DISTINCT, useful description that reflects that specific page's content.
+
+CRITICAL RULES — NEVER VIOLATE:
+- The current shared description tells you the OVERALL business. Each rewritten description MUST stay about that same business. Rephrase, but don't change the subject.
+- The page content (body excerpt) tells you what makes each page distinct. Use that to differentiate.
+- NEVER invent facts not in the source data. NEVER add a city / state unless explicitly in BUSINESS DATA.
+- Output one description per input URL, in the same order. Don't return duplicates.
+
+Style rules:
+- Each description: 140-160 characters total
+- Lead with what makes this specific page useful
+- AVOID buzzwords ("world-class", "cutting-edge"), hedge words ("we believe", "we strive"), emoji
+- Plain prose, factual, like a direct answer
+
+Return ONLY JSON: {"descriptions": [{"url": "...", "description": "..."}, ...]}  with the SAME urls in the SAME order as the input.`;
+
+export interface DuplicatePageInput {
+  url: string;
+  currentTitle?: string;
+  currentDescription?: string;
+  bodyExcerpt: string; // ~600 chars per page
+}
+
+export async function rewriteDuplicateTitles(
+  pages: DuplicatePageInput[],
+  business: { businessName?: string; address?: { city?: string; region?: string }; phone?: string },
+): Promise<RewriteResult<{ titles: Array<{ url: string; title: string }> }>> {
+  if (pages.length < 2) {
+    return { ok: false, error: "Need at least 2 pages with duplicate titles to batch-rewrite." };
+  }
+  if (pages.length > 20) {
+    return { ok: false, error: "Too many duplicate pages (max 20 per batch)." };
+  }
+
+  const summary = [
+    business.businessName ? `Business: ${business.businessName}` : null,
+    business.address?.city || business.address?.region
+      ? `Location: ${[business.address.city, business.address.region].filter(Boolean).join(", ")}`
+      : null,
+    business.phone ? `Phone: ${business.phone}` : null,
+  ].filter(Boolean).join("\n");
+
+  const pagesBlock = pages.map((p, i) => {
+    const excerpt = p.bodyExcerpt.length > 600 ? p.bodyExcerpt.slice(0, 600) + "…" : p.bodyExcerpt;
+    return `Page ${i + 1}\nURL: ${p.url}\nCurrent shared title: "${p.currentTitle ?? ""}"\nContent excerpt:\n${excerpt}`;
+  }).join("\n\n---\n\n");
+
+  const userPrompt = `BUSINESS DATA:\n${summary || "(none)"}\n\n${pagesBlock}\n\nRewrite each page's <title> tag so each is DISTINCT from the others. Output JSON only.`;
+
+  const result = await openaiChatJson<{ titles: Array<{ url: string; title: string }> }>({
+    messages: [
+      { role: "system", content: DUP_TITLES_SYSTEM },
+      { role: "user", content: userPrompt },
+    ],
+    maxTokens: 100 * pages.length + 100,
+    temperature: 0.5,
+  });
+
+  if (!result.ok || !result.data?.titles) {
+    return { ok: false, error: result.error ?? "LLM did not return valid JSON" };
+  }
+
+  // Defensive: ensure all input URLs got a title back, in any order.
+  const byUrl = new Map(result.data.titles.map((t) => [t.url, (t.title ?? "").trim()]));
+  const ordered: Array<{ url: string; title: string }> = [];
+  for (const p of pages) {
+    const candidate = byUrl.get(p.url);
+    if (!candidate || candidate.length < 10) {
+      return { ok: false, error: `LLM returned no usable title for ${p.url}` };
+    }
+    ordered.push({ url: p.url, title: candidate.length > 75 ? candidate.slice(0, 70) : candidate });
+  }
+
+  // Sanity: confirm all titles are unique.
+  const seen = new Set<string>();
+  for (const t of ordered) {
+    const lower = t.title.toLowerCase();
+    if (seen.has(lower)) return { ok: false, error: "LLM returned duplicate titles for two pages — try again." };
+    seen.add(lower);
+  }
+
+  return { ok: true, data: { titles: ordered } };
+}
+
+export async function rewriteDuplicateMetaDescriptions(
+  pages: DuplicatePageInput[],
+  business: { businessName?: string; address?: { city?: string; region?: string }; phone?: string },
+): Promise<RewriteResult<{ descriptions: Array<{ url: string; description: string }> }>> {
+  if (pages.length < 2) {
+    return { ok: false, error: "Need at least 2 pages with duplicate meta descriptions to batch-rewrite." };
+  }
+  if (pages.length > 20) {
+    return { ok: false, error: "Too many duplicate pages (max 20 per batch)." };
+  }
+
+  const summary = [
+    business.businessName ? `Business: ${business.businessName}` : null,
+    business.address?.city || business.address?.region
+      ? `Location: ${[business.address.city, business.address.region].filter(Boolean).join(", ")}`
+      : null,
+    business.phone ? `Phone: ${business.phone}` : null,
+  ].filter(Boolean).join("\n");
+
+  const pagesBlock = pages.map((p, i) => {
+    const excerpt = p.bodyExcerpt.length > 800 ? p.bodyExcerpt.slice(0, 800) + "…" : p.bodyExcerpt;
+    return `Page ${i + 1}\nURL: ${p.url}\nCurrent shared description: "${p.currentDescription ?? ""}"\nContent excerpt:\n${excerpt}`;
+  }).join("\n\n---\n\n");
+
+  const userPrompt = `BUSINESS DATA:\n${summary || "(none)"}\n\n${pagesBlock}\n\nRewrite each page's meta description so each is DISTINCT from the others. Output JSON only.`;
+
+  const result = await openaiChatJson<{ descriptions: Array<{ url: string; description: string }> }>({
+    messages: [
+      { role: "system", content: DUP_METAS_SYSTEM },
+      { role: "user", content: userPrompt },
+    ],
+    maxTokens: 200 * pages.length + 100,
+    temperature: 0.5,
+  });
+
+  if (!result.ok || !result.data?.descriptions) {
+    return { ok: false, error: result.error ?? "LLM did not return valid JSON" };
+  }
+
+  const byUrl = new Map(result.data.descriptions.map((d) => [d.url, (d.description ?? "").trim()]));
+  const ordered: Array<{ url: string; description: string }> = [];
+  for (const p of pages) {
+    const candidate = byUrl.get(p.url);
+    if (!candidate || candidate.length < 50) {
+      return { ok: false, error: `LLM returned no usable description for ${p.url}` };
+    }
+    ordered.push({
+      url: p.url,
+      description: candidate.length > 200 ? candidate.slice(0, 158) + "…" : candidate,
+    });
+  }
+
+  const seen = new Set<string>();
+  for (const d of ordered) {
+    const lower = d.description.toLowerCase();
+    if (seen.has(lower)) return { ok: false, error: "LLM returned duplicate descriptions for two pages — try again." };
+    seen.add(lower);
+  }
+
+  return { ok: true, data: { descriptions: ordered } };
+}
+
 export async function rewriteTitleTag(ctx: PageContext): Promise<RewriteResult<{ title: string }>> {
   const businessSummary = buildBusinessSummary(ctx);
   const pageContent = buildPageContent(ctx, 1000);

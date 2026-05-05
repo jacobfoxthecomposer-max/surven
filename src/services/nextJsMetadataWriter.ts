@@ -195,6 +195,147 @@ function injectNewMetadataExport(content: string, field: MetadataField): InjectM
  *  - Single-key path: `key: value`
  *  - Multi-key path: `key1: { key2: { ... key_n: value } }`
  */
+/**
+ * Replace an existing top-level metadata field's value (or insert if absent).
+ *
+ * Used by the duplicate-titles / duplicate-meta-descriptions auto-fix where each page
+ * already HAS a title/description but it's identical to other pages — we need to
+ * overwrite, not skip.
+ *
+ * Only handles single-key paths (e.g. ["title"], ["description"]). Bails on:
+ *   - "use client" files (Next.js disallows metadata export)
+ *   - generateMetadata() (dynamic; can't safely auto-edit)
+ *   - missing metadata block (falls through to creating a new one via the same insert path)
+ */
+export function replaceMetadataField(content: string, field: MetadataField): InjectMetadataResult {
+  if (/^\s*["']use client["']\s*;?/m.test(content)) {
+    return {
+      ok: false,
+      reason: "dynamic_metadata",
+      manualInstruction: `This page is a Client Component ("use client"). Move metadata to a parent server component and set ${formatPathKey(field.path)} = ${field.valueLiteral} there.`,
+    };
+  }
+  if (/\bgenerateMetadata\s*\(/.test(content)) {
+    return {
+      ok: false,
+      reason: "dynamic_metadata",
+      manualInstruction: `This file uses generateMetadata(). Set ${formatPathKey(field.path)} = ${field.valueLiteral} inside the function manually.`,
+    };
+  }
+  if (field.path.length !== 1) {
+    return {
+      ok: false,
+      reason: "parse_error",
+      manualInstruction: `replaceMetadataField only supports single-key paths (got ${formatPathKey(field.path)}).`,
+    };
+  }
+
+  const metadataMatch = /export\s+const\s+metadata(?:\s*:\s*Metadata)?\s*=\s*\{/.exec(content);
+  if (!metadataMatch) {
+    // No metadata block exists yet — defer to the normal create-new path.
+    return injectNewMetadataExport(content, field);
+  }
+
+  const blockOpenIdx = metadataMatch.index + metadataMatch[0].length - 1;
+  const blockCloseIdx = findMatchingBrace(content, blockOpenIdx);
+  if (blockCloseIdx === -1) {
+    return {
+      ok: false,
+      reason: "parse_error",
+      manualInstruction: `Couldn't find the closing brace of the metadata block. Set ${formatPathKey(field.path)}: ${field.valueLiteral} manually.`,
+    };
+  }
+
+  const block = content.slice(blockOpenIdx + 1, blockCloseIdx);
+  const key = field.path[0]!;
+
+  // Find the existing top-level key. Match `key:` at start-of-line (with optional whitespace),
+  // then walk forward to the value end (next top-level comma or end-of-block).
+  const keyRegex = new RegExp(`(^|\\n)([\\t ]*)${escapeRegex(key)}\\s*:\\s*`, "m");
+  const keyMatch = keyRegex.exec(block);
+
+  if (!keyMatch) {
+    // Key doesn't exist — fall back to the normal insert path.
+    return injectMetadataField(content, field);
+  }
+
+  // Walk forward from end of `key:` to find the value's terminator (top-level , or })
+  const valueStartInBlock = keyMatch.index + keyMatch[0].length;
+  const valueEndInBlock = findValueEnd(block, valueStartInBlock);
+  if (valueEndInBlock === -1) {
+    return {
+      ok: false,
+      reason: "parse_error",
+      manualInstruction: `Found existing metadata.${key} but couldn't determine its end. Replace its value with ${field.valueLiteral} manually.`,
+    };
+  }
+
+  const beforeValue = content.slice(0, blockOpenIdx + 1) + block.slice(0, valueStartInBlock);
+  const afterValue = block.slice(valueEndInBlock) + content.slice(blockCloseIdx);
+  const updated = beforeValue + field.valueLiteral + afterValue;
+
+  return { ok: true, updated };
+}
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Walk a metadata-block substring starting at the value position, return the index
+ * of the terminator (top-level comma or end of block). Skips strings, template
+ * literals, nested braces, and comments.
+ */
+function findValueEnd(block: string, start: number): number {
+  let i = start;
+  let depth = 0;
+  const len = block.length;
+  while (i < len) {
+    const ch = block[i]!;
+    // Skip line comments
+    if (ch === "/" && block[i + 1] === "/") {
+      const nl = block.indexOf("\n", i);
+      i = nl === -1 ? len : nl;
+      continue;
+    }
+    // Skip block comments
+    if (ch === "/" && block[i + 1] === "*") {
+      const end = block.indexOf("*/", i + 2);
+      i = end === -1 ? len : end + 2;
+      continue;
+    }
+    // Skip strings (double, single, template)
+    if (ch === '"' || ch === "'" || ch === "`") {
+      const quote = ch;
+      i++;
+      while (i < len) {
+        if (block[i] === "\\") { i += 2; continue; }
+        if (block[i] === quote) { i++; break; }
+        if (quote === "`" && block[i] === "$" && block[i + 1] === "{") {
+          i += 2;
+          let tdepth = 1;
+          while (i < len && tdepth > 0) {
+            if (block[i] === "{") tdepth++;
+            else if (block[i] === "}") tdepth--;
+            i++;
+          }
+          continue;
+        }
+        i++;
+      }
+      continue;
+    }
+    if (ch === "{" || ch === "[" || ch === "(") { depth++; i++; continue; }
+    if (ch === "}" || ch === "]" || ch === ")") {
+      if (depth === 0) return i;
+      depth--; i++; continue;
+    }
+    if (ch === "," && depth === 0) return i;
+    i++;
+  }
+  return len;
+}
+
 function formatFullField(field: MetadataField, indent: string): string {
   if (field.path.length === 1) {
     return `${field.path[0]}: ${field.valueLiteral}`;
