@@ -132,7 +132,7 @@ export function SiteConnectionCard({
 
     let payload: ConnectPayload;
     if (platform === "github") {
-      payload = { platform, businessId, token, repo, branch };
+      payload = { platform, businessId, token, repo, branch, siteUrl };
     } else if (platform === "vercel") {
       payload = { platform, businessId, token, projectId };
     } else if (platform === "wordpress") {
@@ -312,6 +312,15 @@ export function SiteConnectionCard({
                         value={branch}
                         onChange={(e) => setBranch(e.target.value)}
                         placeholder="main"
+                        disabled={submitting}
+                      />
+                      <Input
+                        label="Live Site URL"
+                        type="url"
+                        value={siteUrl}
+                        onChange={(e) => setSiteUrl(e.target.value)}
+                        placeholder="https://yoursite.com"
+                        required
                         disabled={submitting}
                       />
                     </>

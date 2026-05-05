@@ -13,6 +13,7 @@ export default function GithubConnectPage() {
   const [token, setToken] = useState("");
   const [repo, setRepo] = useState("");
   const [branch, setBranch] = useState("");
+  const [siteUrl, setSiteUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -36,6 +37,7 @@ export default function GithubConnectPage() {
           token: token.trim(),
           repo: repo.trim(),
           branch: branch.trim() || undefined,
+          siteUrl: siteUrl.trim(),
         }),
       });
       const data = await res.json();
@@ -164,6 +166,23 @@ export default function GithubConnectPage() {
               placeholder="auto-detect default"
               className="w-full px-3 py-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] focus:outline-none focus:border-[var(--color-primary)] font-mono text-sm"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-fg)] mb-1.5">
+              Live Site URL
+            </label>
+            <input
+              type="url"
+              value={siteUrl}
+              onChange={(e) => setSiteUrl(e.target.value)}
+              placeholder="https://yoursite.com"
+              required
+              className="w-full px-3 py-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] focus:outline-none focus:border-[var(--color-primary)] font-mono text-sm"
+            />
+            <p className="text-xs text-[var(--color-fg-secondary)] mt-1.5">
+              The deployed URL Surven should match against during audits. Example: <code className="font-mono">https://surven.vercel.app</code>
+            </p>
           </div>
 
           {error && (

@@ -25,6 +25,7 @@ const ConnectSchema = z.discriminatedUnion("platform", [
     token: z.string().min(10),
     repo: z.string().min(3),
     branch: z.string().optional(),
+    siteUrl: z.string().url(),
   }),
   z.object({
     platform: z.literal("vercel"),
@@ -140,6 +141,7 @@ export async function POST(request: NextRequest) {
       row = {
         repo: data.repo,
         branch: data.branch ?? validation.meta?.defaultBranch ?? "main",
+        site_url: data.siteUrl,
       };
       break;
     }

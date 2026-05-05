@@ -17,7 +17,7 @@ export interface SiteConnection {
 }
 
 export type ConnectPayload =
-  | { platform: "github"; businessId: string; token: string; repo: string; branch?: string }
+  | { platform: "github"; businessId: string; token: string; repo: string; branch?: string; siteUrl: string }
   | { platform: "vercel"; businessId: string; token: string; projectId: string }
   | { platform: "wordpress"; businessId: string; siteUrl: string; username: string; applicationPassword: string }
   | { platform: "webflow"; businessId: string; token: string; siteId: string }
