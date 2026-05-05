@@ -6,7 +6,9 @@ import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
+  Cpu,
   Sparkles,
+  Swords,
   Target,
   TrendingUp,
 } from "lucide-react";
@@ -47,10 +49,34 @@ const WINS_PALETTE = {
   rowIcon: CheckCircle2,
 };
 
+const ENGINE_PALETTE = {
+  accent: "#7E6B17",
+  accentText: "#5C4D0E",
+  gradient:
+    "linear-gradient(135deg, rgba(184,160,48,0.18) 0%, rgba(184,160,48,0.03) 100%)",
+  tileBg: "rgba(184,160,48,0.18)",
+  HeaderIcon: Swords,
+  tag: "ENGINES TO FOCUS",
+  rowIcon: Cpu,
+};
+
 interface GapItem {
   prompt: string;
   competitor: string | null;
   models: string[];
+}
+
+interface EngineGap {
+  /** Display label like "ChatGPT". */
+  engine: string;
+  /** Top competitor on this engine. */
+  competitor: string;
+  /** Their visibility on this engine, 0–100. */
+  competitorPct: number;
+  /** Your visibility on this engine, 0–100. */
+  yourPct: number;
+  /** competitorPct - yourPct, used for sorting. */
+  gap: number;
 }
 
 interface Props {
@@ -64,7 +90,7 @@ export function CompetitorFixActions({
   businessName,
   competitors,
 }: Props) {
-  const { gaps, advantages } = useMemo(() => {
+  const { gaps, advantages, engineGaps } = useMemo(() => {
     const gapMap = new Map<string, GapItem>();
     const advantageMap = new Map<string, GapItem>();
 
@@ -111,6 +137,50 @@ export function CompetitorFixActions({
       }
     }
 
+    // ── Engine-level head-to-head ─────────────────────────────────────
+    // For each engine we compute: your visibility %, every competitor's
+    // visibility %, and surface the largest gap. Pulls from the same scan
+    // data as the Visibility Leaderboard / Average-Rank chart on this page,
+    // so the panel becomes a direct call-to-action for those visuals.
+    const engines: ModelName[] = ["chatgpt", "claude", "gemini", "google_ai"];
+    const engineGapList: EngineGap[] = [];
+    for (const m of engines) {
+      const modelResults = results.filter((r) => r.model_name === m);
+      if (modelResults.length === 0) continue;
+      const yourPct = Math.round(
+        (modelResults.filter((r) => r.business_mentioned).length /
+          modelResults.length) *
+          100,
+      );
+      let topCompetitor: string | null = null;
+      let topPct = 0;
+      for (const c of competitors) {
+        const relevant = modelResults.filter(
+          (r) => r.competitor_mentions && c in r.competitor_mentions,
+        );
+        if (relevant.length === 0) continue;
+        const compPct = Math.round(
+          (relevant.filter((r) => r.competitor_mentions[c]).length /
+            relevant.length) *
+            100,
+        );
+        if (compPct > topPct) {
+          topPct = compPct;
+          topCompetitor = c;
+        }
+      }
+      if (topCompetitor && topPct > yourPct) {
+        engineGapList.push({
+          engine: MODEL_LABELS[m],
+          competitor: topCompetitor,
+          competitorPct: topPct,
+          yourPct,
+          gap: topPct - yourPct,
+        });
+      }
+    }
+    engineGapList.sort((a, b) => b.gap - a.gap);
+
     return {
       // Sort by engines covered descending — most-covered = highest leverage.
       gaps: Array.from(gapMap.values())
@@ -119,6 +189,7 @@ export function CompetitorFixActions({
       advantages: Array.from(advantageMap.values())
         .sort((a, b) => b.models.length - a.models.length)
         .slice(0, 3),
+      engineGaps: engineGapList.slice(0, 3),
     };
   }, [results, competitors]);
 
@@ -148,9 +219,10 @@ export function CompetitorFixActions({
         />
       </div>
 
-      {/* Two nested mini-cards — gaps first, wins second (stacked vertically
-          to fit the narrow right column). */}
+      {/* Three nested mini-cards — engine head-to-head, gaps, wins. All
+          stacked vertically to fit the narrow right column. */}
       <div className="p-3 flex-1 flex flex-col gap-3 min-w-0 min-h-0">
+        <NestedEngineCard items={engineGaps} businessName={businessName} />
         <NestedGapCard
           variant="gaps"
           items={gaps}
@@ -307,6 +379,132 @@ function NestedGapCard({
             <TrendingUp className="h-3 w-3 shrink-0" />
           )}
           {footerLabel}
+          <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+// ─── Engine head-to-head mini-card ───────────────────────────────────────
+// Top 3 engines (ChatGPT/Claude/Gemini/Google AI) where one competitor's
+// visibility is the furthest above yours. Pulls from the same scan data
+// the page's Visibility Leaderboard + Average-Rank chart use, so this
+// card is a compact "where to direct your fix" callout for those visuals.
+function NestedEngineCard({
+  items,
+  businessName,
+}: {
+  items: EngineGap[];
+  businessName: string;
+}) {
+  const palette = ENGINE_PALETTE;
+  const HeaderIcon = palette.HeaderIcon;
+  const RowIcon = palette.rowIcon;
+
+  return (
+    <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col overflow-hidden">
+      <div
+        className="px-3 py-2"
+        style={{
+          background: palette.gradient,
+          borderLeft: `3px solid ${palette.accent}`,
+        }}
+      >
+        <div className="flex items-baseline justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <HeaderIcon
+              className="h-3.5 w-3.5 shrink-0"
+              style={{ color: palette.accent }}
+            />
+            <h3
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 16,
+                fontWeight: 500,
+                color: "var(--color-fg)",
+                letterSpacing: "-0.005em",
+                lineHeight: 1.15,
+              }}
+            >
+              {`${items.length} ${items.length === 1 ? "engine" : "engines"} to focus on`}
+            </h3>
+          </div>
+          <p
+            className="text-[var(--color-fg-muted)]"
+            style={{ fontSize: 11, lineHeight: 1.3 }}
+          >
+            biggest competitor lead per engine
+          </p>
+        </div>
+      </div>
+
+      {items.length === 0 ? (
+        <p
+          className="text-[var(--color-fg-muted)] p-3 text-center"
+          style={{ fontSize: 11.5 }}
+        >
+          {`No engine where a competitor outranks ${businessName} — keep scanning weekly to catch new gaps.`}
+        </p>
+      ) : (
+        <div className="px-2 pt-1.5 pb-1.5 space-y-1.5">
+          {items.map((g) => (
+            <div
+              key={g.engine}
+              className="block rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-2"
+            >
+              <div className="flex items-start gap-2">
+                <RowIcon
+                  className="h-3.5 w-3.5 shrink-0 mt-0.5"
+                  style={{ color: palette.accent }}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p
+                      className="leading-snug"
+                      style={{
+                        fontFamily: "var(--font-display)",
+                        fontSize: 13,
+                        fontWeight: 500,
+                        color: "var(--color-fg)",
+                        letterSpacing: "-0.005em",
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {g.engine}
+                    </p>
+                    <span
+                      className="rounded-full px-1.5 py-0.5 font-bold tabular-nums shrink-0"
+                      style={{
+                        fontSize: 10,
+                        backgroundColor: `${palette.accent}1F`,
+                        color: palette.accentText,
+                      }}
+                    >
+                      +{g.gap}%
+                    </span>
+                  </div>
+                  <p
+                    className="text-[var(--color-fg-muted)] mt-0.5"
+                    style={{ fontSize: 10.5, lineHeight: 1.35 }}
+                  >
+                    {`${g.competitor} ${g.competitorPct}% · ${businessName} ${g.yourPct}%`}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="px-3 py-1.5 border-t border-[var(--color-border)] mt-auto">
+        <Link
+          href="/audit"
+          className="group inline-flex items-center gap-1.5 font-semibold transition-opacity hover:opacity-75"
+          style={{ fontSize: 11.5, color: palette.accentText }}
+        >
+          <Cpu className="h-3 w-3 shrink-0" />
+          Run an engine-specific audit
           <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
         </Link>
       </div>
