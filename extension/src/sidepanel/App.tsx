@@ -1200,6 +1200,17 @@ export default function App() {
     }
   }
 
+  // History view (reachable from Settings)
+  if (historyOpen && settings) {
+    return (
+      <HistoryView
+        apiUrl={settings.apiUrl}
+        apiKey={settings.apiKey}
+        onBack={() => setHistoryOpen(false)}
+      />
+    );
+  }
+
   // Settings screen
   if (settingsOpen || !settings) {
     return (
