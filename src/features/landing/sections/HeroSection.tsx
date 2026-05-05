@@ -13,18 +13,21 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/atoms/Button";
 
 const ROTATING_TEXTS = [
-  "your business?",
   "your restaurant?",
   "your law firm?",
   "your dental practice?",
   "your salon?",
   "your agency?",
+  "your accountant?",
 ];
 
 function useTypewriter(texts: string[]) {
   const [index, setIndex] = useState(0);
   const [display, setDisplay] = useState("");
   const [deleting, setDeleting] = useState(false);
+
+  // Whether the word is fully typed and resting (used to steady the cursor).
+  const isResting = !deleting && display === texts[index];
 
   useEffect(() => {
     const full = texts[index];
@@ -50,7 +53,7 @@ function useTypewriter(texts: string[]) {
     return () => clearTimeout(timer);
   }, [display, deleting, index, texts]);
 
-  return display;
+  return { display, isResting };
 }
 
 function GridPattern({
@@ -87,7 +90,7 @@ function GridPattern({
 }
 
 export function HeroSection() {
-  const typed = useTypewriter(ROTATING_TEXTS);
+  const { display: typed, isResting } = useTypewriter(ROTATING_TEXTS);
 
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
@@ -194,11 +197,11 @@ export function HeroSection() {
               >
                 {typed}
                 <span
-                  className="inline-block w-[2px] ml-1 align-middle animate-pulse"
+                  className={`inline-block w-[2px] ml-1 align-middle ${isResting ? "" : "animate-pulse"}`}
                   style={{
                     height: "0.85em",
                     backgroundColor: "var(--color-primary)",
-                    opacity: 0.7,
+                    opacity: isResting ? 0.85 : 0.7,
                   }}
                 />
               </em>

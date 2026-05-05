@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
+import { MotionConfig } from "framer-motion";
 import { ToastProvider } from "@/components/molecules/Toast";
 import { AuthProvider } from "@/features/auth/hooks/useAuth";
 import { ActiveBusinessProvider } from "@/features/business/hooks/useActiveBusiness";
@@ -22,13 +23,18 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ActiveBusinessProvider>
-          <SidebarProvider>
-            <ToastProvider>{children}</ToastProvider>
-          </SidebarProvider>
-        </ActiveBusinessProvider>
-      </AuthProvider>
+      {/* reducedMotion="user" makes every framer-motion animation honor the
+          OS-level "Reduce Motion" preference. CSS animations are already
+          handled by the prefers-reduced-motion media query in globals.css. */}
+      <MotionConfig reducedMotion="user">
+        <AuthProvider>
+          <ActiveBusinessProvider>
+            <SidebarProvider>
+              <ToastProvider>{children}</ToastProvider>
+            </SidebarProvider>
+          </ActiveBusinessProvider>
+        </AuthProvider>
+      </MotionConfig>
     </QueryClientProvider>
   );
 }

@@ -83,6 +83,21 @@ h1, h2, h3 {
   font-family: var(--font-display);
 }
 
+/* Honor the user's "Reduce Motion" preference. Strips animation and
+   transition durations so always-on motion (hero grid drift, radar pulse,
+   value-prop card scroll, scanning rings, framer-motion reveals) doesn't
+   make the app physically uncomfortable for motion-sensitive users. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 8px;
 }

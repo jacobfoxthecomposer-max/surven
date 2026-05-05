@@ -41,6 +41,20 @@ export function HoverHint({
 
   const hide = React.useCallback(() => setVisible(false), []);
 
+  // Close the tooltip on scroll or resize so it never drifts away from the
+  // trigger. Listening in capture phase catches scrolls inside any ancestor
+  // (cards, sidebar, modals).
+  React.useEffect(() => {
+    if (!visible) return;
+    const close = () => setVisible(false);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [visible]);
+
   const displayClass =
     display === "inline" ? "inline" :
     display === "inline-block" ? "inline-block" :
