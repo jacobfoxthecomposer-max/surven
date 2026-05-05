@@ -24,6 +24,15 @@ export interface RuleContext {
 
 type RuleCheck = (ctx: RuleContext) => CrawlabilityFinding | null;
 
+// HTML-content rules (canonical, viewport, OG, schema, freshness, alt text, dupes) must
+// only apply to pages that returned text/html. Non-HTML 200s — fonts, css/js chunks,
+// favicon — get crawled when they appear in <link>/<script> hrefs but have no <head>,
+// no canonical, no meta. Counting them as "missing" produces nonsense findings and the
+// per-page fix injector then can't find a route file for /_next/static/media/*.woff2.
+function isIndexableHtmlPage(p: CrawledPage): boolean {
+  return p.statusCode >= 200 && p.statusCode < 300 && p.isHtml !== false;
+}
+
 function makeFinding(opts: {
   id: string;
   title: string;
@@ -410,7 +419,7 @@ const checkNoindexPages: RuleCheck = ({ pages }) => {
 
 // 6. Canonical tags
 const checkCanonicalTags: RuleCheck = ({ pages }) => {
-  const indexablePages = pages.filter((p) => p.statusCode >= 200 && p.statusCode < 300);
+  const indexablePages = pages.filter(isIndexableHtmlPage);
   if (indexablePages.length === 0) return null;
 
   const missing = indexablePages.filter((p) => !p.canonical);
@@ -543,7 +552,7 @@ const checkImageAltText: RuleCheck = ({ pages }) => {
 
 // 10. Schema coverage
 const checkSchemaCoverage: RuleCheck = ({ pages, siteUrl }) => {
-  const indexable = pages.filter((p) => p.statusCode >= 200 && p.statusCode < 300);
+  const indexable = pages.filter(isIndexableHtmlPage);
   if (indexable.length === 0) return null;
   const withSchema = indexable.filter((p) => p.schemaTypes.length > 0);
   const ratio = withSchema.length / indexable.length;
@@ -647,7 +656,7 @@ const checkUrlDepth: RuleCheck = ({ pages }) => {
 
 // 13. Content freshness
 const checkContentFreshness: RuleCheck = ({ pages }) => {
-  const indexable = pages.filter((p) => p.statusCode >= 200 && p.statusCode < 300);
+  const indexable = pages.filter(isIndexableHtmlPage);
   if (indexable.length === 0) return null;
   const withDate = indexable.filter((p) => p.lastModified);
   const stale = withDate.filter((p) => {
@@ -725,7 +734,7 @@ const checkInternalBrokenLinks: RuleCheck = ({ pages, pageLinks, siteUrl }) => {
 
 // 15. Viewport meta (NEW)
 const checkViewportMeta: RuleCheck = ({ pages }) => {
-  const indexable = pages.filter((p) => p.statusCode >= 200 && p.statusCode < 300);
+  const indexable = pages.filter(isIndexableHtmlPage);
   if (indexable.length === 0) return null;
   const missing = indexable.filter((p) => p.hasViewportMeta === false);
   if (missing.length / indexable.length < 0.3) return null;
@@ -753,7 +762,7 @@ const checkViewportMeta: RuleCheck = ({ pages }) => {
 
 // 16. Open Graph tags (NEW)
 const checkOgTagsCoverage: RuleCheck = ({ pages }) => {
-  const indexable = pages.filter((p) => p.statusCode >= 200 && p.statusCode < 300);
+  const indexable = pages.filter(isIndexableHtmlPage);
   if (indexable.length === 0) return null;
   const missing = indexable.filter((p) => {
     const og = p.ogTags;
@@ -786,9 +795,7 @@ const checkOgTagsCoverage: RuleCheck = ({ pages }) => {
 const checkLlmsTxt: RuleCheck = ({ llmsTxt, pages, homepage, siteUrl }) => {
   if (llmsTxt?.exists) return null;
 
-  const indexable = pages.filter(
-    (p) => p.statusCode >= 200 && p.statusCode < 300
-  );
+  const indexable = pages.filter(isIndexableHtmlPage);
   if (indexable.length === 0) return null;
 
   let origin: string;

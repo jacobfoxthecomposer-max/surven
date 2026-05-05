@@ -56,4 +56,7 @@ export interface CrawledPage {
   hasViewportMeta?: boolean;
   ogTags?: { title?: string; description?: string; image?: string };
   responseTimeMs?: number;
+  // False when the response was not text/html (font, css, js chunk, favicon, etc.).
+  // HTML-content rules must skip these — they have no head, no canonical, no meta.
+  isHtml?: boolean;
 }

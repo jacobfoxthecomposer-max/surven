@@ -98,7 +98,10 @@ async function fetchAndParsePage(url: string): Promise<PageFetchResult> {
 
     const contentType = res.headers.get("content-type") ?? "";
     if (!contentType.includes("text/html")) {
-      return { page: { ...emptyPage(url, res.status), responseTimeMs }, links: [] };
+      return {
+        page: { ...emptyPage(url, res.status), responseTimeMs, isHtml: false },
+        links: [],
+      };
     }
 
     const lastModifiedHeader = res.headers.get("Last-Modified");
@@ -209,6 +212,7 @@ async function fetchAndParsePage(url: string): Promise<PageFetchResult> {
         hasViewportMeta,
         ogTags: { title: ogTitle, description: ogDescription, image: ogImage },
         responseTimeMs,
+        isHtml: true,
       },
       links,
     };
