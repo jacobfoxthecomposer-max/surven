@@ -17,7 +17,8 @@ export const COLORS = {
   danger: "#B54631",
   warning: "#C97B45",
   success: "#96A283",
-  info: "#6BA3F5",
+  // Sage — matches --color-info in globals.css. Was bright blue, now on-brand.
+  info: "#96A283",
   border: "#C8C2B4",
   scoreRed: "#B54631",
   scoreOrange: "#C97B45",

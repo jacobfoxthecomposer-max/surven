@@ -11,12 +11,14 @@ import { Button } from "@/components/atoms/Button";
 import { useToast } from "@/components/molecules/Toast";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { loginSchema, type LoginInput } from "@/types/auth";
+import { humanizeAuthError } from "@/utils/authErrors";
 
 export function LoginForm() {
   const router = useRouter();
   const { signIn, user, loading: authLoading, unconfigured } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
   useEffect(() => {
     if (user && !authLoading) {
@@ -37,11 +39,19 @@ export function LoginForm() {
     setLoading(true);
     try {
       await signIn(data.email, data.password);
+      // Mark this as a temporary session so AuthProvider clears it on tab close.
+      try {
+        if (rememberMe) {
+          sessionStorage.removeItem("surven.tempSession");
+        } else {
+          sessionStorage.setItem("surven.tempSession", "1");
+        }
+      } catch {
+        // Storage blocked — silently ignore.
+      }
       toast("Welcome back!", "success");
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Login failed. Please try again.";
-      toast(message, "error");
+      toast(humanizeAuthError(err), "error");
     } finally {
       setLoading(false);
     }
@@ -101,7 +111,16 @@ export function LoginForm() {
           {...register("password")}
         />
 
-        <div className="flex justify-end -mt-1">
+        <div className="flex items-center justify-between -mt-1">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer"
+            />
+            <span className="text-sm text-[var(--color-fg-secondary)]">Remember me</span>
+          </label>
           <Link
             href="/forgot-password"
             className="text-sm text-[var(--color-primary)] hover:underline font-medium"

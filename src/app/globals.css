@@ -17,13 +17,16 @@
   --color-secondary: #96A283;
   --color-secondary-hover: #7D8E6C;
 
-  /* Semantic states */
-  --color-danger: #B54631;
+  /* Semantic states — kept in sync with SURVEN_SEMANTIC in src/utils/brandColors.ts.
+     Source of truth for any color that encodes status / health on Surven UI. */
+  --color-danger: #B54631;        /* SURVEN_SEMANTIC.bad */
   --color-danger-hover: #8C3522;
-  --color-warning: #C97B45;
-  --color-success: #96A283;
-  --color-success-hover: #7D8E6C;
-  --color-info: #6BA3F5;
+  --color-warning: #C9A95B;       /* SURVEN_SEMANTIC.mid (gold) */
+  --color-warning-alt: #C97B45;   /* legacy orange — kept for warning toasts */
+  --color-success: #96A283;       /* SURVEN_SEMANTIC.goodAlt */
+  --color-success-hover: #7D8E6C; /* SURVEN_SEMANTIC.good */
+  --color-info: #96A283;          /* sage — was bright blue, now matches brand */
+  --color-neutral: #A09890;       /* SURVEN_SEMANTIC.neutral */
 
   /* Score gauge colors — must stay in sync with COLORS in src/utils/constants.ts */
   --color-score-red: #B54631;

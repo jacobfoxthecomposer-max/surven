@@ -82,20 +82,36 @@ export function Sidebar() {
   const { user } = useAuth();
   const { business } = useBusiness();
   const { plan } = useUserProfile();
-  const { isExpanded, setIsExpanded } = useSidebarContext();
+  const { isExpanded, setIsExpanded, isMobileOpen, setIsMobileOpen } = useSidebarContext();
 
   const isItemActive = (href?: string) => {
     if (!href) return false;
     return pathname === href;
   };
 
+  // Auto-close mobile drawer on route change.
+  useEffect(() => {
+    setIsMobileOpen(false);
+  }, [pathname, setIsMobileOpen]);
+
   return (
-    <aside
-      className={cn(
-        "fixed left-0 top-14 h-[calc(100vh-56px)] border-r border-[var(--color-border)] bg-[var(--color-bg)] overflow-y-auto z-30 flex flex-col transition-all duration-300",
-        isExpanded ? "w-64" : "w-20"
+    <>
+      {/* Mobile backdrop */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 top-14 bg-black/40 z-20 md:hidden"
+          onClick={() => setIsMobileOpen(false)}
+          aria-hidden="true"
+        />
       )}
-    >
+      <aside
+        className={cn(
+          "fixed left-0 top-14 h-[calc(100vh-56px)] border-r border-[var(--color-border)] bg-[var(--color-bg)] overflow-y-auto z-30 flex flex-col transition-all duration-300",
+          isExpanded ? "w-64" : "w-20",
+          // Mobile drawer behavior — hidden off-screen until toggled. Always visible on md+.
+          isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+        )}
+      >
       {/* Collapse toggle button */}
       <div className="flex items-center justify-between px-3 py-4 border-b border-[var(--color-border)]">
         {isExpanded && <div className="text-xs font-semibold text-[var(--color-fg-muted)] uppercase tracking-wider">Menu</div>}
@@ -142,6 +158,7 @@ export function Sidebar() {
         <ProfileCard user={user} business={business} plan={plan} isExpanded={isExpanded} />
       </div>
     </aside>
+    </>
   );
 }
 
@@ -184,13 +201,13 @@ function NavItem({
       <Link
         href={item.href}
         className={cn(
-          "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+          "relative flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
           active
-            ? "bg-[var(--color-surface)] text-[var(--color-fg)]"
+            ? "bg-[var(--color-primary)]/10 text-[var(--color-fg)] before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-1 before:bg-[var(--color-primary)] before:rounded-r"
             : "text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] hover:bg-[var(--color-surface)]/50"
         )}
       >
-        <Icon className="h-4 w-4 flex-shrink-0" />
+        <Icon className={cn("h-4 w-4 flex-shrink-0", active && "text-[var(--color-primary)]")} />
         <span className="flex-1 text-left truncate">{item.label}</span>
         {item.badge && (
           <span className="text-xs bg-[var(--color-bg)] px-2 py-0.5 rounded">
@@ -206,9 +223,9 @@ function NavItem({
       <Link
         href={item.href}
         className={cn(
-          "flex items-center justify-center h-10 w-10 mx-auto rounded-lg transition-colors",
+          "relative flex items-center justify-center h-10 w-10 mx-auto rounded-lg transition-colors",
           active
-            ? "bg-[var(--color-surface)] text-[var(--color-fg)]"
+            ? "bg-[var(--color-primary)]/15 text-[var(--color-primary)] before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-1 before:bg-[var(--color-primary)] before:rounded-r"
             : "text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] hover:bg-[var(--color-surface)]/50"
         )}
       >
@@ -274,7 +291,10 @@ function ProfileCard({
   const initials = user?.email?.[0]?.toUpperCase() || "U";
 
   const AvatarCircle = ({ size = "h-10 w-10" }: { size?: string }) => (
-    <div className={`${size} rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm`}>
+    <div
+      className={`${size} rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br flex items-center justify-center text-white font-semibold text-sm`}
+      style={{ backgroundImage: "linear-gradient(135deg, #96A283 0%, #7D8E6C 100%)" }}
+    >
       {avatarUrl ? (
         <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
       ) : uploading ? (

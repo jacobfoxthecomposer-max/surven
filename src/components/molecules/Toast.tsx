@@ -36,7 +36,7 @@ const styles: Record<ToastType, string> = {
   success: "bg-[var(--color-success)]/15 border-[var(--color-success)]/30 text-[#566A47]",
   error:   "bg-[var(--color-danger)]/15 border-[var(--color-danger)]/30 text-[#8C3522]",
   warning: "bg-[var(--color-warning)]/15 border-[var(--color-warning)]/30 text-[#9A5D28]",
-  info:    "bg-[var(--color-info)]/15 border-[var(--color-info)]/30 text-[#2E6ACF]",
+  info:    "bg-[var(--color-primary)]/15 border-[var(--color-primary)]/30 text-[#566A47]",
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {

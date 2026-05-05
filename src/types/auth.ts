@@ -14,6 +14,9 @@ export const signUpSchema = z.object({
     .regex(/[A-Z]/, "Password must include an uppercase letter")
     .regex(/[0-9]/, "Password must include a number"),
   confirmPassword: z.string(),
+  acceptedTerms: z.literal(true, {
+    message: "Please agree to the Terms of Service and Privacy Policy.",
+  }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],

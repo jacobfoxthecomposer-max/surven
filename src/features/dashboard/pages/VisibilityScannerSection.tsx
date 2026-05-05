@@ -47,7 +47,7 @@ import {
  *   2.  Color tokens (TOK)         — sage/rust palette for charts/cards
  *   3.  Mock data                  — synthetic brand series + dates
  *   4.  Range presets              — 14d/30d/90d/All/YTD/custom
- *   5.  Engines constant           — ChatGPT, Claude, Gemini, Google AI, Perplexity, Copilot
+ *   5.  Engines constant           — ChatGPT, Claude, Gemini, Google AI
  *   6.  Data hook (useScannerData) — derives stats from brands × dates × enabled engines
  *   7.  AI Overview                — shared insight component + build*Insight helpers
  *                                    (gauge, chart, distribution; rank-series builders sit
@@ -259,8 +259,6 @@ const ENGINES = [
   { id: "claude",     label: "Claude",      scale: 0.76 },
   { id: "gemini",     label: "Gemini",      scale: 0.72 },
   { id: "google_ai",  label: "Google AI",   scale: 0.72 },
-  { id: "perplexity", label: "Perplexity",  scale: 1.05 },
-  { id: "copilot",    label: "Copilot",     scale: 0.65 },
 ] as const;
 
 // ─── DATA HOOK ──────────────────────────────────────────────────────────────
@@ -954,7 +952,7 @@ function HeroTitle({ data, treatment }: { data: ScannerData; treatment: Treatmen
 }
 
 const HERO_DESCRIPTION =
-  "AI visibility tracks how often ChatGPT, Claude, Gemini, and Perplexity name your business when answering customer questions. It's the new search ranking — if AI doesn't mention you, customers hear about whoever it does.";
+  "AI visibility tracks how often ChatGPT, Claude, Gemini, and Google AI name your business when answering customer questions. It's the new search ranking — if AI doesn't mention you, customers hear about whoever it does.";
 
 const NEXT_SCAN_PROMPT_COUNT = 248;
 

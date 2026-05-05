@@ -35,13 +35,14 @@ export function BusinessSwitcher() {
         )}
         aria-haspopup="listbox"
         aria-expanded={open}
+        title={activeBusiness.name}
       >
         <span className="max-w-[140px] truncate">{activeBusiness.name}</span>
         <ChevronDown className={cn("h-3.5 w-3.5 text-[var(--color-fg-muted)] transition-transform", open && "rotate-180")} />
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 w-56 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] shadow-lg z-50 py-1">
+        <div className="absolute left-0 top-full mt-1 min-w-[224px] max-w-[360px] rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] shadow-lg z-50 py-1">
           {businesses.map((b) => (
             <button
               key={b.id}
@@ -50,8 +51,9 @@ export function BusinessSwitcher() {
                 setOpen(false);
               }}
               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-[var(--color-surface-alt)] transition-colors"
+              title={b.name}
             >
-              <span className="flex-1 truncate">{b.name}</span>
+              <span className="flex-1 break-words">{b.name}</span>
               {b.id === activeBusiness.id && (
                 <Check className="h-3.5 w-3.5 text-[var(--color-primary)] shrink-0" />
               )}

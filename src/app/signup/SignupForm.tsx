@@ -5,12 +5,40 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Check, X } from "lucide-react";
 import { AuthLayout } from "@/components/layouts/AuthLayout";
 import { Input } from "@/components/atoms/Input";
 import { Button } from "@/components/atoms/Button";
 import { useToast } from "@/components/molecules/Toast";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { signUpSchema, type SignUpInput } from "@/types/auth";
+import { humanizeAuthError } from "@/utils/authErrors";
+import { cn } from "@/utils/cn";
+
+interface RuleProps {
+  met: boolean;
+  label: string;
+}
+
+function Rule({ met, label }: RuleProps) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {met ? (
+        <Check className="h-3.5 w-3.5 text-[var(--color-primary)] shrink-0" />
+      ) : (
+        <X className="h-3.5 w-3.5 text-[var(--color-fg-muted)] shrink-0" />
+      )}
+      <span
+        className={cn(
+          "text-xs",
+          met ? "text-[var(--color-fg-secondary)]" : "text-[var(--color-fg-muted)]",
+        )}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
 
 export function SignupForm() {
   const router = useRouter();
@@ -21,11 +49,20 @@ export function SignupForm() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<SignUpInput>({
     resolver: zodResolver(signUpSchema),
     mode: "onBlur",
+    defaultValues: { acceptedTerms: false as unknown as true },
   });
+
+  const password = watch("password") ?? "";
+  const rules = {
+    length: password.length >= 8,
+    uppercase: /[A-Z]/.test(password),
+    number: /[0-9]/.test(password),
+  };
 
   async function onSubmit(data: SignUpInput) {
     setLoading(true);
@@ -34,9 +71,7 @@ export function SignupForm() {
       toast("Account created! Let's set up your business.", "success");
       router.push("/onboarding");
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Sign up failed. Please try again.";
-      toast(message, "error");
+      toast(humanizeAuthError(err), "error");
     } finally {
       setLoading(false);
     }
@@ -56,14 +91,21 @@ export function SignupForm() {
           error={errors.email?.message}
           {...register("email")}
         />
-        <Input
-          label="Password"
-          type="password"
-          placeholder="Min 8 chars, 1 uppercase, 1 number"
-          autoComplete="new-password"
-          error={errors.password?.message}
-          {...register("password")}
-        />
+        <div className="space-y-2">
+          <Input
+            label="Password"
+            type="password"
+            placeholder="Choose a strong password"
+            autoComplete="new-password"
+            error={errors.password?.message}
+            {...register("password")}
+          />
+          <div className="grid grid-cols-1 gap-1 px-1">
+            <Rule met={rules.length} label="At least 8 characters" />
+            <Rule met={rules.uppercase} label="One uppercase letter" />
+            <Rule met={rules.number} label="One number" />
+          </div>
+        </div>
         <Input
           label="Confirm Password"
           type="password"
@@ -72,6 +114,42 @@ export function SignupForm() {
           error={errors.confirmPassword?.message}
           {...register("confirmPassword")}
         />
+
+        <div className="space-y-1.5">
+          <label className="flex items-start gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              {...register("acceptedTerms")}
+              className="h-4 w-4 mt-0.5 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer shrink-0"
+            />
+            <span className="text-xs text-[var(--color-fg-secondary)] leading-relaxed">
+              I agree to the{" "}
+              <Link
+                href="/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[var(--color-primary)] hover:underline font-medium"
+              >
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link
+                href="/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[var(--color-primary)] hover:underline font-medium"
+              >
+                Privacy Policy
+              </Link>
+              .
+            </span>
+          </label>
+          {errors.acceptedTerms && (
+            <p role="alert" className="text-xs text-[var(--color-danger)] pl-6">
+              {errors.acceptedTerms.message}
+            </p>
+          )}
+        </div>
 
         <Button type="submit" loading={loading} fullWidth size="lg">
           Create Account

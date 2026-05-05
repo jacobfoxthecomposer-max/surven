@@ -116,13 +116,20 @@ export default function OnboardingPage() {
           {...register("businessName")}
         />
 
-        <Select
-          label="Industry"
-          placeholder="Select your industry"
-          options={industryOptions}
-          error={errors.industry?.message}
-          {...register("industry")}
-        />
+        <div className="space-y-1.5">
+          <Select
+            label="Industry"
+            placeholder="Select your industry"
+            options={industryOptions}
+            error={errors.industry?.message}
+            {...register("industry")}
+          />
+          <p className="text-xs text-[var(--color-fg-muted)]">
+            Pick the closest match. Don&apos;t see your business type? Choose{" "}
+            <span className="font-medium text-[var(--color-fg-secondary)]">Other (specify)</span>{" "}
+            and tell us what you do.
+          </p>
+        </div>
 
         <AnimatePresence initial={false}>
           {isOtherIndustry && (
