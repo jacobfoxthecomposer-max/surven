@@ -140,16 +140,29 @@ export async function POST(request: NextRequest) {
     bodyExcerpt: extractBodyExcerpt(f.html),
   }));
 
-  // Look up business name (used by the LLM prompt).
-  let businessName: string | undefined;
-  let businessIdResolved = connection.business_id;
-  if (parse.data.businessId) businessIdResolved = parse.data.businessId;
-  const { data: biz } = await supabaseAdmin
-    .from("businesses")
-    .select("name")
-    .eq("id", businessIdResolved)
-    .single();
-  businessName = (biz?.name as string | undefined) ?? undefined;
+  // Resolve the actual brand name from on-page signals. The connection's stored
+  // business name is unreliable: a user can connect GitHub under business A but
+  // the deployed site is for business B, and we'd write A's name into B's titles.
+  // Detection precedence: og:site_name → application-name → root domain → connection's business name.
+  const homepage = fetchOk.find((f) => {
+    try { return new URL(f.url).pathname === "/" || new URL(f.url).pathname === ""; }
+    catch { return false; }
+  }) ?? fetchOk[0];
+  let businessName = deriveBrandFromHtml(homepage.html);
+  if (!businessName) businessName = deriveBrandFromDomain(siteUrl);
+
+  // Last-resort fallback: connection's business name. Logged so a future audit can
+  // tell when we had to guess.
+  if (!businessName) {
+    let businessIdResolved = connection.business_id;
+    if (parse.data.businessId) businessIdResolved = parse.data.businessId;
+    const { data: biz } = await supabaseAdmin
+      .from("businesses")
+      .select("name")
+      .eq("id", businessIdResolved)
+      .single();
+    businessName = (biz?.name as string | undefined) ?? undefined;
+  }
 
   // LLM call.
   const llmResult = isTitles
