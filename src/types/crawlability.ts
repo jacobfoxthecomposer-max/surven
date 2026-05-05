@@ -20,7 +20,7 @@ export interface CrawlabilityFinding {
   whyItMatters: string;
   howToFix: string;
   fixCode?: string;
-  fixType?: "html" | "robots" | "sitemap" | "config" | "llms";
+  fixType?: "html" | "robots" | "sitemap" | "config" | "llms" | "rewrite_duplicates";
   fixLabel?: string;
   isApplied?: boolean;
 }
