@@ -12,6 +12,8 @@ export const metadata: Metadata = {
   },
 
   title: "Login to Your Surven Account | The Hidden Still",
+
+  description: "Log in to your Surven account to manage your AI visibility tracking and access your dashboard.",
 };
 const SUPABASE_UNCONFIGURED =
   !process.env.NEXT_PUBLIC_SUPABASE_URL ||
