@@ -1,20 +1,54 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
-  CheckCircle2,
   Cpu,
+  MessageSquare,
   Link2,
-  Sparkles,
   ShieldCheck,
+  Sparkles,
+  type LucideIcon,
 } from "lucide-react";
 import { SectionHeading } from "@/components/atoms/SectionHeading";
+import { Modal } from "@/components/molecules/Modal";
+import { SURVEN_SEMANTIC } from "@/utils/brandColors";
 import type { ScanResult, ModelName } from "@/types/database";
 
 const COLORS = {
   primary: "#96A283",
+  primaryHover: "#7D8E6C",
+};
+
+// Visual rhythm cribbed from Code Scanner's `TopFixesPanel`. Sage→amber→rust
+// gradient header band + status-tile / title / body rows + sage `+N` pill on
+// the right when the action carries a numeric magnitude.
+
+const ACTION_META: Record<
+  string,
+  { Icon: LucideIcon; tint: string; iconColor: string }
+> = {
+  engine: {
+    Icon: Cpu,
+    tint: "rgba(150,162,131,0.18)",
+    iconColor: "#5E7250",
+  },
+  prompts: {
+    Icon: MessageSquare,
+    tint: "rgba(201,123,69,0.16)",
+    iconColor: "#A06210",
+  },
+  sources: {
+    Icon: Link2,
+    tint: "rgba(184,160,48,0.18)",
+    iconColor: "#7E6B17",
+  },
+  defend: {
+    Icon: ShieldCheck,
+    tint: "rgba(150,162,131,0.18)",
+    iconColor: "#5E7250",
+  },
 };
 
 const MODEL_LABELS: Record<ModelName, string> = {
@@ -24,55 +58,26 @@ const MODEL_LABELS: Record<ModelName, string> = {
   google_ai: "Google AI",
 };
 
-// ─── Three card palettes ─────────────────────────────────────────────────
-// Each mini-card uses a distinct accent + icon so the eye can scan the
-// panel and see "three different action surfaces" at a glance.
-
-const SOURCES_PALETTE = {
-  accent: "#7E6B17",
-  accentText: "#5C4D0E",
-  gradient:
-    "linear-gradient(135deg, rgba(184,160,48,0.18) 0%, rgba(184,160,48,0.03) 100%)",
-  HeaderIcon: Link2,
-  tag: "SOURCES TO CLAIM",
+// Per-engine optimization lever — used to write engine-specific advice in the
+// modal body when we name a worst-performing engine.
+const ENGINE_LEVERS: Record<ModelName, string> = {
+  chatgpt:
+    "ChatGPT leans on Reddit threads, Wikipedia, and editorial articles. Get yourself mentioned on a couple of high-traffic Reddit threads in your category and pitch one or two niche publications — those are the sources it weights highest.",
+  claude:
+    "Claude favors long-form articles, official sites, and structured documentation. Publish (or commission) a thorough piece — a comparison guide, a buyer's guide, or a definitive how-to — on a domain Claude already trusts.",
+  gemini:
+    "Gemini pulls heavily from Google Search, Google reviews, and Google Maps. Cleaning up your Google Business Profile, getting fresh reviews on Google specifically, and ensuring your site ranks for the prompt's keywords moves Gemini fastest.",
+  google_ai:
+    "Google AI Overview reads the top organic search results for the prompt. Win this engine by ranking the page that directly answers the query — schema markup, an FAQ section, and clear answer-first copy on the page that targets that keyword.",
 };
 
-const ENGINES_PALETTE = {
-  accent: "#C97B45",
-  accentText: "#8C5A1E",
-  gradient:
-    "linear-gradient(135deg, rgba(199,123,69,0.20) 0%, rgba(199,123,69,0.03) 100%)",
-  HeaderIcon: Cpu,
-  tag: "ENGINES TO FIX",
-};
-
-const DEFEND_PALETTE = {
-  accent: "#96A283",
-  accentText: "#4A5E3A",
-  gradient:
-    "linear-gradient(135deg, rgba(150,162,131,0.22) 0%, rgba(150,162,131,0.04) 100%)",
-  HeaderIcon: ShieldCheck,
-  tag: "PROMPTS TO DEFEND",
-};
-
-interface SourceGap {
-  domain: string;
-  competitors: string[];
-  /** Total citations across competitors. */
-  count: number;
-}
-
-interface EngineGap {
-  engine: string;
-  competitor: string;
-  competitorPct: number;
-  yourPct: number;
-  gap: number;
-}
-
-interface DefendItem {
-  prompt: string;
-  engineCount: number;
+interface FixAction {
+  key: keyof typeof ACTION_META;
+  headline: string;
+  oneLiner: string;
+  modalBody: string;
+  /** Optional magnitude pill rendered on the right of the row. */
+  metric?: string;
 }
 
 interface Props {
@@ -81,401 +86,363 @@ interface Props {
   competitors: string[];
 }
 
+function calcModelScore(
+  results: ScanResult[],
+  model: ModelName,
+  competitor?: string,
+): number | null {
+  const modelResults = results.filter((r) => r.model_name === model);
+  if (modelResults.length === 0) return null;
+  if (!competitor) {
+    const hits = modelResults.filter((r) => r.business_mentioned).length;
+    return Math.round((hits / modelResults.length) * 100);
+  }
+  const relevant = modelResults.filter(
+    (r) => r.competitor_mentions && competitor in r.competitor_mentions,
+  );
+  if (relevant.length === 0) return null;
+  const hits = relevant.filter((r) => r.competitor_mentions[competitor]).length;
+  if (hits === 0) return null;
+  return Math.round((hits / relevant.length) * 100);
+}
+
 export function CompetitorFixActions({
   results,
   businessName,
   competitors,
 }: Props) {
-  const { sources, engines, defends } = useMemo(() => {
-    // ── 1. Citation source gaps ──────────────────────────────────────
-    // Domains AI cites for at least one competitor but never for you.
-    // These are the highest-ROI listings to chase next.
+  const [openKey, setOpenKey] = useState<string | null>(null);
+
+  const actions = useMemo<FixAction[]>(() => {
+    const models: ModelName[] = ["chatgpt", "claude", "gemini", "google_ai"];
+
+    // ===== 1. Biggest engine gap — find the engine where competitors most outpace you =====
+    let worstEngine: ModelName | null = null;
+    let worstEngineYourScore = 0;
+    let worstEngineCompetitor: string | null = null;
+    let worstEngineCompScore = 0;
+    let worstEngineGap = 0;
+
+    for (const m of models) {
+      const yourScore = calcModelScore(results, m) ?? 0;
+      for (const c of competitors) {
+        const compScore = calcModelScore(results, m, c) ?? 0;
+        const gap = compScore - yourScore;
+        if (gap > worstEngineGap) {
+          worstEngineGap = gap;
+          worstEngine = m;
+          worstEngineYourScore = yourScore;
+          worstEngineCompetitor = c;
+          worstEngineCompScore = compScore;
+        }
+      }
+    }
+
+    // ===== 2. Gap prompts — prompts where competitors rank, you don't =====
+    const gapPromptMap = new Map<string, { competitors: Set<string>; engines: Set<string> }>();
+    for (const r of results) {
+      if (!r.competitor_mentions) continue;
+      if (r.business_mentioned) continue;
+      for (const c of competitors) {
+        if (r.competitor_mentions[c]) {
+          if (!gapPromptMap.has(r.prompt_text)) {
+            gapPromptMap.set(r.prompt_text, {
+              competitors: new Set(),
+              engines: new Set(),
+            });
+          }
+          const entry = gapPromptMap.get(r.prompt_text)!;
+          entry.competitors.add(c);
+          entry.engines.add(r.model_name);
+        }
+      }
+    }
+    const gapPrompts = Array.from(gapPromptMap.entries()).slice(0, 3);
+    const totalGapPrompts = gapPromptMap.size;
+    const topGapCompetitor =
+      gapPrompts.length > 0
+        ? Array.from(gapPrompts[0][1].competitors)[0]
+        : null;
+
+    // ===== 3. Citation source gaps — domains AI cites for competitors but not you =====
     const yourDomains = new Set<string>();
-    const compDomainHits = new Map<string, Map<string, number>>();
+    const competitorDomains = new Map<string, Map<string, number>>(); // domain → competitor → count
+
     for (const r of results) {
       if (!r.citations) continue;
       for (const domain of r.citations) {
-        if (r.business_mentioned) yourDomains.add(domain);
+        if (r.business_mentioned) {
+          yourDomains.add(domain);
+        }
         if (r.competitor_mentions) {
           for (const c of competitors) {
             if (r.competitor_mentions[c]) {
-              if (!compDomainHits.has(domain)) compDomainHits.set(domain, new Map());
-              const inner = compDomainHits.get(domain)!;
+              if (!competitorDomains.has(domain)) {
+                competitorDomains.set(domain, new Map());
+              }
+              const inner = competitorDomains.get(domain)!;
               inner.set(c, (inner.get(c) ?? 0) + 1);
             }
           }
         }
       }
     }
-    const sourceGapList: SourceGap[] = [];
-    for (const [domain, byComp] of compDomainHits) {
+
+    const citationGaps: { domain: string; competitor: string; count: number }[] = [];
+    for (const [domain, byComp] of competitorDomains) {
       if (yourDomains.has(domain)) continue;
-      const competitors = Array.from(byComp.keys());
-      const count = Array.from(byComp.values()).reduce((a, b) => a + b, 0);
-      sourceGapList.push({ domain, competitors, count });
+      const top = Array.from(byComp.entries()).sort((a, b) => b[1] - a[1])[0];
+      if (top) citationGaps.push({ domain, competitor: top[0], count: top[1] });
     }
-    sourceGapList.sort((a, b) => b.count - a.count);
+    citationGaps.sort((a, b) => b.count - a.count);
+    const topCitationGaps = citationGaps.slice(0, 3);
 
-    // ── 2. Engine head-to-head gaps ──────────────────────────────────
-    // For each engine: your visibility vs the strongest competitor's.
-    // Only surface engines where a competitor leads you.
-    const engineList: ModelName[] = ["chatgpt", "claude", "gemini", "google_ai"];
-    const engineGapList: EngineGap[] = [];
-    for (const m of engineList) {
-      const modelResults = results.filter((r) => r.model_name === m);
-      if (modelResults.length === 0) continue;
-      const yourPct = Math.round(
-        (modelResults.filter((r) => r.business_mentioned).length /
-          modelResults.length) *
-          100,
-      );
-      let topCompetitor: string | null = null;
-      let topPct = 0;
-      for (const c of competitors) {
-        const relevant = modelResults.filter(
-          (r) => r.competitor_mentions && c in r.competitor_mentions,
-        );
-        if (relevant.length === 0) continue;
-        const compPct = Math.round(
-          (relevant.filter((r) => r.competitor_mentions[c]).length /
-            relevant.length) *
-            100,
-        );
-        if (compPct > topPct) {
-          topPct = compPct;
-          topCompetitor = c;
-        }
-      }
-      if (topCompetitor && topPct > yourPct) {
-        engineGapList.push({
-          engine: MODEL_LABELS[m],
-          competitor: topCompetitor,
-          competitorPct: topPct,
-          yourPct,
-          gap: topPct - yourPct,
-        });
-      }
-    }
-    engineGapList.sort((a, b) => b.gap - a.gap);
-
-    // ── 3. Solo wins to defend ───────────────────────────────────────
-    // Prompts where YOU appear and no competitor does. Highest engine
-    // coverage = most exposed when a competitor publishes new content.
-    const defendMap = new Map<string, Set<string>>();
+    // ===== 4. Advantage prompts — prompts where you rank, competitors don't =====
+    const advantagePromptMap = new Map<string, { engines: Set<string> }>();
     for (const r of results) {
       if (!r.business_mentioned) continue;
       if (!r.competitor_mentions) continue;
-      const anyComp = competitors.some((c) => r.competitor_mentions[c]);
-      if (anyComp) continue;
-      if (!defendMap.has(r.prompt_text)) defendMap.set(r.prompt_text, new Set());
-      defendMap.get(r.prompt_text)!.add(r.model_name);
+      const anyCompMentioned = competitors.some((c) => r.competitor_mentions[c]);
+      if (anyCompMentioned) continue;
+      if (!advantagePromptMap.has(r.prompt_text)) {
+        advantagePromptMap.set(r.prompt_text, { engines: new Set() });
+      }
+      advantagePromptMap.get(r.prompt_text)!.engines.add(r.model_name);
     }
-    const defendList: DefendItem[] = Array.from(defendMap.entries()).map(
-      ([prompt, engines]) => ({ prompt, engineCount: engines.size }),
-    );
-    defendList.sort((a, b) => b.engineCount - a.engineCount);
+    const advantagePrompts = Array.from(advantagePromptMap.entries()).slice(0, 3);
+    const totalAdvantagePrompts = advantagePromptMap.size;
 
-    return {
-      sources: sourceGapList.slice(0, 3),
-      engines: engineGapList.slice(0, 3),
-      defends: defendList.slice(0, 3),
-    };
-  }, [results, competitors]);
+    // ============== Action 1: Close biggest engine gap ==============
+    const engineAction: FixAction = worstEngine && worstEngineCompetitor
+      ? {
+          key: "engine",
+          headline: `Close the ${worstEngineGap}% gap on ${MODEL_LABELS[worstEngine]}`,
+          oneLiner: `${worstEngineCompetitor} appears ${worstEngineGap}% more often than ${businessName} on ${MODEL_LABELS[worstEngine]}.`,
+          metric: `${worstEngineGap}% gap`,
+          modalBody: `${worstEngineCompetitor} appears on ${worstEngineCompScore}% of ${MODEL_LABELS[worstEngine]} prompts. ${businessName} is at ${worstEngineYourScore}%.\n\n${ENGINE_LEVERS[worstEngine]}\n\nCheck the Top Cited Domains card below — match the sources ${worstEngineCompetitor} appears on and visibility usually closes within 2–4 weeks.`,
+        }
+      : {
+          key: "engine",
+          headline: "You're not trailing on any single engine",
+          oneLiner: `${businessName} matches or beats every competitor on every engine.`,
+          modalBody: `No competitor outpaces ${businessName} on any engine in this scan. Run a fresh scan in 7–14 days to confirm the lead is holding.`,
+        };
+
+    // ============== Action 2: Win prompts you're losing ==============
+    const promptList = gapPrompts
+      .map(([p, info], i) => {
+        const compsLabel = Array.from(info.competitors).join(", ");
+        const enginesLabel = Array.from(info.engines)
+          .map((e) => MODEL_LABELS[e as ModelName])
+          .join(", ");
+        return `${i + 1}. "${p}" — ${compsLabel} appears on ${enginesLabel}.`;
+      })
+      .join("\n");
+
+    const promptAction: FixAction = totalGapPrompts > 0 && topGapCompetitor
+      ? {
+          key: "prompts",
+          headline: `Win the ${totalGapPrompts} prompt${totalGapPrompts === 1 ? "" : "s"} where ${topGapCompetitor} ranks and you don't`,
+          oneLiner: `${topGapCompetitor} shows up on ${totalGapPrompts} prompt${totalGapPrompts === 1 ? "" : "s"} that ${businessName} is missing entirely.`,
+          metric: `${totalGapPrompts} prompt${totalGapPrompts === 1 ? "" : "s"}`,
+          modalBody: `Prompts ${businessName} is missing:\n\n${promptList}\n\nWrite a page that restates each prompt in the title and first paragraph — AI pulls copy from pages that match the prompt almost verbatim. For "best/top" prompts, add 5–10 named-customer reviews on the page; AI weights real names higher than generic marketing copy.`,
+        }
+      : {
+          key: "prompts",
+          headline: "No prompts where competitors solo-rank above you",
+          oneLiner: `${businessName} is at least matching every competitor where they appear.`,
+          modalBody: `Every prompt where a competitor was mentioned, ${businessName} was also mentioned. Keep scanning weekly to catch new gap prompts as competitors publish content.`,
+        };
+
+    // ============== Action 3: Steal competitor citation sources ==============
+    const sourceList = topCitationGaps
+      .map(
+        (g, i) =>
+          `${i + 1}. ${g.domain} — cited ${g.count} time${g.count === 1 ? "" : "s"} for ${g.competitor}.`,
+      )
+      .join("\n");
+
+    const sourceAction: FixAction = topCitationGaps.length > 0
+      ? {
+          key: "sources",
+          headline: `Get listed on ${topCitationGaps.length} source${topCitationGaps.length === 1 ? "" : "s"} citing your competitors`,
+          oneLiner: `AI is citing ${topCitationGaps[0].domain} for ${topCitationGaps[0].competitor}, but never for ${businessName}.`,
+          metric: `${topCitationGaps.length} source${topCitationGaps.length === 1 ? "" : "s"}`,
+          modalBody: `Sources powering competitor visibility but ignoring ${businessName}:\n\n${sourceList}\n\nDirectories (Yelp, BBB, industry-specific) usually accept free listings — claim yours. Editorial mentions need a story pitch or customer-led intro. Reddit happens when real customers recommend you in real threads.\n\nStart with ${topCitationGaps[0].domain} — one placement on the highest-cited source moves more visibility than five on weak ones.`,
+        }
+      : {
+          key: "sources",
+          headline: "Match competitors on the citation sources they use",
+          oneLiner: `${businessName} is showing up on the same sources competitors are — keep that parity.`,
+          modalBody: `AI isn't citing any sources for competitors that aren't also citing ${businessName}. Watch Citation Insights for new gaps as competitors get listed on new platforms.`,
+        };
+
+    // ============== Action 4: Defend the prompts you own ==============
+    const advList = advantagePrompts
+      .map(([p, info], i) => {
+        const enginesLabel = Array.from(info.engines)
+          .map((e) => MODEL_LABELS[e as ModelName])
+          .join(", ");
+        return `${i + 1}. "${p}" — appearing on ${enginesLabel}.`;
+      })
+      .join("\n");
+
+    const defendAction: FixAction = totalAdvantagePrompts > 0
+      ? {
+          key: "defend",
+          headline: `Defend the ${totalAdvantagePrompts} prompt${totalAdvantagePrompts === 1 ? "" : "s"} where you alone rank`,
+          oneLiner: `${businessName} owns ${totalAdvantagePrompts} prompt${totalAdvantagePrompts === 1 ? "" : "s"} where no competitor is mentioned.`,
+          metric: `${totalAdvantagePrompts} solo win${totalAdvantagePrompts === 1 ? "" : "s"}`,
+          modalBody: `Solo wins — prompts where AI mentions ${businessName} and no competitor:\n\n${advList}\n\nThree moves to hold them:\n\n1. Find the source AI is reading (check Citation Insights for the cited domains).\n2. Refresh that page every 60–90 days — AI weights freshness heavily.\n3. Add depth: named customers, dated outcomes, specific numbers. Concrete pages are harder to dislodge.`,
+        }
+      : {
+          key: "defend",
+          headline: `Build solo-win prompts ${businessName} can own`,
+          oneLiner: `${businessName} doesn't currently solo-rank on any prompt — every win is shared.`,
+          modalBody: `Every prompt mentioning ${businessName} also mentions a competitor — every win is shared. Pick your most specific category prompt (not "best plumber" but "best emergency plumber for older homes in [city]") and write a page that answers it better than any competitor. Specificity is the lever — generic answers stay shared, specific answers get owned. You'll usually see solo-wins appear within 2–3 scans.`,
+        };
+
+    return [engineAction, promptAction, sourceAction, defendAction];
+  }, [results, businessName, competitors]);
+
+  const open = actions.find((a) => a.key === openKey) ?? null;
 
   return (
-    <div
-      className="rounded-[var(--radius-lg)] border bg-[var(--color-surface)] flex flex-col h-full overflow-hidden"
-      style={{ borderColor: "rgba(150,162,131,0.45)" }}
-    >
-      {/* Outer panel header */}
+    <>
       <div
-        className="px-4 py-2.5 border-b border-[var(--color-border)] flex items-center gap-2.5"
-        style={{
-          background:
-            "linear-gradient(135deg, rgba(150,162,131,0.28) 0%, rgba(184,160,48,0.14) 50%, rgba(201,123,69,0.14) 100%)",
-        }}
+        className="rounded-[var(--radius-lg)] border bg-[var(--color-surface)] flex flex-col h-full"
+        style={{ borderColor: "rgba(150,162,131,0.45)" }}
       >
+        {/* Header band — same 3-stop sage→amber→rust gradient as the Code
+            Scanner "Fix these first" panel. */}
         <div
-          className="h-7 w-7 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
-          style={{ backgroundColor: "rgba(150,162,131,0.22)" }}
+          className="rounded-t-[var(--radius-lg)] px-5 py-3.5 border-b border-[var(--color-border)] flex items-center justify-between flex-wrap gap-3"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(150,162,131,0.28) 0%, rgba(184,160,48,0.14) 50%, rgba(201,123,69,0.14) 100%)",
+          }}
         >
-          <Sparkles className="h-3.5 w-3.5" style={{ color: COLORS.primary }} />
-        </div>
-        <SectionHeading
-          text="Ways to take the lead"
-          info="Three distinct levers — citation sources, engine performance, and your defensive wins. Each links to the page where you can act on it."
-        />
-      </div>
-
-      {/* Three nested mini-cards stacked, sharing the available column height */}
-      <div className="p-3 flex-1 flex flex-col gap-3 min-w-0 min-h-0">
-        <SourcesCard items={sources} />
-        <EnginesCard items={engines} businessName={businessName} />
-        <DefendCard items={defends} businessName={businessName} />
-      </div>
-    </div>
-  );
-}
-
-// ─── Card 1: Sources to claim ────────────────────────────────────────────
-
-function SourcesCard({ items }: { items: SourceGap[] }) {
-  const palette = SOURCES_PALETTE;
-  return (
-    <NestedShell
-      palette={palette}
-      title={`${items.length} ${items.length === 1 ? "source" : "sources"} to claim`}
-      summary="domains citing competitors, not you"
-      footerHref="/citation-insights"
-      footerLabel="See all citation sources"
-      empty="You appear on every source AI is citing for competitors."
-    >
-      {items.map((s) => (
-        <Row
-          key={s.domain}
-          palette={palette}
-          icon={Link2}
-          title={s.domain}
-          subtitle={`Cited for ${s.competitors.slice(0, 2).join(", ")}${s.competitors.length > 2 ? ` +${s.competitors.length - 2}` : ""}`}
-          pill={`${s.count}×`}
-        />
-      ))}
-    </NestedShell>
-  );
-}
-
-// ─── Card 2: Engines to fix ──────────────────────────────────────────────
-
-function EnginesCard({
-  items,
-  businessName,
-}: {
-  items: EngineGap[];
-  businessName: string;
-}) {
-  const palette = ENGINES_PALETTE;
-  return (
-    <NestedShell
-      palette={palette}
-      title={`${items.length} ${items.length === 1 ? "engine" : "engines"} to fix`}
-      summary="biggest competitor lead per engine"
-      footerHref="/ai-visibility-tracker"
-      footerLabel="View engine performance"
-      empty={`No engine where a competitor outranks ${businessName}.`}
-    >
-      {items.map((g) => (
-        <Row
-          key={g.engine}
-          palette={palette}
-          icon={Cpu}
-          title={g.engine}
-          subtitle={`${g.competitor} ${g.competitorPct}% · you ${g.yourPct}%`}
-          pill={`+${g.gap}%`}
-        />
-      ))}
-    </NestedShell>
-  );
-}
-
-// ─── Card 3: Prompts to defend ───────────────────────────────────────────
-
-function DefendCard({
-  items,
-  businessName,
-}: {
-  items: DefendItem[];
-  businessName: string;
-}) {
-  const palette = DEFEND_PALETTE;
-  return (
-    <NestedShell
-      palette={palette}
-      title={`${items.length} ${items.length === 1 ? "prompt" : "prompts"} to defend`}
-      summary="solo wins competitors could chase"
-      footerHref="/prompts"
-      footerLabel="Watch in Prompt Tracker"
-      empty={`${businessName} doesn't currently solo-rank — every win is shared.`}
-    >
-      {items.map((d, i) => (
-        <Row
-          key={i}
-          palette={palette}
-          icon={CheckCircle2}
-          title={`"${d.prompt}"`}
-          subtitle={`Solo on ${d.engineCount}/4 engines`}
-          pill={`${d.engineCount}/4`}
-          titleIsPrompt
-        />
-      ))}
-    </NestedShell>
-  );
-}
-
-// ─── Shared shell (header + scrollable rows + footer CTA) ────────────────
-
-interface Palette {
-  accent: string;
-  accentText: string;
-  gradient: string;
-  HeaderIcon: typeof Sparkles;
-  tag: string;
-}
-
-function NestedShell({
-  palette,
-  title,
-  summary,
-  footerHref,
-  footerLabel,
-  empty,
-  children,
-}: {
-  palette: Palette;
-  title: string;
-  summary: string;
-  footerHref: string;
-  footerLabel: string;
-  empty: string;
-  children: React.ReactNode;
-}) {
-  const HeaderIcon = palette.HeaderIcon;
-  const isEmpty = Array.isArray(children) && children.length === 0;
-
-  return (
-    <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col overflow-hidden flex-1 min-h-0">
-      {/* Mini header */}
-      <div
-        className="px-3 py-2"
-        style={{
-          background: palette.gradient,
-          borderLeft: `3px solid ${palette.accent}`,
-        }}
-      >
-        <div className="flex items-baseline justify-between gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <HeaderIcon
-              className="h-3.5 w-3.5 shrink-0"
-              style={{ color: palette.accent }}
-            />
-            <h3
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: 15.5,
-                fontWeight: 500,
-                color: "var(--color-fg)",
-                letterSpacing: "-0.005em",
-                lineHeight: 1.15,
-              }}
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div
+              className="h-8 w-8 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
+              style={{ backgroundColor: "rgba(150,162,131,0.22)" }}
             >
-              {title}
-            </h3>
+              <Sparkles className="h-4 w-4" style={{ color: COLORS.primary }} />
+            </div>
+            <SectionHeading
+              text="Ways to take the lead"
+              info="The highest-impact moves for closing the gap on your competitors, derived from your scan."
+            />
           </div>
           <p
-            className="text-[var(--color-fg-muted)]"
-            style={{ fontSize: 10.5, lineHeight: 1.3 }}
+            className="text-[var(--color-fg-secondary)]"
+            style={{ fontSize: 13.5 }}
           >
-            {summary}
+            Specific to your scan.{" "}
+            <span style={{ color: COLORS.primary, fontWeight: 600 }}>
+              Tap any row
+            </span>{" "}
+            for the playbook.
           </p>
+        </div>
+
+        <div className="p-4 flex-1 flex flex-col gap-3">
+          {actions.map((a) => {
+            const meta = ACTION_META[a.key];
+            const Icon = meta.Icon;
+            return (
+              <button
+                key={a.key}
+                onClick={() => setOpenKey(a.key)}
+                className="w-full text-left rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 px-5 py-4 flex items-start gap-4 hover:border-[var(--color-border-hover)] hover:bg-[var(--color-surface-alt)] hover:-translate-y-px transition-all group"
+              >
+                <span
+                  className="inline-flex items-center justify-center rounded-[var(--radius-md)] shrink-0 mt-0.5"
+                  style={{
+                    width: 36,
+                    height: 36,
+                    backgroundColor: meta.tint,
+                    color: meta.iconColor,
+                  }}
+                >
+                  <Icon className="h-5 w-5" />
+                </span>
+                <div className="flex-1 min-w-0 space-y-1">
+                  <p
+                    className="text-[var(--color-fg)]"
+                    style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.3 }}
+                  >
+                    {a.headline}
+                  </p>
+                  <p
+                    className="text-[var(--color-fg-secondary)]"
+                    style={{ fontSize: 14, lineHeight: 1.5 }}
+                  >
+                    {a.oneLiner}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0 mt-1">
+                  {a.metric && (
+                    <span
+                      className="rounded-full px-3 py-1 font-semibold tabular-nums"
+                      style={{
+                        fontSize: 13,
+                        backgroundColor: `${COLORS.primary}1f`,
+                        color: COLORS.primaryHover,
+                      }}
+                    >
+                      {a.metric}
+                    </span>
+                  )}
+                  <ArrowRight
+                    className="h-4 w-4 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"
+                    style={{ color: COLORS.primary }}
+                  />
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Rows */}
-      {isEmpty ? (
-        <p
-          className="text-[var(--color-fg-muted)] p-3 text-center"
-          style={{ fontSize: 11.5 }}
-        >
-          {empty}
-        </p>
-      ) : (
-        <div className="px-2 pt-1.5 pb-1.5 flex-1 flex flex-col gap-1.5 min-h-0">
-          {children}
-        </div>
-      )}
-
-      {/* Footer CTA — links to the page where the user can act on this card */}
-      <Link
-        href={footerHref}
-        className="group px-3 py-2 border-t border-[var(--color-border)] mt-auto inline-flex items-center gap-1.5 font-semibold transition-opacity hover:opacity-75"
-        style={{ fontSize: 12, color: palette.accentText }}
+      <Modal
+        open={open !== null}
+        onClose={() => setOpenKey(null)}
+        title={open?.headline}
+        className="max-w-lg"
       >
-        {footerLabel}
-        <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-      </Link>
-    </section>
-  );
-}
+        {open && (
+          <div className="space-y-4">
+            <p className="text-sm text-[var(--color-fg-secondary)] leading-relaxed whitespace-pre-line">
+              {open.modalBody}
+            </p>
 
-// ─── Single row used by all three card variants ──────────────────────────
-
-function Row({
-  palette,
-  icon: Icon,
-  title,
-  subtitle,
-  pill,
-  titleIsPrompt = false,
-}: {
-  palette: Palette;
-  icon: typeof Sparkles;
-  title: string;
-  subtitle: string;
-  pill?: string;
-  /** Use display font + subtle italics for prompt text. */
-  titleIsPrompt?: boolean;
-}) {
-  return (
-    <div
-      className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-2 flex items-start gap-2 hover:bg-[var(--color-surface-alt)]/40 transition-colors flex-1 min-h-0"
-    >
-      <Icon
-        className="h-3.5 w-3.5 shrink-0 mt-0.5"
-        style={{ color: palette.accent }}
-      />
-      <div className="flex-1 min-w-0 flex flex-col justify-between gap-1">
-        <div className="flex items-start justify-between gap-2">
-          <p
-            className="leading-snug truncate"
-            style={
-              titleIsPrompt
-                ? {
-                    fontFamily: "var(--font-display)",
-                    fontSize: 13,
-                    fontWeight: 500,
-                    color: "var(--color-fg)",
-                    letterSpacing: "-0.005em",
-                    lineHeight: 1.2,
-                  }
-                : {
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: "var(--color-fg)",
-                    lineHeight: 1.2,
-                  }
-            }
-          >
-            {title}
-          </p>
-          {pill && (
-            <span
-              className="rounded-full px-1.5 py-0.5 font-bold tabular-nums shrink-0"
+            <div
+              className="rounded-[var(--radius-md)] p-3 text-xs flex items-start gap-2"
               style={{
-                fontSize: 10,
-                backgroundColor: `${palette.accent}1F`,
-                color: palette.accentText,
+                background: "rgba(150,162,131,0.10)",
+                borderLeft: `3px solid ${SURVEN_SEMANTIC.goodAlt}`,
               }}
             >
-              {pill}
-            </span>
-          )}
-        </div>
-        <p
-          className="text-[var(--color-fg-muted)]"
-          style={{ fontSize: 11, lineHeight: 1.35 }}
-        >
-          {subtitle}
-        </p>
-      </div>
-    </div>
+              <Sparkles
+                className="h-3.5 w-3.5 mt-0.5 shrink-0"
+                style={{ color: SURVEN_SEMANTIC.goodAlt }}
+              />
+              <p className="text-[var(--color-fg-secondary)] leading-snug">
+                Don&apos;t want to do this yourself? Surven&apos;s managed plans handle the
+                directory listings, source outreach, and content publishing for you.{" "}
+                <Link
+                  href="/settings/billing"
+                  className="font-semibold hover:underline"
+                  style={{ color: SURVEN_SEMANTIC.goodAlt }}
+                >
+                  See managed plans →
+                </Link>
+              </p>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </>
   );
 }
