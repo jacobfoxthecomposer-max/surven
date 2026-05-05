@@ -617,6 +617,7 @@ async function runWordpressCommit(
         status: "applied",
         commit_url: result.commitUrl ?? null,
         file_path: result.filePath ?? null,
+        previous_value: result.previousValue ?? null,
       })
       .eq("id", pendingRow.id);
   }

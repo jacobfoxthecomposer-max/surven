@@ -45,6 +45,13 @@ export interface HtmlInjectResult {
   error?: string;
   manualSnippet?: string;
   manualNote?: string;
+  // Captured at apply time so /api/fixes/revert can PATCH back. Shape is per-platform-per-kind:
+  //   WP meta_desc → { kind, postType, postId, plugin, metaKey, oldValue, usedExcerpt }
+  //   WP title_tag → { kind, postType, postId, plugin, metaKey, oldValue }
+  //   WP alt_text  → { kind, mediaId, oldValue }
+  //   WP schema_org → { kind, postType, postId, marker, oldContentRaw }
+  //   GitHub fixes → undefined (revert via commit SHA, no need to capture)
+  previousValue?: Record<string, unknown>;
 }
 
 interface GithubContentResponse {

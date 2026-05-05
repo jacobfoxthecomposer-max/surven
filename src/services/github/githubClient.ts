@@ -183,6 +183,166 @@ export class GithubClient {
     return { commitSha: newCommit.sha };
   }
 
+  /**
+   * Get a commit. Returns parent SHA list — needed by revertCommit().
+   */
+  async getCommit(sha: string): Promise<{
+    sha: string;
+    parents: Array<{ sha: string }>;
+    message: string;
+  }> {
+    return this.ghFetch<{
+      sha: string;
+      parents: Array<{ sha: string }>;
+      message: string;
+    }>(`/repos/${this.repo}/git/commits/${encodeURIComponent(sha)}`);
+  }
+
+  /**
+   * Compare two refs/SHAs. Returns the list of files changed between them.
+   * Used by revertCommit() to know which paths to roll back.
+   */
+  async compareCommits(
+    base: string,
+    head: string
+  ): Promise<{ files: Array<{ filename: string; status: string }> }> {
+    return this.ghFetch<{ files: Array<{ filename: string; status: string }> }>(
+      `/repos/${this.repo}/compare/${encodeURIComponent(base)}...${encodeURIComponent(head)}`
+    );
+  }
+
+  /**
+   * Get a file's contents at a specific ref (commit SHA or branch).
+   * Returns null if the path didn't exist at that ref (e.g. file was added by the commit
+   * being reverted, so its parent state is "no file").
+   */
+  async getFileAtRef(
+    path: string,
+    ref: string
+  ): Promise<{ content: string } | null> {
+    try {
+      const data = await this.ghFetch<{ content: string; encoding: string }>(
+        `/repos/${this.repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(ref)}`
+      );
+      const decoded =
+        data.encoding === "base64"
+          ? Buffer.from(data.content, "base64").toString("utf8")
+          : data.content;
+      return { content: decoded };
+    } catch (err) {
+      if (err instanceof Error && err.message.includes("404")) return null;
+      throw err;
+    }
+  }
+
+  /**
+   * Revert a commit by writing its parent's file contents back at HEAD.
+   *
+   * Strategy:
+   *   1. Look up the commit and its parent SHA.
+   *   2. Diff parent..commit to get the list of paths the commit touched.
+   *   3. For each path, read the file as it existed at the parent SHA (the "before" state).
+   *   4. commitBatch all those before-states onto the current branch tip.
+   *
+   * Caveat — this is a "force revert," same effect as `git checkout {parent_sha} -- {paths}`
+   * and committing. If the user modified one of those files between the original commit and
+   * HEAD, the modification will be lost. The extension UI surfaces this risk in the confirm
+   * dialog.
+   *
+   * Files added by the commit (no parent state) are deleted as part of the revert.
+   * That requires a second commitBatch path because git tree entries with `sha: null`
+   * indicate deletion — handled by `commitBatchWithDeletions`.
+   */
+  async revertCommit(
+    sha: string,
+    branch: string
+  ): Promise<{ commitSha: string; revertedFiles: string[] }> {
+    const commit = await this.getCommit(sha);
+    if (!commit.parents || commit.parents.length === 0) {
+      throw new Error("Cannot revert the initial commit (no parent).");
+    }
+    if (commit.parents.length > 1) {
+      throw new Error("Cannot revert a merge commit via the extension.");
+    }
+    const parentSha = commit.parents[0]!.sha;
+
+    const diff = await this.compareCommits(parentSha, sha);
+    const touchedPaths = (diff.files ?? []).map((f) => f.filename);
+    if (touchedPaths.length === 0) {
+      throw new Error("Commit didn't change any files — nothing to revert.");
+    }
+
+    const writes: Array<{ path: string; content: string }> = [];
+    const deletes: string[] = [];
+    for (const path of touchedPaths) {
+      const before = await this.getFileAtRef(path, parentSha);
+      if (before === null) {
+        deletes.push(path);
+      } else {
+        writes.push({ path, content: before.content });
+      }
+    }
+
+    const truncatedSubject = commit.message.split("\n")[0]!.slice(0, 60);
+    const message = `Revert: ${truncatedSubject}\n\nReverts ${sha} via Surven.`;
+
+    const result = await this.commitBatchWithDeletions(writes, deletes, branch, message);
+    return { commitSha: result.commitSha, revertedFiles: touchedPaths };
+  }
+
+  /**
+   * Commit a batch that includes both file writes AND file deletions on the same tree.
+   * Built on top of the Git Data API. Used by revertCommit() when the original commit
+   * added new files (their parent state is "no file" → revert deletes them).
+   */
+  async commitBatchWithDeletions(
+    writes: Array<{ path: string; content: string }>,
+    deletes: string[],
+    branch: string,
+    commitMessage: string
+  ): Promise<{ commitSha: string }> {
+    const baseSha = await this.getBranchSha(branch);
+    const baseCommit = await this.ghFetch<{ tree: { sha: string } }>(
+      `/repos/${this.repo}/git/commits/${baseSha}`
+    );
+
+    const blobs = await Promise.all(
+      writes.map(async (f) => {
+        const blob = await this.ghFetch<{ sha: string }>(`/repos/${this.repo}/git/blobs`, {
+          method: "POST",
+          body: {
+            content: Buffer.from(f.content, "utf8").toString("base64"),
+            encoding: "base64",
+          },
+        });
+        return { path: f.path, sha: blob.sha };
+      })
+    );
+
+    const treeEntries: Array<Record<string, unknown>> = [
+      ...blobs.map((b) => ({ path: b.path, mode: "100644", type: "blob", sha: b.sha })),
+      // Deletion: pass `sha: null` to remove the path from the tree.
+      ...deletes.map((p) => ({ path: p, mode: "100644", type: "blob", sha: null })),
+    ];
+
+    const newTree = await this.ghFetch<{ sha: string }>(`/repos/${this.repo}/git/trees`, {
+      method: "POST",
+      body: { base_tree: baseCommit.tree.sha, tree: treeEntries },
+    });
+
+    const newCommit = await this.ghFetch<{ sha: string }>(`/repos/${this.repo}/git/commits`, {
+      method: "POST",
+      body: { message: commitMessage, tree: newTree.sha, parents: [baseSha] },
+    });
+
+    await this.ghFetch(`/repos/${this.repo}/git/refs/heads/${encodeURIComponent(branch)}`, {
+      method: "PATCH",
+      body: { sha: newCommit.sha },
+    });
+
+    return { commitSha: newCommit.sha };
+  }
+
   async openPullRequest(opts: {
     title: string;
     body: string;

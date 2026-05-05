@@ -88,6 +88,14 @@ export class WordPressClient {
     return null;
   }
 
+  /** Get the current alt text on a media item (for revert capture). */
+  async getMediaAlt(mediaId: number): Promise<string | null> {
+    const res = await this.fetch(`/wp-json/wp/v2/media/${mediaId}?_fields=alt_text`);
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null) as { alt_text?: string } | null;
+    return data?.alt_text ?? "";
+  }
+
   /** Update the alt text of a media item. */
   async updateMediaAlt(mediaId: number, altText: string): Promise<{ ok: boolean; error?: string; editUrl?: string }> {
     const res = await this.fetch(`/wp-json/wp/v2/media/${mediaId}`, {
@@ -164,6 +172,99 @@ export class WordPressClient {
       if (ns.some((n) => n.startsWith("aioseo/"))) return "aioseo";
     }
     return null;
+  }
+
+  /**
+   * Read the current meta description value on a page/post. Used for revert capture.
+   * Returns the stored value (could be empty string if no description set), or null on error.
+   * For sites without an SEO plugin, reads `excerpt.raw` (where the apply path stores it).
+   */
+  async getPageMetaDescription(page: WordPressPageOrPost, plugin: SeoPlugin): Promise<{ value: string; usedExcerpt: boolean; metaKey: string | null } | null> {
+    const metaKey =
+      plugin === "yoast" ? "_yoast_wpseo_metadesc" :
+      plugin === "rankmath" ? "rank_math_description" :
+      plugin === "aioseo" ? "_aioseo_description" :
+      null;
+
+    const fields = metaKey ? "meta,excerpt" : "excerpt";
+    const res = await this.fetch(`/wp-json/wp/v2/${page.type}s/${page.id}?context=edit&_fields=${fields}`);
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null) as { meta?: Record<string, unknown>; excerpt?: { raw?: string } } | null;
+    if (!data) return null;
+
+    if (metaKey) {
+      const value = (data.meta?.[metaKey] as string | undefined) ?? "";
+      return { value, usedExcerpt: false, metaKey };
+    }
+    return { value: data.excerpt?.raw ?? "", usedExcerpt: true, metaKey: null };
+  }
+
+  /** Read the current SEO title value on a page/post. Used for revert capture. */
+  async getPageSeoTitle(page: WordPressPageOrPost, plugin: SeoPlugin): Promise<{ value: string; metaKey: string } | null> {
+    const metaKey =
+      plugin === "yoast" ? "_yoast_wpseo_title" :
+      plugin === "rankmath" ? "rank_math_title" :
+      plugin === "aioseo" ? "_aioseo_title" :
+      null;
+    if (!metaKey) return null;
+
+    const res = await this.fetch(`/wp-json/wp/v2/${page.type}s/${page.id}?context=edit&_fields=meta`);
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null) as { meta?: Record<string, unknown> } | null;
+    return { value: (data?.meta?.[metaKey] as string | undefined) ?? "", metaKey };
+  }
+
+  /** Set the meta description (or excerpt) on a page back to a specific value. Used for revert. */
+  async setPageMetaDescriptionRaw(page: WordPressPageOrPost, value: string, metaKey: string | null, usedExcerpt: boolean): Promise<{ ok: boolean; error?: string }> {
+    const body: Record<string, unknown> = usedExcerpt
+      ? { excerpt: value }
+      : { meta: { [metaKey!]: value } };
+    const res = await this.fetch(`/wp-json/wp/v2/${page.type}s/${page.id}`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      return { ok: false, error: `WP returned ${res.status}: ${errText.slice(0, 200)}` };
+    }
+    return { ok: true };
+  }
+
+  /** Set the SEO title meta on a page back to a specific value. Used for revert. */
+  async setPageSeoTitleRaw(page: WordPressPageOrPost, value: string, metaKey: string): Promise<{ ok: boolean; error?: string }> {
+    const res = await this.fetch(`/wp-json/wp/v2/${page.type}s/${page.id}`, {
+      method: "POST",
+      body: JSON.stringify({ meta: { [metaKey]: value } }),
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      return { ok: false, error: `WP returned ${res.status}: ${errText.slice(0, 200)}` };
+    }
+    return { ok: true };
+  }
+
+  /**
+   * Read raw page content. Used by the schema injection path for revert capture
+   * (we capture the marker placement so revert can strip it).
+   */
+  async getPageContentRaw(page: WordPressPageOrPost): Promise<string | null> {
+    const res = await this.fetch(`/wp-json/wp/v2/${page.type}s/${page.id}?context=edit&_fields=content`);
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null) as { content?: { raw?: string } } | null;
+    return data?.content?.raw ?? null;
+  }
+
+  /** Set raw page content. Used by schema-org revert (strip the marker block). */
+  async setPageContentRaw(page: WordPressPageOrPost, content: string): Promise<{ ok: boolean; error?: string }> {
+    const res = await this.fetch(`/wp-json/wp/v2/${page.type}s/${page.id}`, {
+      method: "POST",
+      body: JSON.stringify({ content }),
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      return { ok: false, error: `WP returned ${res.status}: ${errText.slice(0, 200)}` };
+    }
+    return { ok: true };
   }
 
   /**
@@ -246,7 +347,7 @@ export class WordPressClient {
    * AI engines pick it up regardless of position. This approach works on every WordPress
    * install with no plugin required.
    */
-  async injectJsonLd(page: WordPressPageOrPost, jsonLd: string, schemaType: string, plugin: SeoPlugin): Promise<{ ok: boolean; error?: string; manualNote?: string; editUrl?: string }> {
+  async injectJsonLd(page: WordPressPageOrPost, jsonLd: string, schemaType: string, plugin: SeoPlugin): Promise<{ ok: boolean; error?: string; manualNote?: string; editUrl?: string; markerId?: string }> {
     void plugin; // SEO plugin presence doesn't change our approach — we inject directly into content
 
     // Step 1: Fetch current content
@@ -273,8 +374,11 @@ export class WordPressClient {
       };
     }
 
-    // Step 3: Append schema to content
-    const newContent = `${currentContent.trimEnd()}\n\n${jsonLd.trim()}\n`;
+    // Step 3: Wrap the snippet with surven markers so revert can find and strip it.
+    // Markers are HTML comments — invisible at render time, easy to grep on revert.
+    const markerId = `${schemaType.toLowerCase()}-${Date.now().toString(36)}`;
+    const wrapped = `<!--surven-fix:${markerId}-->\n${jsonLd.trim()}\n<!--/surven-fix:${markerId}-->`;
+    const newContent = `${currentContent.trimEnd()}\n\n${wrapped}\n`;
 
     // Step 4: PATCH the page
     const updateRes = await this.fetch(`/wp-json/wp/v2/${page.type}s/${page.id}`, {
@@ -304,6 +408,7 @@ export class WordPressClient {
     return {
       ok: true,
       editUrl: `${this.base}/wp-admin/post.php?post=${page.id}&action=edit`,
+      markerId,
     };
   }
 }

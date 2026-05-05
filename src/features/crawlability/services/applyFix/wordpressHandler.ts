@@ -61,7 +61,7 @@ async function applyAltTextFix(
     return { ok: false, error: "No alt text replacements provided" };
   }
 
-  const results: Array<{ src: string; ok: boolean; error?: string }> = [];
+  const results: Array<{ src: string; ok: boolean; error?: string; mediaId?: number; oldAlt?: string }> = [];
 
   for (const replacement of payload.replacements) {
     try {
@@ -70,8 +70,10 @@ async function applyAltTextFix(
         results.push({ src: replacement.src, ok: false, error: "Image not found in WordPress media library" });
         continue;
       }
+      // Capture-before so revert can PATCH this exact alt text back.
+      const oldAlt = (await client.getMediaAlt(media.id)) ?? "";
       const result = await client.updateMediaAlt(media.id, replacement.alt);
-      results.push({ src: replacement.src, ok: result.ok, error: result.error });
+      results.push({ src: replacement.src, ok: result.ok, error: result.error, mediaId: media.id, oldAlt });
     } catch (err) {
       results.push({ src: replacement.src, ok: false, error: err instanceof Error ? err.message : "Unknown error" });
     }
@@ -89,6 +91,12 @@ async function applyAltTextFix(
     ok: true,
     filePath: `${successCount} of ${results.length} images in WordPress media library`,
     commitUrl: undefined,
+    previousValue: {
+      kind: "alt_text",
+      items: results
+        .filter((r) => r.ok && typeof r.mediaId === "number")
+        .map((r) => ({ mediaId: r.mediaId, oldValue: r.oldAlt ?? "" })),
+    },
   };
 }
 
@@ -106,6 +114,8 @@ async function applyMetaDescFix(
   }
 
   const plugin = await client.detectSeoPlugin();
+  // Capture before-state for revert.
+  const before = await client.getPageMetaDescription(page, plugin);
   const result = await client.updatePageMetaDescription(page, payload.description, plugin);
 
   if (!result.ok) {
@@ -116,6 +126,17 @@ async function applyMetaDescFix(
     ok: true,
     commitUrl: result.editUrl,
     filePath: pluginBadge(plugin, page.type, page.title?.rendered),
+    previousValue: before
+      ? {
+          kind: "meta_desc",
+          postType: page.type,
+          postId: page.id,
+          plugin,
+          metaKey: before.metaKey,
+          oldValue: before.value,
+          usedExcerpt: before.usedExcerpt,
+        }
+      : undefined,
   };
 }
 
@@ -140,6 +161,7 @@ async function applyTitleFix(
     };
   }
 
+  const before = await client.getPageSeoTitle(page, plugin);
   const result = await client.updatePageSeoTitle(page, payload.title, plugin);
   if (!result.ok) {
     return { ok: false, error: result.error };
@@ -149,6 +171,16 @@ async function applyTitleFix(
     ok: true,
     commitUrl: result.editUrl,
     filePath: pluginBadge(plugin, page.type, page.title?.rendered),
+    previousValue: before
+      ? {
+          kind: "title_tag",
+          postType: page.type,
+          postId: page.id,
+          plugin,
+          metaKey: before.metaKey,
+          oldValue: before.value,
+        }
+      : undefined,
   };
 }
 
@@ -181,6 +213,14 @@ async function applySchemaFix(
     ok: true,
     commitUrl: result.editUrl,
     filePath: pluginBadge(plugin, page.type, page.title?.rendered),
+    previousValue: result.markerId
+      ? {
+          kind: "schema_org",
+          postType: page.type,
+          postId: page.id,
+          markerId: result.markerId,
+        }
+      : undefined,
   };
 }
 
