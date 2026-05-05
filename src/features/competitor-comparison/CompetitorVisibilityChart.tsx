@@ -44,7 +44,6 @@ export function CompetitorVisibilityChart() {
     <ChartCard
       data={data}
       treatment={TREATMENT_STANDARD_LABEL}
-      aiOverviewVariant="V1"
       enabledBrandIds={enabledBrandIds}
       title="Competitors' visibility over time vs you"
       titleInfo="Daily mention rate for you and every tracked competitor across all AI tools. Higher = more visibility."

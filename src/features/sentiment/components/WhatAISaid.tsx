@@ -4,7 +4,6 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Card } from "@/components/atoms/Card";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
-import { AIOverview } from "@/components/atoms/AIOverview";
 import { cn } from "@/utils/cn";
 import type { ScanResult, ModelName } from "@/types/database";
 
@@ -40,19 +39,12 @@ export function WhatAISaid({ results, businessName }: Props) {
 
   if (mentioned.length === 0) return null;
 
-  const negativeCount = mentioned.filter((r) => r.sentiment === "negative").length;
-  const positiveCount = mentioned.filter((r) => r.sentiment === "positive").length;
-  const insight = negativeCount > 0
-    ? `${negativeCount} of ${mentioned.length} mention${mentioned.length !== 1 ? "s" : ""} contain negative language — expand those rows to see exactly what AI said.`
-    : `All ${mentioned.length} mention${mentioned.length !== 1 ? "s" : ""} are positive or neutral. Expand any row to read the full AI response.`;
-
   return (
     <Card>
       <h3 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, color: "var(--color-fg)", marginBottom: 4 }}>What AI Said About You</h3>
-      <p className="text-xs text-[var(--color-fg-muted)] mb-3">
+      <p className="text-xs text-[var(--color-fg-muted)] mb-4">
         Actual responses from AI models that mentioned {businessName}.
       </p>
-      <div className="mb-4"><AIOverview text={insight} size="sm" /></div>
 
       <div className="space-y-2">
         {mentioned.map((r, i) => {

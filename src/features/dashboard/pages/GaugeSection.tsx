@@ -85,9 +85,9 @@ export function GaugeSection({
           <h1
             style={{
               fontFamily: "var(--font-display)",
-              fontSize: "clamp(28px, 3.5vw, 44px)",
+              fontSize: "clamp(36px, 4.6vw, 60px)",
               fontWeight: 600,
-              lineHeight: 1.15,
+              lineHeight: 1.12,
               letterSpacing: "-0.01em",
               color: "var(--color-fg)",
             }}

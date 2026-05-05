@@ -9,6 +9,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing businessId" }, { status: 400 });
   }
 
+  // Local dev without service-role key: return empty connections instead of 500.
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return NextResponse.json({ connections: [] });
+  }
+
   const cookieStore = await cookies();
   const supabaseAuth = createSupabaseSSR(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

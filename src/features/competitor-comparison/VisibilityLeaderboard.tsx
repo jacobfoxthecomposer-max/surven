@@ -3,7 +3,6 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Crown, Plus, Trophy } from "lucide-react";
-import { AIOverview } from "@/components/atoms/AIOverview";
 import { BadgeDelta } from "@/components/atoms/BadgeDelta";
 import { SectionHeading } from "@/components/atoms/SectionHeading";
 import { COMPETITOR_PALETTE } from "@/utils/constants";
@@ -132,26 +131,6 @@ export function VisibilityLeaderboard({
   if (rows.length === 0) return null;
 
   const yourRank = rows.findIndex((r) => r.isYou) + 1;
-  const yourRow = rows.find((r) => r.isYou)!;
-  const leader = rows[0];
-
-  // Real-data-derived AI summary — never placeholder, per the locked rule.
-  const insight = (() => {
-    if (yourRank === 1) {
-      const next = rows[1];
-      return next
-        ? `Leading the pack at ${yourRow.visibility}% visibility. ${next.name} trails at ${next.visibility}% — keep building citations to hold the lead.`
-        : `Leading the pack at ${yourRow.visibility}% visibility — the only brand AI is naming on your prompts.`;
-    }
-    const tier =
-      yourRank === 2
-        ? "Solid runner-up"
-        : yourRank === 3
-          ? "Solid mid-pack"
-          : "Trailing position";
-    const gap = leader.visibility - yourRow.visibility;
-    return `${tier} at ${yourRow.visibility}% visibility. Push to close the ${gap}% gap on ${leader.name}.`;
-  })();
 
   // Empty-slot calculation. `totalCompetitorCount` reflects the unfiltered
   // count (so toggling a chip off doesn't suddenly turn that row into an
@@ -201,10 +180,6 @@ export function VisibilityLeaderboard({
             }
           />
         </div>
-      </div>
-
-      <div className="mb-3">
-        <AIOverview text={insight} size="sm" gradient />
       </div>
 
       <ol className="space-y-1">

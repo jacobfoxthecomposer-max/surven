@@ -3105,51 +3105,11 @@ function PromptsTable({
         </div>
       ) : (
         <>
-      {/* Branded warning (minimalist text) + sage-boxed AI summary using
-          good/fix structure — fix portion auto-tints rust to match the
-          branded < 95% red coding rule. */}
+      {/* Branded warning (minimalist text). The sage-boxed AI summary that
+          previously sat under it was removed per the page-wide AI-overview
+          cleanup (2026-05-05). */}
       <div className="px-6 pt-4 pb-1 space-y-3">
         <BrandedCallout data={data} onSeeBranded={onSeeBranded} />
-        {(() => {
-          const brandedLeak = data.brandedVisibility < 95;
-          const good = brandedLeak ? (
-            <>
-              Link citation rate is climbing to{" "}
-              <strong>{data.linkCitationRate}%</strong>
-              {data.linkCitationDelta > 0
-                ? ` (+${data.linkCitationDelta.toFixed(1)}%)`
-                : ""}
-              , and branded coverage trended up{" "}
-              <strong>+{data.brandedVisibilityDelta.toFixed(1)}%</strong> over
-              the period.
-            </>
-          ) : (
-            <>
-              Branded queries are landing at{" "}
-              <strong>{data.brandedVisibility}%</strong> with strong sentiment,
-              and citation rate is up{" "}
-              <strong>+{data.linkCitationDelta.toFixed(1)}%</strong>.
-            </>
-          );
-          const fix = brandedLeak ? (
-            <>
-              Branded coverage sits at{" "}
-              <strong>{data.brandedVisibility}%</strong> — below the 95%
-              credibility threshold; competitors take warm leads on{" "}
-              {data.brandedTopRankTotal - data.brandedTopRankCount} of{" "}
-              {data.brandedTopRankTotal} engines. Close that gap before
-              unbranded.
-            </>
-          ) : (
-            <>
-              Unbranded coverage at{" "}
-              <strong>{data.unbrandedVisibility}%</strong> is leaking traffic on
-              high-volume informational and transactional prompts — capture
-              answer-capsule formats first.
-            </>
-          );
-          return <AISummaryStrip good={good} fix={fix} />;
-        })()}
       </div>
 
       <div
@@ -3935,38 +3895,6 @@ function CoverageDonut({ items }: { items: IntentCoverage[] }) {
           </span>
         </div>
       </div>
-
-      {(() => {
-        const ranked = [...items].sort((a, b) => b.coveragePct - a.coveragePct);
-        const best = ranked[0];
-        const worst = ranked[ranked.length - 1];
-        if (!best || !worst) return null;
-        const bestDelta =
-          best.coverageDelta > 0
-            ? ` (+${best.coverageDelta.toFixed(1)}%)`
-            : "";
-        const worstDelta =
-          worst.coverageDelta < 0
-            ? ` (${worst.coverageDelta.toFixed(1)}%)`
-            : "";
-        return (
-          <AISummaryStrip
-            className="mb-5"
-            good={
-              <>
-                <strong>{best.intent}</strong> leads at {best.coveragePct}%
-                {bestDelta}.
-              </>
-            }
-            fix={
-              <>
-                <strong>{worst.intent}</strong> sits at {worst.coveragePct}%
-                {worstDelta} — biggest catch-up.
-              </>
-            }
-          />
-        );
-      })()}
 
       <div className="grid grid-cols-1 md:grid-cols-[280px_minmax(0,1fr)] gap-6 items-center">
         {/* Donut */}
@@ -4941,23 +4869,6 @@ function CitationSourcesCard({ items }: { items: CitationSource[] }) {
         </div>
       </div>
 
-      {top && fixSource && (
-        <AISummaryStrip
-          className="mb-4"
-          good={
-            <>
-              <strong>{top.source}</strong> leads at {top.pct}% of citations.
-            </>
-          }
-          fix={
-            <>
-              Only {fixSource.pct}% from <strong>{fixSource.source}</strong> —
-              earn ground there.
-            </>
-          }
-        />
-      )}
-
       <div className="flex-1 flex flex-col justify-between">
         {sorted.map((s) => {
           const widthPct = (s.pct / max) * 100;
@@ -5034,23 +4945,6 @@ function SentimentByTypeCard({ items }: { items: SentimentByType[] }) {
           </a>
         </div>
       </div>
-
-      {best && fixCandidate && (
-        <AISummaryStrip
-          className="mb-4"
-          good={
-            <>
-              <strong>{best.type}</strong> reads {best.positive}% positive.
-            </>
-          }
-          fix={
-            <>
-              <strong>{fixCandidate.type}</strong> has {fixCandidate.negative}%
-              negative — flip the framing.
-            </>
-          }
-        />
-      )}
 
       <div className="flex-1 flex flex-col justify-between">
         {sorted.map((row) => {

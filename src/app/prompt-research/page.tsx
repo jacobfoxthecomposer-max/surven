@@ -10,8 +10,8 @@ import { Spinner } from "@/components/atoms/Spinner";
 import { Card } from "@/components/atoms/Card";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { HoverHint } from "@/components/atoms/HoverHint";
-import { AIOverview } from "@/components/atoms/AIOverview";
 import { NextScanCard } from "@/components/atoms/NextScanCard";
+import { AISummaryGenerator } from "@/components/atoms/AISummaryGenerator";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
 import { useScan } from "@/features/dashboard/hooks/useScan";
@@ -174,18 +174,45 @@ export default function PromptResearchPage() {
       ? SURVEN_SEMANTIC.neutral
       : SURVEN_SEMANTIC.bad;
 
-  const aiInsight = insights && insights.strongest && insights.weakest
-    ? `Your strongest territory is ${TAXONOMY_LABEL[insights.strongest.tax as keyof typeof TAXONOMY_LABEL]} (${Math.round(insights.strongest.cov)}% coverage). Your weakest is ${TAXONOMY_LABEL[insights.weakest.tax as keyof typeof TAXONOMY_LABEL]} at ${Math.round(insights.weakest.cov)}% — that's where the biggest opportunity sits.`
-    : null;
-
   const competitorNames = competitors.map((c) => c.name);
   const untrackedCount = data
     ? data.intents.filter((i) => !i.inTracker).length
     : 0;
 
+  const buildAISummary = (): string => {
+    if (!insights) {
+      return `No prompt research data yet for ${business.name}. Once a scan runs, this panel surfaces which intent categories you cover well and where the biggest opportunities sit.`;
+    }
+    const strongLabel = insights.strongest
+      ? TAXONOMY_LABEL[insights.strongest.tax as keyof typeof TAXONOMY_LABEL]
+      : null;
+    const weakLabel = insights.weakest
+      ? TAXONOMY_LABEL[insights.weakest.tax as keyof typeof TAXONOMY_LABEL]
+      : null;
+    const s1 = strongLabel && weakLabel && insights.strongest && insights.weakest
+      ? `Across ${insights.totalIntents} intents and ${insights.totalVariants} prompt variants, your ${landscapeWord} territory is ${strongLabel} (${Math.round(insights.strongest.cov)}% coverage). Your weakest is ${weakLabel} at ${Math.round(insights.weakest.cov)}% — that's where the biggest opportunity sits.`
+      : `Across ${insights.totalIntents} intents and ${insights.totalVariants} prompt variants, your average coverage is ${insights.avgCoverage}% — a ${landscapeWord} starting point.`;
+    const s2 = insights.trackedCount < insights.totalIntents
+      ? `${untrackedCount} of ${insights.totalIntents} intents aren't in your tracker yet — adding the high-volume ones tightens your visibility loop and surfaces leaks faster.`
+      : `Every intent on this page is being tracked — your visibility loop is fully wired.`;
+    const s3 = weakLabel && insights.weakest && insights.weakest.cov < 40
+      ? `Watch ${weakLabel}: AI engines are answering those questions without naming you, and competitors are filling the void.`
+      : `One bright spot: no taxonomy area is fully empty — every category has at least some coverage to build on.`;
+    return `${s1} ${s2} ${s3}`;
+  };
+
+  const buildAICTA = (): { label: string; href: string } => {
+    if (!insights || !insights.weakest) {
+      return { label: "Run a site audit to start covering more intents", href: "/site-audit" };
+    }
+    const weakLabel = TAXONOMY_LABEL[insights.weakest.tax as keyof typeof TAXONOMY_LABEL];
+    return { label: `Run a site audit to fix coverage on ${weakLabel}`, href: "/site-audit" };
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6 w-full">
+        <AISummaryGenerator getSummary={buildAISummary} getCTA={buildAICTA} />
         {/* ===== Top grid — controls ===== */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -198,9 +225,9 @@ export default function PromptResearchPage() {
               <h1
                 style={{
                   fontFamily: "var(--font-display)",
-                  fontSize: "clamp(32px, 4vw, 52px)",
+                  fontSize: "clamp(36px, 4.6vw, 60px)",
                   fontWeight: 600,
-                  lineHeight: 1.15,
+                  lineHeight: 1.12,
                   letterSpacing: "-0.01em",
                   color: "var(--color-fg)",
                 }}
@@ -352,17 +379,6 @@ export default function PromptResearchPage() {
                     linkLabel="Why AI cites you"
                   />
                 </motion.div>
-
-                {/* AIOverview */}
-                {aiInsight && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: 0.2, ease }}
-                  >
-                    <AIOverview text={aiInsight} size="md" />
-                  </motion.div>
-                )}
 
                 {/* Entity grid — last item in left column, sets the bottom edge */}
                 <motion.div {...reveal} className="flex-1">

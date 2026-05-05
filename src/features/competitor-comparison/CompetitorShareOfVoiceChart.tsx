@@ -44,7 +44,6 @@ export function CompetitorShareOfVoiceChart() {
       stats={sovStats}
       insight={sovInsight}
       pieMode="donut-center"
-      aiOverviewVariant="V1"
       showChart={false}
     />
   );

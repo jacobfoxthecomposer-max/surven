@@ -22,7 +22,6 @@ import {
 import { Card } from "@/components/atoms/Card";
 import { Button } from "@/components/atoms/Button";
 import { Input } from "@/components/atoms/Input";
-import { AIOverview } from "@/components/atoms/AIOverview";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { useCrawlabilityAudit } from "@/features/crawlability/hooks/useCrawlabilityAudit";
 import { useSiteConnections } from "@/features/crawlability/hooks/useSiteConnections";
@@ -128,14 +127,6 @@ export function CrawlabilityAuditPage({
     low: result?.findings.filter((f) => f.severity === "low").length ?? 0,
   };
 
-  const aiOverviewText = !result
-    ? "Scan your site to see exactly which crawlability issues are blocking AI models from indexing your content."
-    : counts.critical > 0
-    ? `${counts.critical} critical issue${counts.critical !== 1 ? "s" : ""} could be preventing AI models from indexing your content. Fix these first.`
-    : result.findings.length === 0
-    ? "Your site is well-configured for AI crawlability. Keep monitoring for content freshness and schema coverage."
-    : "No critical crawlability blockers found. Focus on the warnings below to maximize AI indexability.";
-
   // Score-derived headline word
   const scoreWord = result
     ? result.crawlabilityScore < 26
@@ -167,9 +158,9 @@ export function CrawlabilityAuditPage({
         <h1
           style={{
             fontFamily: "var(--font-display)",
-            fontSize: "clamp(32px, 4vw, 52px)",
+            fontSize: "clamp(36px, 4.6vw, 60px)",
             fontWeight: 600,
-            lineHeight: 1.15,
+            lineHeight: 1.12,
             letterSpacing: "-0.01em",
             color: "var(--color-fg)",
           }}
@@ -233,15 +224,6 @@ export function CrawlabilityAuditPage({
             )}
           </div>
         )}
-      </motion.div>
-
-      {/* AIOverview callout */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1, ease }}
-      >
-        <AIOverview text={aiOverviewText} />
       </motion.div>
 
       {/* ── Free upgrade prompt ── */}
