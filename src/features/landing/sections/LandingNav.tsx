@@ -112,7 +112,7 @@ export function LandingNav() {
             onMouseLeave={scheduleClose}
           >
             <button
-              className="flex items-center gap-1 text-lg font-medium text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors"
+              className="flex items-center gap-1 text-[15px] font-medium text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors"
               aria-expanded={featuresOpen}
             >
               Features
@@ -168,13 +168,13 @@ export function LandingNav() {
 
           <Link
             href="/pricing"
-            className="text-lg font-medium text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors"
+            className="text-[15px] font-medium text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors"
           >
             Pricing
           </Link>
           <Link
             href="/audit"
-            className="text-lg font-medium text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors"
+            className="text-[15px] font-medium text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors"
           >
             Audit
           </Link>
@@ -185,7 +185,7 @@ export function LandingNav() {
             onMouseLeave={scheduleClose}
           >
             <button
-              className="flex items-center gap-1 text-lg font-medium text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors"
+              className="flex items-center gap-1 text-[15px] font-medium text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors"
               aria-expanded={resourcesOpen}
             >
               Resources
