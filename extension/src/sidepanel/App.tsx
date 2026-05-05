@@ -286,6 +286,7 @@ function getApplyFixUrl(auditUrl: string): string {
 export default function App() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [draftSettings, setDraftSettings] = useState<Settings>({ apiUrl: "", apiKey: "" });
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [state, setState] = useState<AuditState>({ loading: false, findings: [], fromCache: false });
