@@ -3,11 +3,12 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  AlertTriangle,
   ArrowRight,
   Cpu,
-  MessageSquare,
   Link2,
-  ShieldCheck,
+  MessageSquare,
+  PieChart,
   Sparkles,
   type LucideIcon,
 } from "lucide-react";
@@ -21,33 +22,42 @@ const COLORS = {
   primaryHover: "#7D8E6C",
 };
 
-// Visual rhythm cribbed from Code Scanner's `TopFixesPanel`. Sage→amber→rust
-// gradient header band + status-tile / title / body rows + sage `+N` pill on
-// the right when the action carries a numeric magnitude.
+// Every action in this panel is now framed as a GAP the customer can fill,
+// so the palette stays in the warning family (amber / gold / rust) — no
+// sage success tones. Each row also carries a "GAP" tag to reinforce the
+// theme verbally.
 
 const ACTION_META: Record<
   string,
-  { Icon: LucideIcon; tint: string; iconColor: string }
+  { Icon: LucideIcon; tint: string; iconColor: string; pillTint: string; pillText: string }
 > = {
   engine: {
     Icon: Cpu,
-    tint: "rgba(150,162,131,0.18)",
-    iconColor: "#5E7250",
+    tint: "rgba(199,123,69,0.16)",
+    iconColor: "#A06210",
+    pillTint: "rgba(199,123,69,0.18)",
+    pillText: "#8C5A1E",
   },
   prompts: {
-    Icon: MessageSquare,
-    tint: "rgba(201,123,69,0.16)",
-    iconColor: "#A06210",
+    Icon: AlertTriangle,
+    tint: "rgba(181,70,49,0.14)",
+    iconColor: "#B54631",
+    pillTint: "rgba(181,70,49,0.16)",
+    pillText: "#8C3522",
   },
   sources: {
     Icon: Link2,
     tint: "rgba(184,160,48,0.18)",
     iconColor: "#7E6B17",
+    pillTint: "rgba(184,160,48,0.20)",
+    pillText: "#5C4D0E",
   },
-  defend: {
-    Icon: ShieldCheck,
-    tint: "rgba(150,162,131,0.18)",
-    iconColor: "#5E7250",
+  share: {
+    Icon: PieChart,
+    tint: "rgba(199,123,69,0.16)",
+    iconColor: "#A06210",
+    pillTint: "rgba(199,123,69,0.18)",
+    pillText: "#8C5A1E",
   },
 };
 
@@ -197,38 +207,54 @@ export function CompetitorFixActions({
     citationGaps.sort((a, b) => b.count - a.count);
     const topCitationGaps = citationGaps.slice(0, 3);
 
-    // ===== 4. Advantage prompts — prompts where you rank, competitors don't =====
-    const advantagePromptMap = new Map<string, { engines: Set<string> }>();
-    for (const r of results) {
-      if (!r.business_mentioned) continue;
-      if (!r.competitor_mentions) continue;
-      const anyCompMentioned = competitors.some((c) => r.competitor_mentions[c]);
-      if (anyCompMentioned) continue;
-      if (!advantagePromptMap.has(r.prompt_text)) {
-        advantagePromptMap.set(r.prompt_text, { engines: new Set() });
+    // ===== 4. Share-of-voice gap — the leader's overall visibility vs yours =====
+    const totalResults = results.length;
+    const yourOverallPct =
+      totalResults > 0
+        ? Math.round(
+            (results.filter((r) => r.business_mentioned).length /
+              totalResults) *
+              100,
+          )
+        : 0;
+    let sovLeader: string | null = null;
+    let sovLeaderPct = 0;
+    for (const c of competitors) {
+      const relevant = results.filter(
+        (r) => r.competitor_mentions && c in r.competitor_mentions,
+      );
+      const compPct =
+        relevant.length > 0
+          ? Math.round(
+              (relevant.filter((r) => r.competitor_mentions[c]).length /
+                relevant.length) *
+                100,
+            )
+          : 0;
+      if (compPct > sovLeaderPct) {
+        sovLeaderPct = compPct;
+        sovLeader = c;
       }
-      advantagePromptMap.get(r.prompt_text)!.engines.add(r.model_name);
     }
-    const advantagePrompts = Array.from(advantagePromptMap.entries()).slice(0, 3);
-    const totalAdvantagePrompts = advantagePromptMap.size;
+    const sovGap = sovLeaderPct - yourOverallPct;
 
-    // ============== Action 1: Close biggest engine gap ==============
+    // ============== Action 1: Engine gap ==============
     const engineAction: FixAction = worstEngine && worstEngineCompetitor
       ? {
           key: "engine",
-          headline: `Close the ${worstEngineGap}% gap on ${MODEL_LABELS[worstEngine]}`,
-          oneLiner: `${worstEngineCompetitor} appears ${worstEngineGap}% more often than ${businessName} on ${MODEL_LABELS[worstEngine]}.`,
+          headline: `Close the ${worstEngineGap}% engine gap on ${MODEL_LABELS[worstEngine]}`,
+          oneLiner: `${worstEngineCompetitor} appears ${worstEngineGap}% more often than ${businessName} on ${MODEL_LABELS[worstEngine]} — your biggest single-engine gap.`,
           metric: `${worstEngineGap}% gap`,
           modalBody: `${worstEngineCompetitor} appears on ${worstEngineCompScore}% of ${MODEL_LABELS[worstEngine]} prompts. ${businessName} is at ${worstEngineYourScore}%.\n\n${ENGINE_LEVERS[worstEngine]}\n\nCheck the Top Cited Domains card below — match the sources ${worstEngineCompetitor} appears on and visibility usually closes within 2–4 weeks.`,
         }
       : {
           key: "engine",
-          headline: "You're not trailing on any single engine",
-          oneLiner: `${businessName} matches or beats every competitor on every engine.`,
+          headline: "No engine gap to close",
+          oneLiner: `${businessName} matches or beats every competitor on every engine in this scan.`,
           modalBody: `No competitor outpaces ${businessName} on any engine in this scan. Run a fresh scan in 7–14 days to confirm the lead is holding.`,
         };
 
-    // ============== Action 2: Win prompts you're losing ==============
+    // ============== Action 2: Prompt coverage gap ==============
     const promptList = gapPrompts
       .map(([p, info], i) => {
         const compsLabel = Array.from(info.competitors).join(", ");
@@ -242,19 +268,19 @@ export function CompetitorFixActions({
     const promptAction: FixAction = totalGapPrompts > 0 && topGapCompetitor
       ? {
           key: "prompts",
-          headline: `Win the ${totalGapPrompts} prompt${totalGapPrompts === 1 ? "" : "s"} where ${topGapCompetitor} ranks and you don't`,
+          headline: `Close the ${totalGapPrompts}-prompt coverage gap with ${topGapCompetitor}`,
           oneLiner: `${topGapCompetitor} shows up on ${totalGapPrompts} prompt${totalGapPrompts === 1 ? "" : "s"} that ${businessName} is missing entirely.`,
           metric: `${totalGapPrompts} prompt${totalGapPrompts === 1 ? "" : "s"}`,
           modalBody: `Prompts ${businessName} is missing:\n\n${promptList}\n\nWrite a page that restates each prompt in the title and first paragraph — AI pulls copy from pages that match the prompt almost verbatim. For "best/top" prompts, add 5–10 named-customer reviews on the page; AI weights real names higher than generic marketing copy.`,
         }
       : {
           key: "prompts",
-          headline: "No prompts where competitors solo-rank above you",
-          oneLiner: `${businessName} is at least matching every competitor where they appear.`,
+          headline: "No prompt coverage gaps",
+          oneLiner: `${businessName} appears on every prompt where a competitor does.`,
           modalBody: `Every prompt where a competitor was mentioned, ${businessName} was also mentioned. Keep scanning weekly to catch new gap prompts as competitors publish content.`,
         };
 
-    // ============== Action 3: Steal competitor citation sources ==============
+    // ============== Action 3: Citation source gap ==============
     const sourceList = topCitationGaps
       .map(
         (g, i) =>
@@ -265,44 +291,37 @@ export function CompetitorFixActions({
     const sourceAction: FixAction = topCitationGaps.length > 0
       ? {
           key: "sources",
-          headline: `Get listed on ${topCitationGaps.length} source${topCitationGaps.length === 1 ? "" : "s"} citing your competitors`,
-          oneLiner: `AI is citing ${topCitationGaps[0].domain} for ${topCitationGaps[0].competitor}, but never for ${businessName}.`,
+          headline: `Claim the ${topCitationGaps.length} source${topCitationGaps.length === 1 ? "" : "s"} citing your competitors`,
+          oneLiner: `AI cites ${topCitationGaps[0].domain} for ${topCitationGaps[0].competitor}, but never for ${businessName} — the highest-leverage citation gap.`,
           metric: `${topCitationGaps.length} source${topCitationGaps.length === 1 ? "" : "s"}`,
           modalBody: `Sources powering competitor visibility but ignoring ${businessName}:\n\n${sourceList}\n\nDirectories (Yelp, BBB, industry-specific) usually accept free listings — claim yours. Editorial mentions need a story pitch or customer-led intro. Reddit happens when real customers recommend you in real threads.\n\nStart with ${topCitationGaps[0].domain} — one placement on the highest-cited source moves more visibility than five on weak ones.`,
         }
       : {
           key: "sources",
-          headline: "Match competitors on the citation sources they use",
-          oneLiner: `${businessName} is showing up on the same sources competitors are — keep that parity.`,
+          headline: "No citation source gaps",
+          oneLiner: `${businessName} is appearing on every source AI cites for your competitors.`,
           modalBody: `AI isn't citing any sources for competitors that aren't also citing ${businessName}. Watch Citation Insights for new gaps as competitors get listed on new platforms.`,
         };
 
-    // ============== Action 4: Defend the prompts you own ==============
-    const advList = advantagePrompts
-      .map(([p, info], i) => {
-        const enginesLabel = Array.from(info.engines)
-          .map((e) => MODEL_LABELS[e as ModelName])
-          .join(", ");
-        return `${i + 1}. "${p}" — appearing on ${enginesLabel}.`;
-      })
-      .join("\n");
-
-    const defendAction: FixAction = totalAdvantagePrompts > 0
+    // ============== Action 4: Share-of-voice gap ==============
+    const shareAction: FixAction = sovLeader && sovGap > 0
       ? {
-          key: "defend",
-          headline: `Defend the ${totalAdvantagePrompts} prompt${totalAdvantagePrompts === 1 ? "" : "s"} where you alone rank`,
-          oneLiner: `${businessName} owns ${totalAdvantagePrompts} prompt${totalAdvantagePrompts === 1 ? "" : "s"} where no competitor is mentioned.`,
-          metric: `${totalAdvantagePrompts} solo win${totalAdvantagePrompts === 1 ? "" : "s"}`,
-          modalBody: `Solo wins — prompts where AI mentions ${businessName} and no competitor:\n\n${advList}\n\nThree moves to hold them:\n\n1. Find the source AI is reading (check Citation Insights for the cited domains).\n2. Refresh that page every 60–90 days — AI weights freshness heavily.\n3. Add depth: named customers, dated outcomes, specific numbers. Concrete pages are harder to dislodge.`,
+          key: "share",
+          headline: `Close the ${sovGap}-point share-of-voice gap with ${sovLeader}`,
+          oneLiner: `${sovLeader} owns ${sovLeaderPct}% of mentions across this scan; ${businessName} sits at ${yourOverallPct}%.`,
+          metric: `${sovGap} pts`,
+          modalBody: `Share of voice is the % of all AI answers that name a brand. ${sovLeader} sits at ${sovLeaderPct}% across this scan; ${businessName} is at ${yourOverallPct}%.\n\nTo close a SoV gap, you have to win on prompts ${sovLeader} currently dominates — not just the prompts you're already on. Open the Visibility Leaderboard below to see exactly which prompts are pulling ${sovLeader}'s share up. Pick the highest-volume one and write a single best-in-class page targeting it.\n\nMost businesses see a 3–8 point SoV move within 30 days when they fix one high-volume prompt this way.`,
         }
       : {
-          key: "defend",
-          headline: `Build solo-win prompts ${businessName} can own`,
-          oneLiner: `${businessName} doesn't currently solo-rank on any prompt — every win is shared.`,
-          modalBody: `Every prompt mentioning ${businessName} also mentions a competitor — every win is shared. Pick your most specific category prompt (not "best plumber" but "best emergency plumber for older homes in [city]") and write a page that answers it better than any competitor. Specificity is the lever — generic answers stay shared, specific answers get owned. You'll usually see solo-wins appear within 2–3 scans.`,
+          key: "share",
+          headline: "No share-of-voice gap to close",
+          oneLiner: sovLeader
+            ? `${businessName} matches or leads every competitor's share of voice.`
+            : "No competitor data in this scan yet.",
+          modalBody: `${businessName} is leading or tied on share of voice across this scan. Re-check after every weekly scan — SoV is the leading indicator that one of your competitors is publishing new content.`,
         };
 
-    return [engineAction, promptAction, sourceAction, defendAction];
+    return [engineAction, promptAction, sourceAction, shareAction];
   }, [results, businessName, competitors]);
 
   const open = actions.find((a) => a.key === openKey) ?? null;
@@ -331,14 +350,14 @@ export function CompetitorFixActions({
             </div>
             <SectionHeading
               text="Ways to take the lead"
-              info="The highest-impact moves for closing the gap on your competitors, derived from your scan."
+              info="The four largest competitor gaps from your scan — engine, prompt coverage, citation sources, and share of voice. Each row is a gap you can close."
             />
           </div>
           <p
             className="text-[var(--color-fg-secondary)]"
             style={{ fontSize: 13.5 }}
           >
-            Specific to your scan.{" "}
+            Four gaps to close.{" "}
             <span style={{ color: COLORS.primary, fontWeight: 600 }}>
               Tap any row
             </span>{" "}
@@ -382,13 +401,26 @@ export function CompetitorFixActions({
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0 mt-1">
+                  {/* Inline GAP tag — visual reminder that every row is a
+                      gap-to-fill, not a generic recommendation. */}
+                  <span
+                    className="rounded-full px-2 py-0.5 font-bold uppercase"
+                    style={{
+                      fontSize: 9.5,
+                      letterSpacing: "0.08em",
+                      backgroundColor: meta.pillTint,
+                      color: meta.pillText,
+                    }}
+                  >
+                    GAP
+                  </span>
                   {a.metric && (
                     <span
                       className="rounded-full px-3 py-1 font-semibold tabular-nums"
                       style={{
                         fontSize: 13,
-                        backgroundColor: `${COLORS.primary}1f`,
-                        color: COLORS.primaryHover,
+                        backgroundColor: meta.pillTint,
+                        color: meta.pillText,
                       }}
                     >
                       {a.metric}
@@ -396,7 +428,7 @@ export function CompetitorFixActions({
                   )}
                   <ArrowRight
                     className="h-4 w-4 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"
-                    style={{ color: COLORS.primary }}
+                    style={{ color: meta.iconColor }}
                   />
                 </div>
               </button>
