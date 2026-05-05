@@ -2849,9 +2849,15 @@ function PromptsTable({
       }
       return true;
     });
+    // Filter on the SAME source the Intent column displays (primaryIntent
+    // from prompt text), not the legacy p.intent label from mock data.
+    // Otherwise a row tagged "Informational" in the data can render as
+    // "Local" in the column (because the column re-classifies from text)
+    // and confuse the user about why the filter "didn't work".
+    const labelFor = (p: PromptRow) => PROMPT_CATEGORIES[primaryIntent(p.text)].label;
     const intentFiltered = selectedIntents.size === allIntents.length
       ? base
-      : base.filter((p) => selectedIntents.has(p.intent));
+      : base.filter((p) => selectedIntents.has(labelFor(p)));
     const sorted = [...intentFiltered];
     sorted.sort((a, b) => {
       const cmp = comparePrompts(a, b, sort.column);
@@ -3921,7 +3927,7 @@ function CoverageDonut({ items }: { items: IntentCoverage[] }) {
         <div className="flex items-center justify-between gap-4">
           <SectionHeading
             text="Coverage by intent"
-            info="How well you're cited across each user-intent category — brand lookups, comparisons, transactional queries, etc."
+            info="How well you're cited across each user-intent category — informational, local, comparison, use-case, and transactional queries."
           />
           <span className="text-[var(--color-fg-muted)]" style={{ fontSize: 12 }}>
             {fmtVolume(totalVolume)} /mo · {total} prompts
