@@ -5,6 +5,10 @@ import { LoginForm } from "./LoginForm";
 import type { Metadata } from "next";
 export const metadata: Metadata = {
   openGraph: { url: "https://surven.vercel.app/login", type: "website" },
+
+  alternates: {
+    canonical: "https://surven.vercel.app/login",
+  },
 };
 const SUPABASE_UNCONFIGURED =
   !process.env.NEXT_PUBLIC_SUPABASE_URL ||
