@@ -324,7 +324,7 @@ export default function App() {
   }
 
   async function applyFix(finding: AuditFinding) {
-    if (!settings?.apiUrl || !settings?.apiKey || !finding.fixCode || !finding.fixType) return;
+    if (!settings?.apiUrl || !settings?.apiKey) return;
 
     // Guard: refuse if active tab doesn't match the audited site.
     const guard = await guardActiveTab(siteUrl);
@@ -335,6 +335,72 @@ export default function App() {
 
     const targetUrl = siteUrl ?? guard.tab.url!;
     setFixStates((s) => ({ ...s, [finding.id]: { status: "applying" } }));
+
+    // Duplicate-titles / duplicate-meta-descriptions take a different path: a batch LLM
+    // call rewrites all N pages with distinct values, then a per-page commit.
+    if (finding.id === "duplicate_titles" || finding.id === "duplicate_meta_descriptions") {
+      try {
+        const endpoint = settings.apiUrl.replace(/\/api\/audit\/run\/?$/, "/api/audit/rewrite-duplicates");
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-api-key": settings.apiKey },
+          body: JSON.stringify({
+            findingId: finding.id,
+            siteUrl: targetUrl,
+            affectedUrls: finding.affectedUrls ?? [],
+          }),
+        });
+        const data = await res.json() as {
+          ok?: boolean;
+          platform?: string;
+          commitUrl?: string;
+          succeeded?: Array<{ url: string; oldValue?: string; newValue: string; filePath?: string }>;
+          failed?: Array<{ url: string; reason: string }>;
+          message?: string;
+          error?: string;
+          managedPlanCta?: ManagedPlanCta;
+        };
+
+        if (!res.ok || !data.ok) {
+          setFixStates((s) => ({
+            ...s,
+            [finding.id]: {
+              status: "error",
+              message: data.message ?? data.error ?? "Couldn't rewrite duplicates",
+            },
+          }));
+          return;
+        }
+
+        const succeeded = (data.succeeded ?? []).map((s) => ({
+          url: s.url,
+          filePath: s.newValue,
+        }));
+        const failed = data.failed ?? [];
+        setFixStates((s) => ({
+          ...s,
+          [finding.id]: {
+            status: "success-per-page",
+            commitUrl: data.commitUrl,
+            perPageResult: {
+              total: succeeded.length + failed.length,
+              succeeded,
+              skipped: [],
+              failed,
+            },
+            platform: data.platform,
+          },
+        }));
+      } catch (err) {
+        setFixStates((s) => ({
+          ...s,
+          [finding.id]: { status: "error", message: err instanceof Error ? err.message : "Network error" },
+        }));
+      }
+      return;
+    }
+
+    if (!finding.fixCode || !finding.fixType) return;
 
     try {
       const res = await fetch(getApplyFixUrl(settings.apiUrl), {
