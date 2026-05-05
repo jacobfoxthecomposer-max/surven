@@ -2762,17 +2762,22 @@ function PromptsTable({
   }, []);
 
   // If the page was opened with #prompts-table (e.g. from Prompt Dominance
-  // CTAs), scroll it to the vertical center of the viewport.
+  // CTAs), scroll it to the vertical center of the viewport. Otherwise — for
+  // a normal sidebar click with no hash — default to the top of the page.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const hash = window.location.hash.replace(/^#/, "");
-    if (hash !== "prompts-table") return;
-    const t = setTimeout(() => {
-      document
-        .getElementById("prompts-table")
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 120);
-    return () => clearTimeout(t);
+    if (hash === "prompts-table") {
+      const t = setTimeout(() => {
+        document
+          .getElementById("prompts-table")
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 120);
+      return () => clearTimeout(t);
+    }
+    if (!hash) {
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
   }, []);
 
   // Canonical intent list — fixed order matching the product taxonomy.
