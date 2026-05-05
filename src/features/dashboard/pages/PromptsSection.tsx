@@ -54,9 +54,8 @@ import {
  *   1.  Tokens + mock data hook
  *   2.  Hero (sage-accent dynamic title + description) + NextScanCard
  *   3.  RangePills + EngineChips filter row
- *   4.  PageAISummary (sage-tinted gradient block)
- *   5.  StatStrip (4 icon-tile cards)
- *   6.  BrandedCallout (conditional warn/partial/clean)
+ *   4.  StatStrip (4 icon-tile cards)
+ *   5.  BrandedCallout (conditional warn/partial/clean)
  *
  * Chunks 2 + 3 land in follow-up commits.
  * ========================================================================== */
