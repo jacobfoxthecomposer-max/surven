@@ -1301,6 +1301,42 @@ export default function App() {
               {settingsError}
             </div>
           )}
+
+          {/* Fix History — only shown once Surven is configured. */}
+          {settings && (
+            <button
+              type="button"
+              onClick={() => {
+                setSettingsOpen(false);
+                setHistoryOpen(true);
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "10px",
+                padding: "12px",
+                background: "white",
+                border: "1px solid #E5E1D5",
+                borderRadius: "6px",
+                cursor: "pointer",
+                width: "100%",
+                textAlign: "left",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <History size={16} color="#7D8E6C" />
+                <div>
+                  <div style={{ fontSize: "13px", fontWeight: 600, color: "#3D3F3D" }}>Fix History</div>
+                  <div style={{ fontSize: "11px", color: "#6B6D6B", marginTop: "2px" }}>
+                    Review every fix Surven applied. Revert any individually or all at once.
+                  </div>
+                </div>
+              </div>
+              <ChevronRight size={16} color="#6B6D6B" />
+            </button>
+          )}
+
           <button
             onClick={saveSettings}
             disabled={!draftSettings.apiUrl || !draftSettings.apiKey}
