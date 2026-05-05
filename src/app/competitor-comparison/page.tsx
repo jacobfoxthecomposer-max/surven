@@ -18,7 +18,6 @@ import { VisibilityLeaderboard } from "@/features/competitor-comparison/Visibili
 import { CompetitorVisibilityChart } from "@/features/competitor-comparison/CompetitorVisibilityChart";
 import { PromptClusterDominance } from "@/features/competitor-comparison/PromptClusterDominance";
 import { CompetitorFixActions } from "@/features/competitor-comparison/CompetitorFixActions";
-import { CompetitorGaps } from "@/features/competitor-comparison/CompetitorGaps";
 import { CompetitorRankChart } from "@/features/competitor-comparison/CompetitorRankChart";
 import { CompetitorShareOfVoiceChart } from "@/features/competitor-comparison/CompetitorShareOfVoiceChart";
 import { BetaFeedbackFooter } from "@/components/organisms/BetaFeedbackFooter";
@@ -527,13 +526,8 @@ export default function CompetitorComparisonPage() {
               <CompetitorShareOfVoiceChart />
             </motion.div>
 
-            {/* Gaps & advantages */}
-            <motion.div {...reveal}>
-              <CompetitorGaps
-                results={filteredResults}
-                competitors={competitorNames}
-              />
-            </motion.div>
+            {/* Gaps + Wins now live inside the "Ways to take the lead"
+                panel above (CompetitorFixActions), so no separate row here. */}
 
             {/* Beta feedback callout — shared organism with Code Scanner. */}
             <BetaFeedbackFooter />

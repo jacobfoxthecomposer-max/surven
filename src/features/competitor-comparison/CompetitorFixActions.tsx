@@ -1,54 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import {
+  AlertTriangle,
   ArrowRight,
-  Cpu,
-  MessageSquare,
-  Link2,
-  ShieldCheck,
+  CheckCircle2,
   Sparkles,
-  type LucideIcon,
+  Target,
+  TrendingUp,
 } from "lucide-react";
 import { SectionHeading } from "@/components/atoms/SectionHeading";
-import { Modal } from "@/components/molecules/Modal";
-import { SURVEN_SEMANTIC } from "@/utils/brandColors";
 import type { ScanResult, ModelName } from "@/types/database";
 
 const COLORS = {
   primary: "#96A283",
   primaryHover: "#7D8E6C",
-};
-
-// Visual rhythm cribbed from Code Scanner's `TopFixesPanel`. Sage→amber→rust
-// gradient header band + status-tile / title / body rows + sage `+N` pill on
-// the right when the action carries a numeric magnitude.
-
-const ACTION_META: Record<
-  string,
-  { Icon: LucideIcon; tint: string; iconColor: string }
-> = {
-  engine: {
-    Icon: Cpu,
-    tint: "rgba(150,162,131,0.18)",
-    iconColor: "#5E7250",
-  },
-  prompts: {
-    Icon: MessageSquare,
-    tint: "rgba(201,123,69,0.16)",
-    iconColor: "#A06210",
-  },
-  sources: {
-    Icon: Link2,
-    tint: "rgba(184,160,48,0.18)",
-    iconColor: "#7E6B17",
-  },
-  defend: {
-    Icon: ShieldCheck,
-    tint: "rgba(150,162,131,0.18)",
-    iconColor: "#5E7250",
-  },
 };
 
 const MODEL_LABELS: Record<ModelName, string> = {
@@ -58,26 +25,32 @@ const MODEL_LABELS: Record<ModelName, string> = {
   google_ai: "Google AI",
 };
 
-// Per-engine optimization lever — used to write engine-specific advice in the
-// modal body when we name a worst-performing engine.
-const ENGINE_LEVERS: Record<ModelName, string> = {
-  chatgpt:
-    "ChatGPT leans on Reddit threads, Wikipedia, and editorial articles. Get yourself mentioned on a couple of high-traffic Reddit threads in your category and pitch one or two niche publications — those are the sources it weights highest.",
-  claude:
-    "Claude favors long-form articles, official sites, and structured documentation. Publish (or commission) a thorough piece — a comparison guide, a buyer's guide, or a definitive how-to — on a domain Claude already trusts.",
-  gemini:
-    "Gemini pulls heavily from Google Search, Google reviews, and Google Maps. Cleaning up your Google Business Profile, getting fresh reviews on Google specifically, and ensuring your site ranks for the prompt's keywords moves Gemini fastest.",
-  google_ai:
-    "Google AI Overview reads the top organic search results for the prompt. Win this engine by ranking the page that directly answers the query — schema markup, an FAQ section, and clear answer-first copy on the page that targets that keyword.",
+const GAPS_PALETTE = {
+  accent: "#C97B45",
+  accentText: "#8C5A1E",
+  gradient:
+    "linear-gradient(135deg, rgba(199,123,69,0.20) 0%, rgba(199,123,69,0.03) 100%)",
+  tileBg: "rgba(199,123,69,0.18)",
+  HeaderIcon: AlertTriangle,
+  tag: "WHAT TO CLOSE",
+  rowIcon: AlertTriangle,
 };
 
-interface FixAction {
-  key: keyof typeof ACTION_META;
-  headline: string;
-  oneLiner: string;
-  modalBody: string;
-  /** Optional magnitude pill rendered on the right of the row. */
-  metric?: string;
+const WINS_PALETTE = {
+  accent: "#96A283",
+  accentText: "#4A5E3A",
+  gradient:
+    "linear-gradient(135deg, rgba(150,162,131,0.22) 0%, rgba(150,162,131,0.04) 100%)",
+  tileBg: "rgba(150,162,131,0.20)",
+  HeaderIcon: Sparkles,
+  tag: "WHERE YOU'RE WINNING",
+  rowIcon: CheckCircle2,
+};
+
+interface GapItem {
+  prompt: string;
+  competitor: string | null;
+  models: string[];
 }
 
 interface Props {
@@ -86,363 +59,290 @@ interface Props {
   competitors: string[];
 }
 
-function calcModelScore(
-  results: ScanResult[],
-  model: ModelName,
-  competitor?: string,
-): number | null {
-  const modelResults = results.filter((r) => r.model_name === model);
-  if (modelResults.length === 0) return null;
-  if (!competitor) {
-    const hits = modelResults.filter((r) => r.business_mentioned).length;
-    return Math.round((hits / modelResults.length) * 100);
-  }
-  const relevant = modelResults.filter(
-    (r) => r.competitor_mentions && competitor in r.competitor_mentions,
-  );
-  if (relevant.length === 0) return null;
-  const hits = relevant.filter((r) => r.competitor_mentions[competitor]).length;
-  if (hits === 0) return null;
-  return Math.round((hits / relevant.length) * 100);
-}
-
 export function CompetitorFixActions({
   results,
   businessName,
   competitors,
 }: Props) {
-  const [openKey, setOpenKey] = useState<string | null>(null);
+  const { gaps, advantages } = useMemo(() => {
+    const gapMap = new Map<string, GapItem>();
+    const advantageMap = new Map<string, GapItem>();
 
-  const actions = useMemo<FixAction[]>(() => {
-    const models: ModelName[] = ["chatgpt", "claude", "gemini", "google_ai"];
-
-    // ===== 1. Biggest engine gap — find the engine where competitors most outpace you =====
-    let worstEngine: ModelName | null = null;
-    let worstEngineYourScore = 0;
-    let worstEngineCompetitor: string | null = null;
-    let worstEngineCompScore = 0;
-    let worstEngineGap = 0;
-
-    for (const m of models) {
-      const yourScore = calcModelScore(results, m) ?? 0;
-      for (const c of competitors) {
-        const compScore = calcModelScore(results, m, c) ?? 0;
-        const gap = compScore - yourScore;
-        if (gap > worstEngineGap) {
-          worstEngineGap = gap;
-          worstEngine = m;
-          worstEngineYourScore = yourScore;
-          worstEngineCompetitor = c;
-          worstEngineCompScore = compScore;
-        }
-      }
-    }
-
-    // ===== 2. Gap prompts — prompts where competitors rank, you don't =====
-    const gapPromptMap = new Map<string, { competitors: Set<string>; engines: Set<string> }>();
     for (const r of results) {
       if (!r.competitor_mentions) continue;
-      if (r.business_mentioned) continue;
-      for (const c of competitors) {
-        if (r.competitor_mentions[c]) {
-          if (!gapPromptMap.has(r.prompt_text)) {
-            gapPromptMap.set(r.prompt_text, {
-              competitors: new Set(),
-              engines: new Set(),
+
+      for (const competitor of competitors) {
+        const competitorMentioned = r.competitor_mentions[competitor] === true;
+        const clientMentioned = r.business_mentioned;
+        const key = `${competitor}||${r.prompt_text}`;
+        const modelLabel = MODEL_LABELS[r.model_name as ModelName] ?? r.model_name;
+
+        if (competitorMentioned && !clientMentioned) {
+          const existing = gapMap.get(key);
+          if (existing) {
+            if (!existing.models.includes(modelLabel))
+              existing.models.push(modelLabel);
+          } else {
+            gapMap.set(key, {
+              prompt: r.prompt_text,
+              competitor,
+              models: [modelLabel],
             });
           }
-          const entry = gapPromptMap.get(r.prompt_text)!;
-          entry.competitors.add(c);
-          entry.engines.add(r.model_name);
         }
-      }
-    }
-    const gapPrompts = Array.from(gapPromptMap.entries()).slice(0, 3);
-    const totalGapPrompts = gapPromptMap.size;
-    const topGapCompetitor =
-      gapPrompts.length > 0
-        ? Array.from(gapPrompts[0][1].competitors)[0]
-        : null;
 
-    // ===== 3. Citation source gaps — domains AI cites for competitors but not you =====
-    const yourDomains = new Set<string>();
-    const competitorDomains = new Map<string, Map<string, number>>(); // domain → competitor → count
-
-    for (const r of results) {
-      if (!r.citations) continue;
-      for (const domain of r.citations) {
-        if (r.business_mentioned) {
-          yourDomains.add(domain);
-        }
-        if (r.competitor_mentions) {
-          for (const c of competitors) {
-            if (r.competitor_mentions[c]) {
-              if (!competitorDomains.has(domain)) {
-                competitorDomains.set(domain, new Map());
-              }
-              const inner = competitorDomains.get(domain)!;
-              inner.set(c, (inner.get(c) ?? 0) + 1);
-            }
+        if (clientMentioned && !competitorMentioned) {
+          // Advantage rows are per-prompt, not per-competitor — collapse so
+          // the same prompt with multiple "uncited" competitors doesn't
+          // appear three times.
+          const advKey = r.prompt_text;
+          const existing = advantageMap.get(advKey);
+          if (existing) {
+            if (!existing.models.includes(modelLabel))
+              existing.models.push(modelLabel);
+          } else {
+            advantageMap.set(advKey, {
+              prompt: r.prompt_text,
+              competitor: null,
+              models: [modelLabel],
+            });
           }
         }
       }
     }
 
-    const citationGaps: { domain: string; competitor: string; count: number }[] = [];
-    for (const [domain, byComp] of competitorDomains) {
-      if (yourDomains.has(domain)) continue;
-      const top = Array.from(byComp.entries()).sort((a, b) => b[1] - a[1])[0];
-      if (top) citationGaps.push({ domain, competitor: top[0], count: top[1] });
-    }
-    citationGaps.sort((a, b) => b.count - a.count);
-    const topCitationGaps = citationGaps.slice(0, 3);
-
-    // ===== 4. Advantage prompts — prompts where you rank, competitors don't =====
-    const advantagePromptMap = new Map<string, { engines: Set<string> }>();
-    for (const r of results) {
-      if (!r.business_mentioned) continue;
-      if (!r.competitor_mentions) continue;
-      const anyCompMentioned = competitors.some((c) => r.competitor_mentions[c]);
-      if (anyCompMentioned) continue;
-      if (!advantagePromptMap.has(r.prompt_text)) {
-        advantagePromptMap.set(r.prompt_text, { engines: new Set() });
-      }
-      advantagePromptMap.get(r.prompt_text)!.engines.add(r.model_name);
-    }
-    const advantagePrompts = Array.from(advantagePromptMap.entries()).slice(0, 3);
-    const totalAdvantagePrompts = advantagePromptMap.size;
-
-    // ============== Action 1: Close biggest engine gap ==============
-    const engineAction: FixAction = worstEngine && worstEngineCompetitor
-      ? {
-          key: "engine",
-          headline: `Close the ${worstEngineGap}% gap on ${MODEL_LABELS[worstEngine]}`,
-          oneLiner: `${worstEngineCompetitor} appears ${worstEngineGap}% more often than ${businessName} on ${MODEL_LABELS[worstEngine]}.`,
-          metric: `${worstEngineGap}% gap`,
-          modalBody: `${worstEngineCompetitor} appears on ${worstEngineCompScore}% of ${MODEL_LABELS[worstEngine]} prompts. ${businessName} is at ${worstEngineYourScore}%.\n\n${ENGINE_LEVERS[worstEngine]}\n\nCheck the Top Cited Domains card below — match the sources ${worstEngineCompetitor} appears on and visibility usually closes within 2–4 weeks.`,
-        }
-      : {
-          key: "engine",
-          headline: "You're not trailing on any single engine",
-          oneLiner: `${businessName} matches or beats every competitor on every engine.`,
-          modalBody: `No competitor outpaces ${businessName} on any engine in this scan. Run a fresh scan in 7–14 days to confirm the lead is holding.`,
-        };
-
-    // ============== Action 2: Win prompts you're losing ==============
-    const promptList = gapPrompts
-      .map(([p, info], i) => {
-        const compsLabel = Array.from(info.competitors).join(", ");
-        const enginesLabel = Array.from(info.engines)
-          .map((e) => MODEL_LABELS[e as ModelName])
-          .join(", ");
-        return `${i + 1}. "${p}" — ${compsLabel} appears on ${enginesLabel}.`;
-      })
-      .join("\n");
-
-    const promptAction: FixAction = totalGapPrompts > 0 && topGapCompetitor
-      ? {
-          key: "prompts",
-          headline: `Win the ${totalGapPrompts} prompt${totalGapPrompts === 1 ? "" : "s"} where ${topGapCompetitor} ranks and you don't`,
-          oneLiner: `${topGapCompetitor} shows up on ${totalGapPrompts} prompt${totalGapPrompts === 1 ? "" : "s"} that ${businessName} is missing entirely.`,
-          metric: `${totalGapPrompts} prompt${totalGapPrompts === 1 ? "" : "s"}`,
-          modalBody: `Prompts ${businessName} is missing:\n\n${promptList}\n\nWrite a page that restates each prompt in the title and first paragraph — AI pulls copy from pages that match the prompt almost verbatim. For "best/top" prompts, add 5–10 named-customer reviews on the page; AI weights real names higher than generic marketing copy.`,
-        }
-      : {
-          key: "prompts",
-          headline: "No prompts where competitors solo-rank above you",
-          oneLiner: `${businessName} is at least matching every competitor where they appear.`,
-          modalBody: `Every prompt where a competitor was mentioned, ${businessName} was also mentioned. Keep scanning weekly to catch new gap prompts as competitors publish content.`,
-        };
-
-    // ============== Action 3: Steal competitor citation sources ==============
-    const sourceList = topCitationGaps
-      .map(
-        (g, i) =>
-          `${i + 1}. ${g.domain} — cited ${g.count} time${g.count === 1 ? "" : "s"} for ${g.competitor}.`,
-      )
-      .join("\n");
-
-    const sourceAction: FixAction = topCitationGaps.length > 0
-      ? {
-          key: "sources",
-          headline: `Get listed on ${topCitationGaps.length} source${topCitationGaps.length === 1 ? "" : "s"} citing your competitors`,
-          oneLiner: `AI is citing ${topCitationGaps[0].domain} for ${topCitationGaps[0].competitor}, but never for ${businessName}.`,
-          metric: `${topCitationGaps.length} source${topCitationGaps.length === 1 ? "" : "s"}`,
-          modalBody: `Sources powering competitor visibility but ignoring ${businessName}:\n\n${sourceList}\n\nDirectories (Yelp, BBB, industry-specific) usually accept free listings — claim yours. Editorial mentions need a story pitch or customer-led intro. Reddit happens when real customers recommend you in real threads.\n\nStart with ${topCitationGaps[0].domain} — one placement on the highest-cited source moves more visibility than five on weak ones.`,
-        }
-      : {
-          key: "sources",
-          headline: "Match competitors on the citation sources they use",
-          oneLiner: `${businessName} is showing up on the same sources competitors are — keep that parity.`,
-          modalBody: `AI isn't citing any sources for competitors that aren't also citing ${businessName}. Watch Citation Insights for new gaps as competitors get listed on new platforms.`,
-        };
-
-    // ============== Action 4: Defend the prompts you own ==============
-    const advList = advantagePrompts
-      .map(([p, info], i) => {
-        const enginesLabel = Array.from(info.engines)
-          .map((e) => MODEL_LABELS[e as ModelName])
-          .join(", ");
-        return `${i + 1}. "${p}" — appearing on ${enginesLabel}.`;
-      })
-      .join("\n");
-
-    const defendAction: FixAction = totalAdvantagePrompts > 0
-      ? {
-          key: "defend",
-          headline: `Defend the ${totalAdvantagePrompts} prompt${totalAdvantagePrompts === 1 ? "" : "s"} where you alone rank`,
-          oneLiner: `${businessName} owns ${totalAdvantagePrompts} prompt${totalAdvantagePrompts === 1 ? "" : "s"} where no competitor is mentioned.`,
-          metric: `${totalAdvantagePrompts} solo win${totalAdvantagePrompts === 1 ? "" : "s"}`,
-          modalBody: `Solo wins — prompts where AI mentions ${businessName} and no competitor:\n\n${advList}\n\nThree moves to hold them:\n\n1. Find the source AI is reading (check Citation Insights for the cited domains).\n2. Refresh that page every 60–90 days — AI weights freshness heavily.\n3. Add depth: named customers, dated outcomes, specific numbers. Concrete pages are harder to dislodge.`,
-        }
-      : {
-          key: "defend",
-          headline: `Build solo-win prompts ${businessName} can own`,
-          oneLiner: `${businessName} doesn't currently solo-rank on any prompt — every win is shared.`,
-          modalBody: `Every prompt mentioning ${businessName} also mentions a competitor — every win is shared. Pick your most specific category prompt (not "best plumber" but "best emergency plumber for older homes in [city]") and write a page that answers it better than any competitor. Specificity is the lever — generic answers stay shared, specific answers get owned. You'll usually see solo-wins appear within 2–3 scans.`,
-        };
-
-    return [engineAction, promptAction, sourceAction, defendAction];
-  }, [results, businessName, competitors]);
-
-  const open = actions.find((a) => a.key === openKey) ?? null;
+    return {
+      // Sort by engines covered descending — most-covered = highest leverage.
+      gaps: Array.from(gapMap.values())
+        .sort((a, b) => b.models.length - a.models.length)
+        .slice(0, 3),
+      advantages: Array.from(advantageMap.values())
+        .sort((a, b) => b.models.length - a.models.length)
+        .slice(0, 3),
+    };
+  }, [results, competitors]);
 
   return (
-    <>
+    <div
+      className="rounded-[var(--radius-lg)] border bg-[var(--color-surface)] flex flex-col h-full overflow-hidden"
+      style={{ borderColor: "rgba(150,162,131,0.45)" }}
+    >
+      {/* Header band — same sage→amber→rust gradient as before. */}
       <div
-        className="rounded-[var(--radius-lg)] border bg-[var(--color-surface)] flex flex-col h-full"
-        style={{ borderColor: "rgba(150,162,131,0.45)" }}
+        className="px-5 py-3.5 border-b border-[var(--color-border)] flex items-center justify-between flex-wrap gap-3"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(150,162,131,0.28) 0%, rgba(184,160,48,0.14) 50%, rgba(201,123,69,0.14) 100%)",
+        }}
       >
-        {/* Header band — same 3-stop sage→amber→rust gradient as the Code
-            Scanner "Fix these first" panel. */}
-        <div
-          className="rounded-t-[var(--radius-lg)] px-5 py-3.5 border-b border-[var(--color-border)] flex items-center justify-between flex-wrap gap-3"
-          style={{
-            background:
-              "linear-gradient(135deg, rgba(150,162,131,0.28) 0%, rgba(184,160,48,0.14) 50%, rgba(201,123,69,0.14) 100%)",
-          }}
-        >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div
-              className="h-8 w-8 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
-              style={{ backgroundColor: "rgba(150,162,131,0.22)" }}
-            >
-              <Sparkles className="h-4 w-4" style={{ color: COLORS.primary }} />
-            </div>
-            <SectionHeading
-              text="Ways to take the lead"
-              info="The highest-impact moves for closing the gap on your competitors, derived from your scan."
-            />
-          </div>
-          <p
-            className="text-[var(--color-fg-secondary)]"
-            style={{ fontSize: 13.5 }}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div
+            className="h-8 w-8 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
+            style={{ backgroundColor: "rgba(150,162,131,0.22)" }}
           >
-            Specific to your scan.{" "}
-            <span style={{ color: COLORS.primary, fontWeight: 600 }}>
-              Tap any row
-            </span>{" "}
-            for the playbook.
-          </p>
+            <Sparkles className="h-4 w-4" style={{ color: COLORS.primary }} />
+          </div>
+          <SectionHeading
+            text="Ways to take the lead"
+            info="The highest-impact prompts to close gaps on and to defend, derived from your scan."
+          />
         </div>
-
-        <div className="p-4 flex-1 flex flex-col gap-3">
-          {actions.map((a) => {
-            const meta = ACTION_META[a.key];
-            const Icon = meta.Icon;
-            return (
-              <button
-                key={a.key}
-                onClick={() => setOpenKey(a.key)}
-                className="w-full text-left rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 px-5 py-4 flex items-start gap-4 hover:border-[var(--color-border-hover)] hover:bg-[var(--color-surface-alt)] hover:-translate-y-px transition-all group"
-              >
-                <span
-                  className="inline-flex items-center justify-center rounded-[var(--radius-md)] shrink-0 mt-0.5"
-                  style={{
-                    width: 36,
-                    height: 36,
-                    backgroundColor: meta.tint,
-                    color: meta.iconColor,
-                  }}
-                >
-                  <Icon className="h-5 w-5" />
-                </span>
-                <div className="flex-1 min-w-0 space-y-1">
-                  <p
-                    className="text-[var(--color-fg)]"
-                    style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.3 }}
-                  >
-                    {a.headline}
-                  </p>
-                  <p
-                    className="text-[var(--color-fg-secondary)]"
-                    style={{ fontSize: 14, lineHeight: 1.5 }}
-                  >
-                    {a.oneLiner}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0 mt-1">
-                  {a.metric && (
-                    <span
-                      className="rounded-full px-3 py-1 font-semibold tabular-nums"
-                      style={{
-                        fontSize: 13,
-                        backgroundColor: `${COLORS.primary}1f`,
-                        color: COLORS.primaryHover,
-                      }}
-                    >
-                      {a.metric}
-                    </span>
-                  )}
-                  <ArrowRight
-                    className="h-4 w-4 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"
-                    style={{ color: COLORS.primary }}
-                  />
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        <p
+          className="text-[var(--color-fg-secondary)]"
+          style={{ fontSize: 13.5 }}
+        >
+          Top 3 of each. Click any row to view it in Prompt Tracker.
+        </p>
       </div>
 
-      <Modal
-        open={open !== null}
-        onClose={() => setOpenKey(null)}
-        title={open?.headline}
-        className="max-w-lg"
-      >
-        {open && (
-          <div className="space-y-4">
-            <p className="text-sm text-[var(--color-fg-secondary)] leading-relaxed whitespace-pre-line">
-              {open.modalBody}
-            </p>
+      {/* Two nested mini-cards — gaps first, wins second (stacked vertically
+          to fit the narrow right column). */}
+      <div className="p-4 flex-1 flex flex-col gap-4 min-w-0">
+        <NestedGapCard
+          variant="gaps"
+          items={gaps}
+          businessName={businessName}
+          footerHref="/audit"
+          footerLabel="Diagnose gaps in a GEO audit"
+        />
+        <NestedGapCard
+          variant="winning"
+          items={advantages}
+          businessName={businessName}
+          footerHref="/citation-insights"
+          footerLabel="See citation sources powering these wins"
+        />
+      </div>
+    </div>
+  );
+}
 
+function NestedGapCard({
+  variant,
+  items,
+  businessName,
+  footerHref,
+  footerLabel,
+}: {
+  variant: "gaps" | "winning";
+  items: GapItem[];
+  businessName: string;
+  footerHref: string;
+  footerLabel: string;
+}) {
+  const palette = variant === "gaps" ? GAPS_PALETTE : WINS_PALETTE;
+  const HeaderIcon = palette.HeaderIcon;
+  const RowIcon = palette.rowIcon;
+
+  const title =
+    variant === "gaps"
+      ? `${items.length} ${items.length === 1 ? "gap" : "gaps"} to close`
+      : `${items.length} ${items.length === 1 ? "prompt" : "prompts"} you own`;
+
+  const summary =
+    variant === "gaps"
+      ? "Prompts where a competitor is cited and you aren't — highest-leverage targets."
+      : "You're cited and the competitor isn't — defend and amplify these positions.";
+
+  const emptyText =
+    variant === "gaps"
+      ? "No gaps found — you match every competitor on every prompt."
+      : "No solo wins yet — keep building visibility on category prompts.";
+
+  return (
+    <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col overflow-hidden">
+      {/* Mini gradient header */}
+      <div
+        className="px-4 py-3"
+        style={{
+          background: palette.gradient,
+          borderLeft: `3px solid ${palette.accent}`,
+        }}
+      >
+        <div className="flex items-center gap-1.5 mb-0.5">
+          <HeaderIcon
+            className="h-3.5 w-3.5 shrink-0"
+            style={{ color: palette.accent }}
+          />
+          <p
+            className="uppercase font-semibold"
+            style={{
+              fontSize: 10,
+              letterSpacing: "0.12em",
+              color: palette.accentText,
+            }}
+          >
+            {palette.tag}
+          </p>
+        </div>
+        <h3
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: 20,
+            fontWeight: 500,
+            color: "var(--color-fg)",
+            letterSpacing: "-0.01em",
+            lineHeight: 1.15,
+          }}
+        >
+          {title}
+        </h3>
+        <p
+          className="mt-1 text-[var(--color-fg-secondary)]"
+          style={{ fontSize: 12, lineHeight: 1.45 }}
+        >
+          {summary}
+        </p>
+      </div>
+
+      {/* Rows */}
+      {items.length === 0 ? (
+        <p
+          className="text-[var(--color-fg-muted)] p-4 text-center"
+          style={{ fontSize: 12 }}
+        >
+          {emptyText}
+        </p>
+      ) : (
+        <div className="px-3 pt-2 pb-2 space-y-2">
+          {items.map((item, idx) => (
             <div
-              className="rounded-[var(--radius-md)] p-3 text-xs flex items-start gap-2"
-              style={{
-                background: "rgba(150,162,131,0.10)",
-                borderLeft: `3px solid ${SURVEN_SEMANTIC.goodAlt}`,
-              }}
+              key={idx}
+              className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5 flex items-start gap-2.5 hover:bg-[var(--color-surface-alt)]/40 transition-colors"
             >
-              <Sparkles
-                className="h-3.5 w-3.5 mt-0.5 shrink-0"
-                style={{ color: SURVEN_SEMANTIC.goodAlt }}
-              />
-              <p className="text-[var(--color-fg-secondary)] leading-snug">
-                Don&apos;t want to do this yourself? Surven&apos;s managed plans handle the
-                directory listings, source outreach, and content publishing for you.{" "}
-                <Link
-                  href="/settings/billing"
-                  className="font-semibold hover:underline"
-                  style={{ color: SURVEN_SEMANTIC.goodAlt }}
+              <div
+                className="h-7 w-7 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
+                style={{ backgroundColor: palette.tileBg }}
+              >
+                <RowIcon className="h-3.5 w-3.5" style={{ color: palette.accent }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p
+                  className="leading-snug"
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    color: "var(--color-fg)",
+                    letterSpacing: "-0.005em",
+                    lineHeight: 1.25,
+                  }}
                 >
-                  See managed plans →
+                  &ldquo;{item.prompt}&rdquo;
+                </p>
+                <p
+                  className="text-[var(--color-fg-muted)] mt-1"
+                  style={{ fontSize: 11.5, lineHeight: 1.4 }}
+                >
+                  {variant === "gaps"
+                    ? `${item.competitor} is cited by ${item.models.join(", ")} — ${businessName} isn't.`
+                    : `Cited by ${item.models.join(", ")} — no competitor mentioned.`}
+                </p>
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {item.models.map((m) => (
+                    <span
+                      key={m}
+                      className="rounded px-1.5 py-0.5 font-semibold"
+                      style={{
+                        fontSize: 9,
+                        backgroundColor: `${palette.accent}18`,
+                        color: palette.accentText,
+                      }}
+                    >
+                      {m}
+                    </span>
+                  ))}
+                </div>
+                <Link
+                  href="/prompts"
+                  className="group inline-flex items-center gap-1 mt-1.5 font-semibold transition-opacity hover:opacity-80"
+                  style={{ fontSize: 11.5, color: palette.accentText }}
+                >
+                  View in Prompt Tracker
+                  <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
                 </Link>
-              </p>
+              </div>
             </div>
-          </div>
-        )}
-      </Modal>
-    </>
+          ))}
+        </div>
+      )}
+
+      {/* Footer CTA */}
+      <div className="px-4 py-2.5 border-t border-[var(--color-border)] mt-auto">
+        <Link
+          href={footerHref}
+          className="group inline-flex items-center gap-1.5 font-semibold transition-opacity hover:opacity-75"
+          style={{ fontSize: 12, color: palette.accentText }}
+        >
+          {variant === "gaps" ? (
+            <Target className="h-3.5 w-3.5 shrink-0" />
+          ) : (
+            <TrendingUp className="h-3.5 w-3.5 shrink-0" />
+          )}
+          {footerLabel}
+          <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+        </Link>
+      </div>
+    </section>
   );
 }
