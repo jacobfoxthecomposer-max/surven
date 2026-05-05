@@ -230,7 +230,7 @@ async function dispatchGithub(
 
     if (isNextJs) {
       const candidates = urlToPageCandidates(input.url);
-      const resolved = candidates.candidates.find((p) => fileTree.has(p));
+      const resolved = candidates.candidates.find((p: string) => fileTree.has(p));
       if (!resolved) { failed.push({ url: input.url, reason: "Couldn't find a page.tsx for this URL" }); continue; }
       const file = await client.getFile(resolved, connection.branch);
       if (!file) { failed.push({ url: input.url, reason: "Couldn't read the page file" }); continue; }
