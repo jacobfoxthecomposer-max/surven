@@ -952,7 +952,7 @@ function HeroTitle({ data, treatment }: { data: ScannerData; treatment: Treatmen
 }
 
 const HERO_DESCRIPTION =
-  "AI visibility tracks how often ChatGPT, Claude, Gemini, and Google AI name your business when answering customer questions. It's the new search ranking — if AI doesn't mention you, customers hear about whoever it does.";
+  "AI visibility tracks how often ChatGPT, Claude, Gemini, and Google AI name your business when answering customer questions. Each scan shows your mention rate per engine, how it's trending over time, and where you stand against your competitors.";
 
 const NEXT_SCAN_PROMPT_COUNT = 248;
 
