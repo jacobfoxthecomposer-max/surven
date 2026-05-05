@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,6 +15,8 @@ import { humanizeAuthError } from "@/utils/authErrors";
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") ?? "/dashboard";
   const { signIn, user, loading: authLoading, unconfigured } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -22,9 +24,9 @@ export function LoginForm() {
 
   useEffect(() => {
     if (user && !authLoading) {
-      router.replace("/dashboard");
+      router.replace(redirectTo);
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, redirectTo]);
 
   const {
     register,
