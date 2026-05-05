@@ -127,19 +127,20 @@ export function CompetitorFixActions({
       className="rounded-[var(--radius-lg)] border bg-[var(--color-surface)] flex flex-col h-full overflow-hidden"
       style={{ borderColor: "rgba(150,162,131,0.45)" }}
     >
-      {/* Header band — same sage→amber→rust gradient as before. */}
+      {/* Header band — same sage→amber→rust gradient as before. Tightened
+          padding so the panel can match the data row's height on the left. */}
       <div
-        className="px-5 py-3.5 border-b border-[var(--color-border)] flex items-center gap-3"
+        className="px-4 py-2.5 border-b border-[var(--color-border)] flex items-center gap-2.5"
         style={{
           background:
             "linear-gradient(135deg, rgba(150,162,131,0.28) 0%, rgba(184,160,48,0.14) 50%, rgba(201,123,69,0.14) 100%)",
         }}
       >
         <div
-          className="h-8 w-8 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
+          className="h-7 w-7 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
           style={{ backgroundColor: "rgba(150,162,131,0.22)" }}
         >
-          <Sparkles className="h-4 w-4" style={{ color: COLORS.primary }} />
+          <Sparkles className="h-3.5 w-3.5" style={{ color: COLORS.primary }} />
         </div>
         <SectionHeading
           text="Ways to take the lead"
@@ -149,7 +150,7 @@ export function CompetitorFixActions({
 
       {/* Two nested mini-cards — gaps first, wins second (stacked vertically
           to fit the narrow right column). */}
-      <div className="p-4 flex-1 flex flex-col gap-4 min-w-0">
+      <div className="p-3 flex-1 flex flex-col gap-3 min-w-0 min-h-0">
         <NestedGapCard
           variant="gaps"
           items={gaps}
@@ -205,120 +206,105 @@ function NestedGapCard({
 
   return (
     <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col overflow-hidden">
-      {/* Mini gradient header */}
+      {/* Mini gradient header — single row: tag + title inline + summary on
+          the right. Halves the vertical footprint vs. the prior 2-line block. */}
       <div
-        className="px-4 py-3"
+        className="px-3 py-2"
         style={{
           background: palette.gradient,
           borderLeft: `3px solid ${palette.accent}`,
         }}
       >
-        <div className="flex items-center gap-1.5 mb-0.5">
-          <HeaderIcon
-            className="h-3.5 w-3.5 shrink-0"
-            style={{ color: palette.accent }}
-          />
-          <p
-            className="uppercase font-semibold"
-            style={{
-              fontSize: 10,
-              letterSpacing: "0.12em",
-              color: palette.accentText,
-            }}
-          >
-            {palette.tag}
-          </p>
-        </div>
-        <div className="flex items-baseline justify-between gap-3 flex-wrap">
-          <h3
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: 20,
-              fontWeight: 500,
-              color: "var(--color-fg)",
-              letterSpacing: "-0.01em",
-              lineHeight: 1.15,
-            }}
-          >
-            {title}
-          </h3>
+        <div className="flex items-baseline justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <HeaderIcon
+              className="h-3.5 w-3.5 shrink-0"
+              style={{ color: palette.accent }}
+            />
+            <h3
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 16,
+                fontWeight: 500,
+                color: "var(--color-fg)",
+                letterSpacing: "-0.005em",
+                lineHeight: 1.15,
+              }}
+            >
+              {title}
+            </h3>
+          </div>
           <p
             className="text-[var(--color-fg-muted)]"
-            style={{ fontSize: 11.5, lineHeight: 1.4 }}
+            style={{ fontSize: 11, lineHeight: 1.3 }}
           >
             {summary}
           </p>
         </div>
       </div>
 
-      {/* Rows */}
+      {/* Rows — entire row is a Link (drops the separate per-row CTA, since
+          tapping anywhere on the row already routes to Prompt Tracker). */}
       {items.length === 0 ? (
         <p
-          className="text-[var(--color-fg-muted)] p-4 text-center"
-          style={{ fontSize: 12 }}
+          className="text-[var(--color-fg-muted)] p-3 text-center"
+          style={{ fontSize: 11.5 }}
         >
           {emptyText}
         </p>
       ) : (
-        <div className="px-3 pt-2 pb-2 space-y-2">
+        <div className="px-2 pt-1.5 pb-1.5 space-y-1.5">
           {items.map((item, idx) => (
-            <div
+            <Link
               key={idx}
-              className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5 flex items-start gap-2.5 hover:bg-[var(--color-surface-alt)]/40 transition-colors"
+              href="/prompts"
+              className="block rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-2 hover:bg-[var(--color-surface-alt)]/50 hover:border-[var(--color-border-hover)] transition-colors"
             >
-              <div
-                className="h-7 w-7 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
-                style={{ backgroundColor: palette.tileBg }}
-              >
-                <RowIcon className="h-3.5 w-3.5" style={{ color: palette.accent }} />
+              <div className="flex items-start gap-2">
+                <RowIcon
+                  className="h-3.5 w-3.5 shrink-0 mt-0.5"
+                  style={{ color: palette.accent }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p
+                    className="leading-snug"
+                    style={{
+                      fontFamily: "var(--font-display)",
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: "var(--color-fg)",
+                      letterSpacing: "-0.005em",
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    &ldquo;{item.prompt}&rdquo;
+                  </p>
+                  <p
+                    className="text-[var(--color-fg-muted)] mt-0.5"
+                    style={{ fontSize: 10.5, lineHeight: 1.35 }}
+                  >
+                    {variant === "gaps"
+                      ? `${item.competitor} cited by ${item.models.join(", ")} — ${businessName} isn't`
+                      : `Cited by ${item.models.join(", ")} — no competitor mentioned`}
+                  </p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p
-                  className="leading-snug"
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: 14,
-                    fontWeight: 500,
-                    color: "var(--color-fg)",
-                    letterSpacing: "-0.005em",
-                    lineHeight: 1.25,
-                  }}
-                >
-                  &ldquo;{item.prompt}&rdquo;
-                </p>
-                <p
-                  className="text-[var(--color-fg-muted)] mt-1"
-                  style={{ fontSize: 11.5, lineHeight: 1.4 }}
-                >
-                  {variant === "gaps"
-                    ? `${item.competitor} is cited by ${item.models.join(", ")} — ${businessName} isn't.`
-                    : `Cited by ${item.models.join(", ")} — no competitor mentioned.`}
-                </p>
-                <Link
-                  href="/prompts"
-                  className="group inline-flex items-center gap-1 mt-1.5 font-semibold transition-opacity hover:opacity-80"
-                  style={{ fontSize: 11.5, color: palette.accentText }}
-                >
-                  View in Prompt Tracker
-                  <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
-                </Link>
-              </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}
 
       {/* Footer CTA */}
-      <div className="px-4 py-2.5 border-t border-[var(--color-border)] mt-auto">
+      <div className="px-3 py-1.5 border-t border-[var(--color-border)] mt-auto">
         <Link
           href={footerHref}
           className="group inline-flex items-center gap-1.5 font-semibold transition-opacity hover:opacity-75"
-          style={{ fontSize: 12, color: palette.accentText }}
+          style={{ fontSize: 11.5, color: palette.accentText }}
         >
           {variant === "gaps" ? (
-            <Target className="h-3.5 w-3.5 shrink-0" />
+            <Target className="h-3 w-3 shrink-0" />
           ) : (
-            <TrendingUp className="h-3.5 w-3.5 shrink-0" />
+            <TrendingUp className="h-3 w-3 shrink-0" />
           )}
           {footerLabel}
           <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
