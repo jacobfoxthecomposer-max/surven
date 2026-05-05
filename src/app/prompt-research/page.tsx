@@ -211,10 +211,9 @@ export default function PromptResearchPage() {
                 </span>
                 .
               </h1>
-              <p className="text-sm text-[var(--color-fg-muted)] mt-1.5 max-w-[760px]">
-                In GEO (Generative Engine Optimization), a prompt is a question
-                someone asks an AI. You &quot;win&quot; that prompt when the AI
-                mentions your brand in its answer.
+              <p className="text-[var(--color-fg-muted)] mt-2" style={{ fontSize: 15.5, lineHeight: 1.55, maxWidth: 760 }}>
+                <strong className="text-[var(--color-fg)] font-semibold">Why is this important?</strong>{" "}
+                Prompt research surfaces every variation of every customer question we can find in your category — even the ones you aren&apos;t tracking yet. Each researched intent is a future tracked prompt and a future answer you could be winning.
               </p>
             </div>
 

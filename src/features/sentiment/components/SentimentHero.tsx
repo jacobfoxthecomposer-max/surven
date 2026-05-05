@@ -68,10 +68,14 @@ export function SentimentHero({ results, history, businessName }: Props) {
   const circumference = 2 * Math.PI * ringRadius;
   const offset = circumference * (1 - data.positivePct / 100);
 
-  // Compact chart data — positive line only
+  // Multi-series chart data — all three sentiment buckets so the user sees
+  // not just whether positive went up, but whether the lift came from
+  // neutrals or whether negatives also fell.
   const chartData = history.map((d) => ({
     date: formatDate(d.date),
     positive: d.positivePct,
+    neutral: d.neutralPct,
+    negative: d.negativePct,
   }));
 
   const trendInsight = data.delta == null
@@ -153,11 +157,29 @@ export function SentimentHero({ results, history, businessName }: Props) {
           <h3
             style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, color: "var(--color-fg)" }}
           >
-            Positive sentiment over time
+            Sentiment over time
           </h3>
-          <span className="text-xs text-[var(--color-fg-muted)] shrink-0">
-            {history.length} scan{history.length !== 1 ? "s" : ""}
-          </span>
+          <div className="flex items-center gap-3 shrink-0">
+            {/* Three-series legend — same compact pattern as the AI Visibility
+                "over time" chart (color dot + tiny label per series). */}
+            <div className="flex items-center gap-2.5 text-[10.5px] text-[var(--color-fg-muted)]">
+              <span className="inline-flex items-center gap-1">
+                <span className="rounded-full" style={{ width: 7, height: 7, backgroundColor: SURVEN_SEMANTIC.good }} />
+                Positive
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="rounded-full" style={{ width: 7, height: 7, backgroundColor: SURVEN_SEMANTIC.neutral }} />
+                Neutral
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="rounded-full" style={{ width: 7, height: 7, backgroundColor: SURVEN_SEMANTIC.bad }} />
+                Negative
+              </span>
+            </div>
+            <span className="text-xs text-[var(--color-fg-muted)]">
+              {history.length} scan{history.length !== 1 ? "s" : ""}
+            </span>
+          </div>
         </div>
 
         <div
@@ -200,7 +222,7 @@ export function SentimentHero({ results, history, businessName }: Props) {
                     fontSize: "11px",
                     color: "var(--color-fg)",
                   }}
-                  formatter={(value) => [`${Number(value)}% positive`, ""]}
+                  formatter={(value, name) => [`${Number(value)}%`, String(name).charAt(0).toUpperCase() + String(name).slice(1)]}
                 />
                 <Line
                   type="monotone"
@@ -208,6 +230,24 @@ export function SentimentHero({ results, history, businessName }: Props) {
                   stroke={SURVEN_SEMANTIC.good}
                   strokeWidth={2.5}
                   dot={{ r: 3, fill: SURVEN_SEMANTIC.good, strokeWidth: 0 }}
+                  activeDot={{ r: 5 }}
+                  isAnimationActive={true}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="neutral"
+                  stroke={SURVEN_SEMANTIC.neutral}
+                  strokeWidth={2.5}
+                  dot={{ r: 3, fill: SURVEN_SEMANTIC.neutral, strokeWidth: 0 }}
+                  activeDot={{ r: 5 }}
+                  isAnimationActive={true}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="negative"
+                  stroke={SURVEN_SEMANTIC.bad}
+                  strokeWidth={2.5}
+                  dot={{ r: 3, fill: SURVEN_SEMANTIC.bad, strokeWidth: 0 }}
                   activeDot={{ r: 5 }}
                   isAnimationActive={true}
                 />

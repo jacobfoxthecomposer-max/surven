@@ -51,9 +51,9 @@ export function CompetitorHero({
         </span>{" "}
         the competition.
       </h1>
-      <p className="text-sm text-[var(--color-fg-muted)]">
-        {businessName} vs {competitorCount} competitor
-        {competitorCount !== 1 ? "s" : ""} across AI platforms
+      <p className="text-[var(--color-fg-muted)] mt-2" style={{ fontSize: 15.5, lineHeight: 1.55, maxWidth: 760 }}>
+        <strong className="text-[var(--color-fg)] font-semibold">Why is this important?</strong>{" "}
+        See where {businessName} outpaces, matches, or trails {competitorCount} competitor{competitorCount !== 1 ? "s" : ""} across every AI platform and prompt. Closing the gaps you trail on is the fastest way to take their share of AI-driven traffic.
       </p>
     </motion.div>
   );

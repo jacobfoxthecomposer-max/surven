@@ -961,14 +961,15 @@ function HeroTitle({ data }: { data: PromptsData }) {
 }
 
 const HERO_DESCRIPTION =
-  "Surven monitors real questions customers ask AI tools and tracks how often you appear, where you rank, and what AI says about you when it does.";
+  "Each tracked prompt is a real customer question being asked of AI engines right now. Watching them weekly tells you which intents you're winning, which you're losing, and where one fix could move dozens of answers at once.";
 
 function HeroDescription() {
   return (
     <p
-      className="text-[var(--color-fg-muted)]"
-      style={{ fontSize: 14, lineHeight: 1.55, maxWidth: 760 }}
+      className="text-[var(--color-fg-muted)] mt-2"
+      style={{ fontSize: 15.5, lineHeight: 1.55, maxWidth: 760 }}
     >
+      <strong className="text-[var(--color-fg)] font-semibold">Why is this important?</strong>{" "}
       {HERO_DESCRIPTION}
     </p>
   );

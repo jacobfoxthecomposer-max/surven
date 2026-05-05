@@ -189,8 +189,9 @@ export default function SentimentPage() {
               )}
               .
             </h1>
-            <p className="text-sm text-[var(--color-fg-muted)] mt-1.5">
-              How AI models perceive and describe {business.name} across platforms.
+            <p className="text-[var(--color-fg-muted)] mt-2" style={{ fontSize: 15.5, lineHeight: 1.55, maxWidth: 760 }}>
+              <strong className="text-[var(--color-fg)] font-semibold">Why is this important?</strong>{" "}
+              Sentiment shows whether AI engines describe {business.name} positively, neutrally, or negatively when customers ask about you. Negative framing in AI answers steers buyers to competitors before they ever click your site.
             </p>
           </div>
           <div className="shrink-0 mt-1">

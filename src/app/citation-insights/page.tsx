@@ -216,9 +216,9 @@ export default function CitationInsightsPage() {
                 </span>
                 .
               </h1>
-              <p className="text-sm text-[var(--color-fg-muted)] mt-1.5">
-                The sources AI models cite when answering questions about{" "}
-                {business.name}.
+              <p className="text-[var(--color-fg-muted)] mt-2" style={{ fontSize: 15.5, lineHeight: 1.55, maxWidth: 760 }}>
+                <strong className="text-[var(--color-fg)] font-semibold">Why is this important?</strong>{" "}
+                Citations are the third-party sites AI pulls quotes and links from when answering about {business.name}. Getting listed on the sources AI already trusts is the highest-leverage thing you can do to surface in more answers.
               </p>
             </motion.div>
 
