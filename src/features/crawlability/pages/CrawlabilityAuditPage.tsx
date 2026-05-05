@@ -106,7 +106,10 @@ export function CrawlabilityAuditPage({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!siteUrl.trim()) return;
-    await runScan({ businessId, siteUrl });
+    // Always fresh on user-initiated scan — when someone types a URL and clicks
+    // Scan, they expect the live state, not a 24h-old cached result. Server-side
+    // 5-min rate limit still applies, so this can't be abused.
+    await runScan({ businessId, siteUrl, force: true });
   }
 
   async function handleRescan() {
@@ -424,9 +427,9 @@ export function CrawlabilityAuditPage({
             />
           </motion.div>
 
-          {/* Cache notice */}
+          {/* Freshness notice */}
           <p className="text-xs text-[var(--color-fg-muted)] text-center">
-            Crawlability results cached for 24 hours. Use Re-scan to force a fresh audit.
+            Every Scan and Re-scan runs a live crawl. There is a 5-minute cooldown between scans of the same site to prevent overload.
           </p>
         </>
       )}
