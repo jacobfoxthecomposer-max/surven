@@ -18,7 +18,6 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { AlertTriangle, ArrowRight, MessageSquare, Sparkles, Target, Trophy } from "lucide-react";
-import { AIOverview } from "@/components/atoms/AIOverview";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { SectionHeading } from "@/components/atoms/SectionHeading";
 import { COMPETITOR_PALETTE } from "@/utils/constants";
@@ -376,11 +375,6 @@ export function PromptClusterDominance({
   if (clusterRows.length === 0 && intentRows.length === 0) return null;
 
   const activeRows = viewMode === "general" ? intentRows : clusterRows;
-  const topGap = activeRows[0] ?? clusterRows[0];
-  const insight =
-    topGap && topGap.gap > 0
-      ? `Biggest gap: ${topGap.label} (${topGap.promptCount} prompt${topGap.promptCount === 1 ? "" : "s"}) — you sit at ${topGap.you.visibility}% while ${topGap.leader.name} owns ${topGap.leader.visibility}%. Closing this ${viewMode === "general" ? "intent" : "cluster"} moves more leads than any other.`
-      : `You lead or tie every ${viewMode === "general" ? "intent category" : "prompt cluster"}. Defend by keeping content fresh on the highest-volume topics.`;
 
   const industryDef = clustersForIndustry(industry);
   const dictionaryLabel = industry ? `${industry} clusters` : "Generic clusters";
@@ -497,10 +491,6 @@ export function PromptClusterDominance({
             </button>
           </HoverHint>
         </div>
-      </div>
-
-      <div className="mb-4">
-        <AIOverview text={insight} size="sm" gradient />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 items-stretch">

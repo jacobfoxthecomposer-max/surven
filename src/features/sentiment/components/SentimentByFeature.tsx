@@ -4,7 +4,6 @@ import { useMemo } from "react";
 import { Info } from "lucide-react";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
-import { AIOverview } from "@/components/atoms/AIOverview";
 import { ChartExplainer } from "@/components/atoms/ChartExplainer";
 import type { ScanResult } from "@/types/database";
 
@@ -77,19 +76,8 @@ export function SentimentByFeature({ results, businessName, competitors }: Props
 
   const hasCompetitors = competitors.length > 0;
 
-  // Derive best and worst sentiment prompts for the callout
-  const withSentiment = rows.filter((r) => r.biz.sentimentPct !== null);
-  const bestRow  = withSentiment.length > 0 ? withSentiment.reduce((a, b) => (a.biz.sentimentPct ?? 0) >= (b.biz.sentimentPct ?? 0) ? a : b) : null;
-  const worstRow = withSentiment.length > 1 ? withSentiment.reduce((a, b) => (a.biz.sentimentPct ?? 100) <= (b.biz.sentimentPct ?? 100) ? a : b) : null;
-  const featureInsight = bestRow && worstRow && bestRow.prompt !== worstRow.prompt
-    ? `Strongest on "${bestRow.prompt.slice(0, 50)}…" (${bestRow.biz.sentimentPct}% positive). Most opportunity on "${worstRow.prompt.slice(0, 50)}…" (${worstRow.biz.sentimentPct}%).`
-    : bestRow
-    ? `Best performance on "${bestRow.prompt.slice(0, 60)}…" at ${bestRow.biz.sentimentPct}% positive.`
-    : null;
-
   return (
     <div className="space-y-3">
-      {featureInsight && <AIOverview text={featureInsight} />}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* Sentiment by Feature */}
       <Card className="overflow-x-auto">

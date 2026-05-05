@@ -78,14 +78,6 @@ export function SentimentHero({ results, history, businessName }: Props) {
     negative: d.negativePct,
   }));
 
-  const trendInsight = data.delta == null
-    ? `Tracking ${data.total} AI mention${data.total !== 1 ? "s" : ""} of ${businessName}.`
-    : data.delta > 0
-    ? `Positive sentiment up ${data.delta}% since last scan — momentum is building.`
-    : data.delta < 0
-    ? `Positive sentiment dropped ${Math.abs(data.delta)}% since last scan. Watch what shifted.`
-    : `Positive sentiment held steady at ${data.positivePct}% across recent scans.`;
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
       {/* LEFT — Sentiment ring */}
@@ -180,17 +172,6 @@ export function SentimentHero({ results, history, businessName }: Props) {
               {history.length} scan{history.length !== 1 ? "s" : ""}
             </span>
           </div>
-        </div>
-
-        <div
-          className="rounded-[var(--radius-md)] mb-3 px-3 py-2 flex items-start gap-2"
-          style={{
-            borderLeft: `3px solid ${SURVEN_SEMANTIC.goodAlt}`,
-            background: "rgba(150,162,131,0.10)",
-          }}
-        >
-          <Sparkles className="h-3.5 w-3.5 mt-0.5 shrink-0" style={{ color: SURVEN_SEMANTIC.goodAlt }} />
-          <p className="text-xs text-[var(--color-fg)] leading-snug">{trendInsight}</p>
         </div>
 
         <div className="flex-1 min-h-[180px]">

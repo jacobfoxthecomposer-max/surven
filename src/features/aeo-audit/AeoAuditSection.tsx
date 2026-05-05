@@ -161,6 +161,7 @@ function WebsiteAuditCallout() {
   );
 }
 import { Card } from "@/components/atoms/Card";
+import { AISummaryGenerator } from "@/components/atoms/AISummaryGenerator";
 import { AIOverview } from "@/components/atoms/AIOverview";
 import { SectionHeading } from "@/components/atoms/SectionHeading";
 import { BetaFeedbackFooter } from "@/components/organisms/BetaFeedbackFooter";
@@ -460,8 +461,33 @@ export function AeoAuditSection({
     ? `No major readability blockers — ${partialCount} check${partialCount === 1 ? "" : "s"} could move from partial to pass with light edits.`
     : "Site reads cleanly for AI engines. Keep monitoring content freshness and schema coverage.";
 
+  const buildAISummary = (): string => {
+    if (!result) {
+      return `Reading ${businessName}'s site through every AI engine's lens to identify what's clear and what's getting missed. Run a scan to see your full readability breakdown across the four pillars.`;
+    }
+    const { good, fix } = buildPageSummaryParts(result);
+    const tier = scoreWord ? scoreWord.toLowerCase() : "scoring";
+    const s1 = `Your site lands ${result.score}/100 — ${tier} territory across the four readability pillars AI engines use to decide whether to cite you.`;
+    const s2 = good;
+    const s3 = fix
+      ? fix
+      : `One thing to watch: AI models update their crawlers quietly — keep an eye on monthly scans so a future change doesn't quietly knock you down a tier.`;
+    return `${s1} ${s2} ${s3}`;
+  };
+
+  const buildAICTA = (): { label: string; href: string } => {
+    if (failCount > 0) {
+      return { label: "Jump to Fix-These-First and start with the critical issues", href: "#fix-these-first" };
+    }
+    if (partialCount > 0) {
+      return { label: "Jump to Fix-These-First and tighten the partial passes", href: "#fix-these-first" };
+    }
+    return { label: "Open the audit log to schedule your next scan", href: "/audit" };
+  };
+
   return (
     <div className="space-y-5 w-full">
+      <AISummaryGenerator getSummary={buildAISummary} getCTA={buildAICTA} />
       {/* ── Header ── */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
@@ -515,11 +541,6 @@ export function AeoAuditSection({
 
       {/* Stat strip — quick anchor under the hero */}
       {result && <ResultStatStrip result={result} />}
-
-      {/* AI summary — sage-bordered callout with the bad parts highlighted in
-          rust (matches the prompts page AISummaryStrip pattern). */}
-      {result && <AeoAISummary result={result} />}
-
 
       {/* Inline error banner if the auto-scan blew up. */}
       {error && (

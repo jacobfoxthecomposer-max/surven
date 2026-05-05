@@ -10,7 +10,6 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Crown, Plus, Trophy } from "lucide-react";
-import { AIOverview } from "@/components/atoms/AIOverview";
 import { BadgeDelta } from "@/components/atoms/BadgeDelta";
 import { SectionHeading } from "@/components/atoms/SectionHeading";
 import { COMPETITOR_PALETTE } from "@/utils/constants";
@@ -145,27 +144,6 @@ export function CompetitorRankChart({
 
   if (rows.length === 0) return null;
 
-  const yourRank = rows.findIndex((r) => r.isYou) + 1;
-  const yourRow = rows.find((r) => r.isYou)!;
-  const leader = rows[0];
-
-  // AI summary — short, real-data-derived. Locked rule: never placeholder.
-  const insight = (() => {
-    if (yourRank === 1) {
-      const next = rows[1];
-      return next
-        ? `Leading the pack at #1.0. ${next.name} is closest at #2.0 — keep building citations to hold the lead.`
-        : `Leading the pack at #1.0 — the only brand AI is naming on your prompts.`;
-    }
-    const tier =
-      yourRank === 2
-        ? "Solid runner-up"
-        : yourRank === 3
-          ? "Solid mid-pack"
-          : "Trailing position";
-    return `${tier} at #${yourRank}.0. Push to close the gap on ${leader.name}.`;
-  })();
-
   // YOUR delta pill in the top-right header corner.
   const youHeaderPill = (() => {
     const flat = Math.abs(your90dDelta) <= 0.04;
@@ -212,10 +190,6 @@ export function CompetitorRankChart({
           />
         </div>
         <div className="shrink-0">{youHeaderPill}</div>
-      </div>
-
-      <div className="mb-3">
-        <AIOverview text={insight} size="sm" gradient />
       </div>
 
       <ol className="space-y-1">

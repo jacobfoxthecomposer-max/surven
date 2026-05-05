@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { AISummaryGenerator } from "@/components/atoms/AISummaryGenerator";
 import { Card } from "@/components/atoms/Card";
 import { BadgeDelta } from "@/components/atoms/BadgeDelta";
 import { VisibilityScoreGauge } from "@/components/atoms/VisibilityScoreGauge";
@@ -366,9 +367,10 @@ function AIOverview({
   size = "md",
 }: {
   text: string;
-  variant: AIOverviewVariant;
+  variant: AIOverviewVariant | undefined;
   size?: "sm" | "md";
 }) {
+  if (!variant) return null;
   if (variant === "V1") {
     const padX = size === "sm" ? 12 : 18;
     const padY = size === "sm" ? 8 : 14;
@@ -931,23 +933,29 @@ function EngineCoverageBar({
 
 // ─── HERO PARTS (title + description) ──────────────────────────────────────
 
-function HeroTitle({ data, treatment }: { data: ScannerData; treatment: Treatment }) {
+function HeroTitle({ data }: { data: ScannerData; treatment: Treatment }) {
   return (
-    <h2
-      className="text-[var(--color-fg)] leading-tight"
+    <h1
       style={{
         fontFamily: "var(--font-display)",
-        fontSize: treatment.heroSize,
-        fontWeight: 500,
+        fontSize: "clamp(36px, 4.6vw, 60px)",
+        fontWeight: 600,
+        lineHeight: 1.12,
         letterSpacing: "-0.01em",
+        color: "var(--color-fg)",
       }}
     >
-      Your AI visibility score is{" "}
-      <span style={{ color: data.youDelta >= 0 ? TOK.growText : TOK.loseText, fontWeight: 600 }}>
+      Your AI visibility is{" "}
+      <span
+        style={{
+          color: data.youDelta >= 0 ? TOK.growText : TOK.loseText,
+          fontStyle: "italic",
+        }}
+      >
         {data.trendWord}
       </span>
       .
-    </h2>
+    </h1>
   );
 }
 
@@ -1726,7 +1734,7 @@ export function RankSeriesCard({
   density = "comfortable",
   listWidthPx,
   chartHeightPx,
-  aiOverviewVariant = "V1",
+  aiOverviewVariant,
   showDelta = true,
   showRankValue = true,
   headerRight,
@@ -1817,7 +1825,7 @@ export function RankSeriesCard({
         <SectionHeading text={title} info={titleInfo} />
         {headerRight && <div className="shrink-0">{headerRight}</div>}
       </div>
-      {dims.showInsight && (
+      {dims.showInsight && aiOverviewVariant && (
         <AIOverview text={insight} variant={aiOverviewVariant} size="sm" />
       )}
       {!dims.showList ? (
@@ -2034,7 +2042,7 @@ export function ShareOfVoiceCard({
   stats,
   insight,
   pieMode,
-  aiOverviewVariant = "V1",
+  aiOverviewVariant,
   showChart = true,
 }: {
   data: ScannerData;
@@ -2083,9 +2091,11 @@ export function ShareOfVoiceCard({
             />
           </div>
         </div>
-        <div className="mt-3 mb-4">
-          <AIOverview text={insight} variant={aiOverviewVariant} size="sm" />
-        </div>
+        {aiOverviewVariant && (
+          <div className="mt-3 mb-4">
+            <AIOverview text={insight} variant={aiOverviewVariant} size="sm" />
+          </div>
+        )}
 
         {/* Donut centered + larger so it absorbs vertical space. */}
         <div className="flex justify-center my-2">
@@ -2202,7 +2212,9 @@ export function ShareOfVoiceCard({
           info="Your share of all brand mentions in AI answers over time."
         />
       </div>
-      <AIOverview text={insight} variant={aiOverviewVariant} size="sm" />
+      {aiOverviewVariant && (
+        <AIOverview text={insight} variant={aiOverviewVariant} size="sm" />
+      )}
       <div className="grid grid-cols-1 xl:grid-cols-[170px_220px_minmax(0,1fr)] gap-5 items-center">
         <div className="flex justify-center">
           <SOVPie
@@ -2246,7 +2258,7 @@ function CompetitorsBlock({
 }: {
   data: ScannerData;
   treatment: Treatment;
-  aiOverviewVariant: AIOverviewVariant;
+  aiOverviewVariant: AIOverviewVariant | undefined;
 }) {
   const positionStats = useMemo(() => buildPositionStats(data), [data]);
   const sovStats = useMemo(() => buildSOVStats(data), [data]);
@@ -2444,7 +2456,7 @@ function NarrativeFeed({ data, treatment }: { data: ScannerData; treatment: Trea
 export function ChartCard({
   data,
   treatment,
-  aiOverviewVariant = "V1",
+  aiOverviewVariant,
   enabledBrandIds,
   title = "Your AI visibility over time",
   titleInfo = "Daily mention rate across all tracked AI tools. Higher = more visibility.",
@@ -2474,7 +2486,7 @@ export function ChartCard({
     <Card className="p-4 min-w-0">
       <div className="mb-3 pb-2 border-b border-[var(--color-border)]">
         <SectionHeading text={title} info={titleInfo} />
-        {showInsight && (
+        {showInsight && aiOverviewVariant && (
           <div className="mt-2 mb-2">
             <AIOverview
               text={buildChartInsight(data)}
@@ -2561,6 +2573,56 @@ export function ChartCard({
   );
 }
 
+// ─── AI SUMMARY GENERATOR (top-of-page glowing button + typewriter reveal) ──
+
+function buildAISummaryText(data: ScannerData): string {
+  const youCurr = data.youToday;
+  const leader = data.ranked[0];
+  const leaderScore = leader.data[leader.data.length - 1] ?? 0;
+
+  const sortedEng = [...data.engineCoverage].sort((a, b) => b.today - a.today);
+  const best = sortedEng[0];
+  const worst = sortedEng[sortedEng.length - 1];
+
+  const sovStats = buildSOVStats(data);
+  const youSov = sovStats.find((s) => s.brand.isYou);
+  const sovDelta = youSov?.delta ?? 0;
+
+  const s1 = leader.isYou
+    ? `You're leading the field at ${youCurr.toFixed(1)}% visibility — defend it by keeping fresh content flowing on ${worst.label}, your weakest engine at ${worst.today.toFixed(1)}%.`
+    : `You sit at ${youCurr.toFixed(1)}% visibility, #${data.youRank} behind ${leader.name} (${leaderScore.toFixed(1)}%) — a ${(leaderScore - youCurr).toFixed(1)}% gap that closes fastest by winning back ${worst.label} (${worst.today.toFixed(1)}%).`;
+
+  const s2 = `Your strongest channel is ${best.label} at ${best.today.toFixed(1)}% — keep that momentum, and watch ${worst.label}: it's the lever with the biggest upside if you double down on schema, citations, and direct answers.`;
+
+  const s3 =
+    sovDelta > 0.5
+      ? `One bright spot: your share of voice grew ${sovDelta.toFixed(1)}% this period — momentum is on your side.`
+      : sovDelta < -0.5
+        ? `One thing to watch: share of voice slipped ${Math.abs(sovDelta).toFixed(1)}% — push fresh content to reclaim mention share before the next scan.`
+        : `One thing to watch: share of voice is flat — the brands publishing more frequently will quietly pull ahead this quarter.`;
+
+  return `${s1} ${s2} ${s3}`;
+}
+
+function buildAISummaryCTA(data: ScannerData): { label: string; href: string } {
+  const sortedEng = [...data.engineCoverage].sort((a, b) => b.today - a.today);
+  const worst = sortedEng[sortedEng.length - 1];
+  const leader = data.ranked[0];
+  const youCurr = data.youToday;
+  const leaderScore = leader.data[leader.data.length - 1] ?? 0;
+  const gap = leader.isYou ? 0 : leaderScore - youCurr;
+
+  // Biggest fixable gap = the weakest engine (always actionable via site audit).
+  // If you're trailing the leader by a sizeable gap, frame the CTA as closing it.
+  const label =
+    !leader.isYou && gap > 8
+      ? `Run a site audit to start closing the gap on ${worst.label}`
+      : `Run a site audit to fix ${worst.label}`;
+
+  return { label, href: "/site-audit" };
+}
+
+
 // ─── VARIANT BODY ───────────────────────────────────────────────────────────
 
 interface VariantBodyProps {
@@ -2576,7 +2638,7 @@ interface VariantBodyProps {
   toggleEngine: (id: string) => void;
   minDate: Date;
   maxDate: Date;
-  aiOverviewVariant: AIOverviewVariant;
+  aiOverviewVariant: AIOverviewVariant | undefined;
 }
 
 function VariantBody({
@@ -2596,6 +2658,10 @@ function VariantBody({
 }: VariantBodyProps) {
   return (
     <div className="space-y-5">
+      <AISummaryGenerator
+        getSummary={() => buildAISummaryText(data)}
+        getCTA={() => buildAISummaryCTA(data)}
+      />
       <div className="flex items-start justify-between gap-6">
         <div className="space-y-2 min-w-0 flex-1">
           <HeroTitle data={data} treatment={treatment} />
@@ -2626,11 +2692,13 @@ function VariantBody({
             score={data.youToday}
             width={260}
             descriptionOverride={
-              <AIOverview
-                text={buildGaugeInsight(data)}
-                variant={aiOverviewVariant}
-                size="sm"
-              />
+              aiOverviewVariant ? (
+                <AIOverview
+                  text={buildGaugeInsight(data)}
+                  variant={aiOverviewVariant}
+                  size="sm"
+                />
+              ) : undefined
             }
             stats={{
               promptsHit: Math.round(
@@ -2701,7 +2769,7 @@ export function VisibilityScannerSection({
   brands = MOCK_BRANDS,
   dates = MOCK_DATES,
   variant = "B",
-  aiOverviewVariant = "V1",
+  aiOverviewVariant,
 }: VisibilityScannerSectionProps) {
   // The mock data is seeded from `new Date()` at module load, which produces
   // slightly different values on the server vs. on the client during hydration.

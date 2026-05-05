@@ -8,6 +8,7 @@ import { Spinner } from "@/components/atoms/Spinner";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { NextScanCard } from "@/components/atoms/NextScanCard";
 import { CustomDatePopover } from "@/components/atoms/CustomDatePopover";
+import { AISummaryGenerator } from "@/components/atoms/AISummaryGenerator";
 import { Calendar, AlertTriangle, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -158,11 +159,43 @@ export default function SentimentPage() {
 
   const competitorNames = competitors.map((c) => c.name);
   const negativeCount = results.filter((r) => r.business_mentioned && r.sentiment === "negative").length;
+  const positiveCount = results.filter((r) => r.business_mentioned && r.sentiment === "positive").length;
   const totalMentions = results.filter((r) => r.business_mentioned && r.sentiment).length;
+
+  const buildAISummary = (): string => {
+    if (totalMentions === 0) {
+      return `No sentiment data yet for ${business.name}. Once a scan runs, this panel surfaces how AI engines describe you positively, neutrally, or negatively.`;
+    }
+    const negPct = Math.round((negativeCount / totalMentions) * 100);
+    const posPct = Math.round((positiveCount / totalMentions) * 100);
+    const s1 = warning
+      ? `Sentiment reads ${sentimentWord.toLowerCase()} overall (${posPct}% positive across ${totalMentions} mention${totalMentions === 1 ? "" : "s"}), but ${MODEL_LABELS[warning.engine]} is bleeding — ${warning.negPct}% of its mentions of you use critical or dismissive language.`
+      : `Sentiment reads ${sentimentWord.toLowerCase()} overall — ${posPct}% positive across ${totalMentions} mention${totalMentions === 1 ? "" : "s"}, with no single engine showing a critical negative spike.`;
+    const s2 = negativeCount > 0
+      ? `${negativeCount} mention${negativeCount === 1 ? "" : "s"} contain negative framing — these are what's steering AI to recommend competitors before customers even click your site.`
+      : `Zero negative mentions across the board — your brand framing is clean, which compounds in your favor every time AI cites you.`;
+    const s3 = warning
+      ? `Watch ${MODEL_LABELS[warning.engine]} closely: every prompt routed there inherits that negative framing until you fix the source content AI is reading.`
+      : posPct > 70
+        ? `One bright spot: positive framing dominates — keep publishing the case studies and testimonials AI is already pulling from.`
+        : `One thing to watch: neutral mentions are where competitors win the comparison — push richer specifics in your cited content.`;
+    return `${s1} ${s2} ${s3}`;
+  };
+
+  const buildAICTA = (): { label: string; href: string } => {
+    if (warning) {
+      return { label: `Run a site audit to fix the negative framing on ${MODEL_LABELS[warning.engine]}`, href: "/site-audit" };
+    }
+    if (negativeCount > 0) {
+      return { label: "Run a site audit to flip the negative framing", href: "/site-audit" };
+    }
+    return { label: "Run a site audit to defend your sentiment lead", href: "/site-audit" };
+  };
 
   return (
     <DashboardLayout>
       <div className="space-y-5 w-full">
+        <AISummaryGenerator getSummary={buildAISummary} getCTA={buildAICTA} />
         {/* ── Header ── */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -174,9 +207,9 @@ export default function SentimentPage() {
             <h1
               style={{
                 fontFamily: "var(--font-display)",
-                fontSize: "clamp(32px, 4vw, 52px)",
+                fontSize: "clamp(36px, 4.6vw, 60px)",
                 fontWeight: 600,
-                lineHeight: 1.15,
+                lineHeight: 1.12,
                 letterSpacing: "-0.01em",
                 color: "var(--color-fg)",
               }}

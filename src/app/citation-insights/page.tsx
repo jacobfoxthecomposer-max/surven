@@ -19,8 +19,8 @@ import { Spinner } from "@/components/atoms/Spinner";
 import { Card } from "@/components/atoms/Card";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { HoverHint } from "@/components/atoms/HoverHint";
-import { AIOverview } from "@/components/atoms/AIOverview";
 import { NextScanCard } from "@/components/atoms/NextScanCard";
+import { AISummaryGenerator } from "@/components/atoms/AISummaryGenerator";
 import { CustomDatePopover } from "@/components/atoms/CustomDatePopover";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
@@ -180,17 +180,37 @@ export default function CitationInsightsPage() {
       ? "#B54631"
       : "#A09890";
 
-  const aiInsight = insights
-    ? insights.topDomain
-      ? `${insights.topDomain.domain} is your most-cited source — appearing in ${insights.topDomain.count} of ${insights.totalCitations} citations across ${insights.engineCount} ${insights.engineCount === 1 ? "engine" : "engines"}.`
-      : `AI engines aren't citing any sources for ${business.name} yet. Getting listed on high-authority directories is the fastest way to build citation presence.`
-    : null;
-
   const hasResults = allResults.length > 0;
+
+  const buildAISummary = (): string => {
+    if (!insights) {
+      return `No citation data yet for ${business.name}. Run a scan from the Dashboard to see which sources AI engines are pulling from when they answer questions about you.`;
+    }
+    const top = insights.topDomain;
+    const s1 = top
+      ? `${top.domain} is doing the heavy lifting — ${top.count} of ${insights.totalCitations} citations across ${insights.engineCount} AI engine${insights.engineCount === 1 ? "" : "s"}, but ${insights.uniqueDomains} total cited domain${insights.uniqueDomains === 1 ? "" : "s"} means your authority footprint is ${profileWord}.`
+      : `AI engines aren't citing any sources for ${business.name} yet — getting listed on high-authority directories is the fastest way to start showing up.`;
+    const s2 = `High-authority sources make up ${insights.highAuthorityPct}% of your citation mix${insights.highAuthorityPct < 40 ? " — that's the lever to pull, since AI weights citations from trusted domains far more heavily" : " — keep that pressure on, since AI weights trusted domains far more heavily"}.`;
+    const s3 = insights.engineCount < 4
+      ? `Watch your engine spread: only ${insights.engineCount} of 4 engines are citing any source for you, which means ${4 - insights.engineCount} engine${4 - insights.engineCount === 1 ? " is" : "s are"} answering without naming you at all.`
+      : `One bright spot: every tracked AI engine is pulling at least one citation for you — coverage is intact across the board.`;
+    return `${s1} ${s2} ${s3}`;
+  };
+
+  const buildAICTA = (): { label: string; href: string } => {
+    if (!insights || !insights.topDomain) {
+      return { label: "Run a site audit to start earning citations", href: "/site-audit" };
+    }
+    if (insights.highAuthorityPct < 40) {
+      return { label: "Run a site audit to earn high-authority citations", href: "/site-audit" };
+    }
+    return { label: "Run a site audit to broaden your citation footprint", href: "/site-audit" };
+  };
 
   return (
     <DashboardLayout>
       <div className="space-y-6 w-full">
+        <AISummaryGenerator getSummary={buildAISummary} getCTA={buildAICTA} />
         {/* Top hero row — headline + filter (left 2/3), action panel (right 1/3) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           <div className="lg:col-span-2 space-y-5 min-w-0">
@@ -203,9 +223,9 @@ export default function CitationInsightsPage() {
               <h1
                 style={{
                   fontFamily: "var(--font-display)",
-                  fontSize: "clamp(32px, 4vw, 52px)",
+                  fontSize: "clamp(36px, 4.6vw, 60px)",
                   fontWeight: 600,
-                  lineHeight: 1.15,
+                  lineHeight: 1.12,
                   letterSpacing: "-0.01em",
                   color: "var(--color-fg)",
                 }}
@@ -524,17 +544,6 @@ export default function CitationInsightsPage() {
                         Run audit <ArrowRight className="h-3 w-3" />
                       </Link>
                     </Card>
-                  </motion.div>
-                )}
-
-                {/* AIOverview */}
-                {aiInsight && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: 0.2, ease }}
-                  >
-                    <AIOverview text={aiInsight} size="md" />
                   </motion.div>
                 )}
 

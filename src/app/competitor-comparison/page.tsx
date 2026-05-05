@@ -9,6 +9,7 @@ import { Spinner } from "@/components/atoms/Spinner";
 import { Card } from "@/components/atoms/Card";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { NextScanCard } from "@/components/atoms/NextScanCard";
+import { AISummaryGenerator } from "@/components/atoms/AISummaryGenerator";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useUserProfile } from "@/features/auth/hooks/useUserProfile";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
@@ -195,9 +196,33 @@ export default function CompetitorComparisonPage() {
     return null;
   }
 
+  const buildAISummary = (): string => {
+    if (!hasResults) {
+      return `No competitor scan data yet for ${business.name}. Once a scan runs, this panel surfaces where rivals are leading and which gaps close fastest.`;
+    }
+    const gap = avgCompetitorScore - score;
+    const leading = score >= avgCompetitorScore;
+    const s1 = leading
+      ? `You're ahead at ${score}% visibility — ${Math.abs(gap)}% above the ${competitorNames.length}-competitor average. Defend that lead by keeping fresh content flowing on the prompts where rivals are starting to creep up.`
+      : `You sit at ${score}% visibility, ${Math.abs(gap)}% behind the ${competitorNames.length}-competitor average — that's a closeable gap if you focus on the intent categories where one rival owns disproportionate share.`;
+    const s2 = `Across ${competitorNames.length} tracked competitor${competitorNames.length === 1 ? "" : "s"}, the brands publishing more frequently on high-volume prompts are quietly compounding mention share — every week they're cited and you're not is a lead they take from you.`;
+    const s3 = leading
+      ? `One thing to watch: the runner-up is closer than they look on engines where you're weakest — defend by widening your citation footprint on those models.`
+      : `One bright spot: no rival is dominant across every engine, so the gap closes quickly when you ship targeted fixes.`;
+    return `${s1} ${s2} ${s3}`;
+  };
+
+  const buildAICTA = (): { label: string; href: string } => {
+    if (!hasResults) {
+      return { label: "Run a site audit to start tracking competitors", href: "/site-audit" };
+    }
+    return { label: "Run a site audit to close the biggest competitive gap", href: "/site-audit" };
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6" id="competitor-dashboard">
+        <AISummaryGenerator getSummary={buildAISummary} getCTA={buildAICTA} />
         {/* Top hero row — headline + filters take the full left, NextScanCard
             hugs the right edge in a fixed-width column. */}
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_260px] gap-6 items-stretch">
