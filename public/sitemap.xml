@@ -2,9 +2,9 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://surven.vercel.app/</loc>
-    <lastmod>2026-05-02</lastmod>
+    <lastmod>2026-05-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
-  <!-- Add a <url> entry for every page -->
+  <!-- Surven regenerates this with every crawled page -->
 </urlset>
