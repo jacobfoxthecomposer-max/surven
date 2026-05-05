@@ -4,7 +4,7 @@ import { SignupForm } from "./SignupForm";
 
 import type { Metadata } from "next";
 export const metadata: Metadata = {
-  title: "Sign Up for Surven AI Tracking | The Hidden Still",
+  title: "Sign Up for Surven AI Tracking | Surven",
 
   description: "Create a Surven account to start tracking your business's AI visibility quickly and easily.",
 };

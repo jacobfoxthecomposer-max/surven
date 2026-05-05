@@ -52,7 +52,7 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           data-surven-schema-type="Organization"
-          dangerouslySetInnerHTML={{ __html: `{"@context":"https://schema.org","@type":"Organization","name":"The Hidden Still","url":"https://surven-8sxen36tj-jacobfoxthecomposer-6176s-projects.vercel.app","description":"Track your business visibility across ChatGPT, Claude, Gemini, Google AI, and more. See if AI is recommending your business."}` }}
+          dangerouslySetInnerHTML={{ __html: `{"@context":"https://schema.org","@type":"Organization","name":"Surven","url":"https://surven-8sxen36tj-jacobfoxthecomposer-6176s-projects.vercel.app","description":"Track your business visibility across ChatGPT, Claude, Gemini, Google AI, and more. See if AI is recommending your business."}` }}
         />
         <Providers>{children}</Providers>
       </body>

@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     canonical: "https://surven.vercel.app/login",
   },
 
-  title: "Login to Your Surven Account | The Hidden Still",
+  title: "Login to Your Surven Account | Surven",
 
   description: "Log in to your Surven account to manage your AI visibility tracking and access your dashboard.",
 };
