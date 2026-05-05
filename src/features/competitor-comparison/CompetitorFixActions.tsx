@@ -257,7 +257,7 @@ function NestedGapCard({
       : "No solo wins yet — keep building visibility on category prompts.";
 
   return (
-    <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col overflow-hidden">
+    <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col overflow-hidden flex-1 min-h-0">
       {/* Mini gradient header — single row: tag + title inline + summary on
           the right. Halves the vertical footprint vs. the prior 2-line block. */}
       <div
