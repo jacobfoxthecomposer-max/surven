@@ -17,6 +17,14 @@
 //      (concerning, where 90%+ is the bar).
 //   4. Max 6 categorical slices per chart — group long tail into "Other"
 //      or convert to a sortable table with a single sage bar.
+//
+// HOW TO USE:
+//   - For CSS / inline styles: prefer `var(--color-primary)` etc. defined
+//     in globals.css. Tweak the hex there to recolor the whole app.
+//   - For chart libs / TS values that need a raw hex: import SURVEN_SEMANTIC
+//     or SURVEN_CATEGORICAL from this file. Don't type the hex by hand.
+//   - Never paste a literal hex like "#7D8E6C" into a component. If you
+//     find one, replace it with a token reference.
 // ============================================
 
 /** Status / health palette. Use anywhere color encodes good vs mid vs bad. */
