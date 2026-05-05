@@ -288,7 +288,14 @@ export function CrawlabilityAuditPage({
                 type="url"
                 value={siteUrl}
                 onChange={(e) => setSiteUrl(e.target.value)}
+                onBlur={(e) => {
+                  const v = e.target.value.trim();
+                  if (v && !v.startsWith("http://") && !v.startsWith("https://")) {
+                    setSiteUrl("https://" + v);
+                  }
+                }}
                 placeholder="https://example.com"
+                helperText="Include https:// — e.g. https://yoursite.com"
                 required
                 disabled={scanning}
               />
