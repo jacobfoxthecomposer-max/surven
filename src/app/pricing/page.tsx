@@ -11,6 +11,8 @@ export const metadata: Metadata = {
   },
 
   openGraph: { url: "https://surven.vercel.app/pricing", type: "website" },
+
+  title: "Transparent Pricing Plans for AI Tracking | The Hidden Still",
 };
 type PlanCard =
   | {

@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://surven.vercel.app/login",
   },
+
+  title: "Login to Your Surven Account | The Hidden Still",
 };
 const SUPABASE_UNCONFIGURED =
   !process.env.NEXT_PUBLIC_SUPABASE_URL ||

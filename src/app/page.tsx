@@ -16,6 +16,8 @@ export const metadata: Metadata = {
   },
 
   openGraph: { url: "https://surven.vercel.app/", type: "website" },
+
+  title: "AI Visibility Tracking Features | The Hidden Still",
 };
 export default function LandingPage() {
   return (
