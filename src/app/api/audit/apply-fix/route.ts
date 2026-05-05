@@ -27,6 +27,7 @@ import {
   isFixTypeSupportedForGithub,
   isHtmlFixSupportedForGithub,
 } from "@/features/crawlability/services/applyFix/githubHandler";
+import { buildCompleteSitemap } from "@/services/fixes/sitemapGenerator";
 import { writeAuditLog, ipFromRequest } from "@/services/auditLog";
 import { MANAGED_PLAN_CTA, PAID_PLANS } from "@/utils/managedPlanCta";
 
@@ -303,12 +304,25 @@ export async function POST(request: NextRequest) {
   }
 
   // Single-file branch (robots, sitemap, llms)
+  // Sitemap special case: the rule's fixCode is a static placeholder (just the homepage).
+  // Generate a real sitemap merging the live site's existing entries with the URLs the
+  // crawler found that weren't in it (passed as affectedUrls for sitemap_low_coverage).
+  let content = fixCode;
+  if (fixType === "sitemap") {
+    const additionalUrls = affectedUrls && affectedUrls.length > 0 ? affectedUrls : [];
+    try {
+      content = await buildCompleteSitemap(siteUrl, additionalUrls);
+    } catch (err) {
+      console.error("[apply-fix] sitemap generator failed", err);
+      // Fall through with the placeholder fixCode rather than blocking the user.
+    }
+  }
   const result = await applyFixToGithub({
     token,
     repo: connection.repo,
     branch: connection.branch ?? "main",
     fixType: fixType as "robots" | "sitemap" | "llms",
-    content: fixCode,
+    content,
     findingId,
     findingTitle,
   });
