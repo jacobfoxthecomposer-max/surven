@@ -95,7 +95,7 @@ export function CitationGapSection({ results, businessName }: CitationGapSection
                 </div>
 
                 {/* Bar */}
-                <div className="flex-1 h-2 rounded-full bg-[var(--color-surface-alt)]">
+                <div className="flex-1 h-2 rounded-full bg-[var(--color-border)]">
                   <motion.div
                     className="h-2 rounded-full"
                     style={{ backgroundColor: isGap ? "var(--color-danger)" : "var(--color-success)" }}

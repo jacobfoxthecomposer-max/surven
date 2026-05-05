@@ -54,17 +54,12 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
     ],
   },
   {
-    title: "Prompts",
-    items: [
-      { label: "Tracked Prompts", href: "/prompts", icon: MessageSquare },
-      { label: "Prompt Research", href: "/prompt-research", icon: BookOpen },
-    ],
-  },
-  {
     title: "Research & Insights",
     items: [
       { label: "Code Scanner", href: "/site-audit", icon: Search },
+      { label: "Tracked Prompts", href: "/prompts", icon: MessageSquare },
       { label: "Citation Insights", href: "/citation-insights", icon: Eye },
+      { label: "Prompt Research", href: "/prompt-research", icon: BookOpen },
     ],
   },
   {

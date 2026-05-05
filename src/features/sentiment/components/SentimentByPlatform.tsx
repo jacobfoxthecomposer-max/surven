@@ -83,7 +83,7 @@ export function SentimentByPlatform({ results }: Props) {
 
               {/* Stacked mini-bar */}
               <div className="flex-1 min-w-0">
-                <div className="h-2 rounded-full overflow-hidden flex bg-[var(--color-surface-alt)]">
+                <div className="h-2 rounded-full overflow-hidden flex bg-[var(--color-border)]">
                   {row.positive > 0 && (
                     <motion.div
                       className="h-full"

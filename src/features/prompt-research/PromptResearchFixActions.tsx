@@ -148,54 +148,54 @@ export function PromptResearchFixActions({
           modalBody: `In this scan, no single taxonomy is dramatically below the others. That's a good baseline — most brands have at least one territory at <30% coverage.\n\nKeep an eye on it: weak territories tend to surface as your competitors publish new content. Run weekly scans, and the moment one taxonomy drops below 40% average coverage, treat it as the priority to fix. Citation Insights will tell you which exact domains AI is missing you on.`,
         };
 
-    // ===== 3. Underbuilt intent types (validation / operational gaps) =====
-    const validationIntents = intents.filter((i) => i.intentType === "validation");
-    const operationalIntents = intents.filter(
-      (i) => i.intentType === "operational",
+    // ===== 3. Underbuilt intent types (informational / transactional gaps) =====
+    const informationalIntents = intents.filter((i) => i.intentType === "informational");
+    const transactionalIntents = intents.filter(
+      (i) => i.intentType === "transactional",
     );
-    const valCount = validationIntents.length;
-    const opCount = operationalIntents.length;
-    const valAvg =
-      valCount > 0
+    const infoCount = informationalIntents.length;
+    const txCount = transactionalIntents.length;
+    const infoAvg =
+      infoCount > 0
         ? Math.round(
-            validationIntents.reduce((acc, i) => acc + i.overallCoverage, 0) /
-              valCount,
+            informationalIntents.reduce((acc, i) => acc + i.overallCoverage, 0) /
+              infoCount,
           )
         : 0;
-    const opAvg =
-      opCount > 0
+    const txAvg =
+      txCount > 0
         ? Math.round(
-            operationalIntents.reduce((acc, i) => acc + i.overallCoverage, 0) /
-              opCount,
+            transactionalIntents.reduce((acc, i) => acc + i.overallCoverage, 0) /
+              txCount,
           )
         : 0;
 
     // Pick the thinner / weaker of the two intent types
-    const valThin = valCount < 4 || valAvg < 35;
-    const opThin = opCount < 4 || opAvg < 35;
-    const focusOnVal = valThin && (!opThin || valAvg <= opAvg);
+    const infoThin = infoCount < 4 || infoAvg < 35;
+    const txThin = txCount < 4 || txAvg < 35;
+    const focusOnInfo = infoThin && (!txThin || infoAvg <= txAvg);
 
     let intentTypeAction: FixAction;
-    if (focusOnVal && valThin) {
+    if (focusOnInfo && infoThin) {
       intentTypeAction = {
         key: "intent-type",
-        headline: `Strengthen your validation prompts (${valAvg}% coverage)`,
-        oneLiner: `${valCount} validation intent${valCount === 1 ? "" : "s"} researched — these are "is X legit / a scam / trustworthy" trust checks.`,
-        modalBody: `Validation prompts are how AI handles trust questions about you — "is ${businessName} legit," "${businessName} reviews," "${businessName} scam," "can I trust ${businessName}." You're at ${valAvg}% average coverage on these, which means AI doesn't yet have strong, structured signals to confirm trust.\n\nWhy it matters: validation prompts tend to be the last question a buyer asks before converting. If AI can't reassure them, they bounce. Fixing these usually moves leads more than fixing pure category prompts.\n\nHow to fix: push your review count to 30+ on Google, Yelp, and BBB. Make sure your About page lists founder info, year founded, certifications, and any press mentions in plain text (not just images). If you've been featured in any local or industry publication, link it from your homepage. AI weights these trust signals heavily.`,
+        headline: `Strengthen your informational prompts (${infoAvg}% coverage)`,
+        oneLiner: `${infoCount} informational intent${infoCount === 1 ? "" : "s"} researched — these include "is X legit / trustworthy" trust checks and category-explainer questions.`,
+        modalBody: `Informational prompts are how AI answers trust and explainer questions about you — "is ${businessName} legit," "${businessName} reviews," "what does ${businessName} do," "can I trust ${businessName}." You're at ${infoAvg}% average coverage on these, which means AI doesn't yet have strong, structured signals to confirm trust or describe you clearly.\n\nWhy it matters: informational prompts (especially trust-flavored ones) tend to be the last question a buyer asks before converting. If AI can't reassure them, they bounce. Fixing these usually moves leads more than fixing pure category prompts.\n\nHow to fix: push your review count to 30+ on Google, Yelp, and BBB. Make sure your About page lists founder info, year founded, certifications, and any press mentions in plain text (not just images). If you've been featured in any local or industry publication, link it from your homepage. AI weights these trust signals heavily.`,
       };
-    } else if (opThin) {
+    } else if (txThin) {
       intentTypeAction = {
         key: "intent-type",
-        headline: `Add depth to your operational prompts (${opAvg}% coverage)`,
-        oneLiner: `${opCount} operational intent${opCount === 1 ? "" : "s"} researched — these are "how do I book / contact / use" how-to questions.`,
-        modalBody: `Operational prompts are how AI helps customers actually use your business — "how do I book ${businessName}," "${businessName} hours," "does ${businessName} offer same-day service." You're at ${opAvg}% average coverage on these.\n\nWhy it matters: operational prompts come from people already convinced you might be the answer. If AI can't tell them how to take the next step, they go to a competitor whose info is clearer.\n\nHow to fix: add a real FAQ section on your homepage with 8–12 of the most common questions, answered in 1–2 sentences each. Use the actual question phrasings as the headings ("How do I book a same-day appointment?" — not "Booking"). AI extracts these directly. Make sure your hours, service area, and how-to-reach-you info are written out in clean text, not buried in images or contact forms.`,
+        headline: `Add depth to your transactional prompts (${txAvg}% coverage)`,
+        oneLiner: `${txCount} transactional intent${txCount === 1 ? "" : "s"} researched — these are "how do I book / contact / buy" action-taking questions.`,
+        modalBody: `Transactional prompts are how AI helps customers actually act on your business — "how do I book ${businessName}," "${businessName} hours," "does ${businessName} offer same-day service." You're at ${txAvg}% average coverage on these.\n\nWhy it matters: transactional prompts come from people already convinced you might be the answer. If AI can't tell them how to take the next step, they go to a competitor whose info is clearer.\n\nHow to fix: add a real FAQ section on your homepage with 8–12 of the most common questions, answered in 1–2 sentences each. Use the actual question phrasings as the headings ("How do I book a same-day appointment?" — not "Booking"). AI extracts these directly. Make sure your hours, service area, and how-to-reach-you info are written out in clean text, not buried in images or contact forms.`,
       };
     } else {
       intentTypeAction = {
         key: "intent-type",
-        headline: "Validation + operational coverage looks healthy",
-        oneLiner: `${businessName} is at ${valAvg}% on validation and ${opAvg}% on operational prompts.`,
-        modalBody: `Validation ("is X legit") and operational ("how do I book X") prompts are the two highest-converting categories of GEO research, and yours look balanced. Most brands underbuild one or both.\n\nKeep watching: as you scale customer volume, both sets of prompts get noisier — more reviews, more questions, more variation. Re-check this section every quarter. If either drops below 40% coverage or below 4 researched intents, it's time to invest in that area.\n\nWhat to do next: focus your effort on category and comparative prompts where the volume opportunity is highest, since trust + how-to are already in good shape.`,
+        headline: "Informational + transactional coverage looks healthy",
+        oneLiner: `${businessName} is at ${infoAvg}% on informational and ${txAvg}% on transactional prompts.`,
+        modalBody: `Informational ("is X legit," "what does X do") and transactional ("how do I book X") prompts are the two highest-converting categories of GEO research, and yours look balanced. Most brands underbuild one or both.\n\nKeep watching: as you scale customer volume, both sets of prompts get noisier — more reviews, more questions, more variation. Re-check this section every quarter. If either drops below 40% coverage or below 4 researched intents, it's time to invest in that area.\n\nWhat to do next: focus your effort on comparison and use-case prompts where the volume opportunity is highest, since trust + how-to are already in good shape.`,
       };
     }
 

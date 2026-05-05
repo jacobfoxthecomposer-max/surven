@@ -160,7 +160,7 @@ export function ExportModal({ open, onClose, businessName, scanDate }: ExportMod
                   >
                     <ZoomOut className="h-4 w-4" />
                   </button>
-                  <div className="flex-1 h-1.5 rounded-full bg-[var(--color-surface-alt)] relative">
+                  <div className="flex-1 h-1.5 rounded-full bg-[var(--color-border)] relative">
                     <div
                       className="h-1.5 rounded-full bg-[var(--color-primary)]"
                       style={{ width: `${((zoom - 50) / 150) * 100}%` }}

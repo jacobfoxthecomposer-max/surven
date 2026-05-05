@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Settings, LogOut, FileSearch } from "lucide-react";
@@ -85,7 +85,9 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         </main>
       </div>
 
-      <PostPurchaseIntegrationsModal />
+      <Suspense fallback={null}>
+        <PostPurchaseIntegrationsModal />
+      </Suspense>
     </div>
   );
 }

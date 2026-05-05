@@ -66,46 +66,40 @@ export const TAXONOMY_ORDER: TaxonomyCategory[] = [
 
 export const INTENT_LABEL: Record<IntentType, string> = {
   informational: "Informational",
-  navigational: "Navigational",
-  transactional: "Transactional",
-  commercial: "Commercial",
   local: "Local",
-  validation: "Validation",
-  operational: "Operational",
+  comparison: "Comparison",
+  use_case: "Use-case",
+  transactional: "Transactional",
 };
 
 export const INTENT_COLOR: Record<IntentType, string> = {
-  informational: "#6BA3F5",
-  navigational: "#7A8FA6",
-  transactional: "#C97B45",
-  commercial: "#96A283",
-  local: "#B8A030",
-  validation: "#B54631",
-  operational: "#566A47",
+  informational: "#9B7EC8",
+  local: "#5BAF92",
+  comparison: "#C97B45",
+  use_case: "#B8A030",
+  transactional: "#6BA3F5",
 };
 
 export const INTENT_ORDER: IntentType[] = [
-  "commercial",
   "informational",
-  "validation",
-  "operational",
-  "transactional",
   "local",
-  "navigational",
+  "comparison",
+  "use_case",
+  "transactional",
 ];
 
 export const TAXONOMY_TO_INTENT: Record<TaxonomyCategory, IntentType> = {
-  branded_defensive: "validation",
+  branded_defensive: "comparison",
   branded_informational: "informational",
-  category: "commercial",
+  category: "use_case",
   category_informational: "informational",
-  comparative: "commercial",
-  use_case_jtbd: "commercial",
-  audience_modified: "commercial",
-  constraint_modified: "commercial",
-  list_recommendation: "commercial",
-  validation: "validation",
-  operational: "operational",
-  adjacent: "commercial",
-  negative_objection: "validation",
+  comparative: "comparison",
+  use_case_jtbd: "use_case",
+  audience_modified: "use_case",
+  constraint_modified: "transactional",
+  list_recommendation: "use_case",
+  validation: "comparison",
+  operational: "informational",
+  adjacent: "use_case",
+  negative_objection: "comparison",
 };

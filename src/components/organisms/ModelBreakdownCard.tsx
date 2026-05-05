@@ -53,7 +53,7 @@ export function ModelBreakdownCard({
         </div>
 
         {/* Progress bar */}
-        <div className="w-full h-2 rounded-full bg-[var(--color-surface-alt)] overflow-hidden">
+        <div className="w-full h-2 rounded-full bg-[var(--color-border)] overflow-hidden">
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${pct}%` }}

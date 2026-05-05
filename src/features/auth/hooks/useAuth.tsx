@@ -28,17 +28,27 @@ const SUPABASE_UNCONFIGURED =
   !process.env.NEXT_PUBLIC_SUPABASE_URL ||
   process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder");
 
-const UNCONFIGURED_MESSAGE =
-  "Auth isn't configured for local dev. Use /dashboard-preview, /prompts-preview, or /visibility-preview to view pages without signing in.";
+const MOCK_USER = {
+  id: "local-dev-user",
+  email: "dev@surven.local",
+  app_metadata: {},
+  user_metadata: {},
+  aud: "authenticated",
+  created_at: new Date().toISOString(),
+} as unknown as User;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [realUser, setRealUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!SUPABASE_UNCONFIGURED);
+  // Always derive the exposed user from SUPABASE_UNCONFIGURED on every render.
+  // This avoids HMR-stale state — even if a previous AuthProvider instance was created
+  // with a different mock value, the next render uses the current module value.
+  const user = SUPABASE_UNCONFIGURED ? MOCK_USER : realUser;
+  const setUser = setRealUser;
 
   useEffect(() => {
     if (SUPABASE_UNCONFIGURED) {
-      setLoading(false);
       return;
     }
 
@@ -60,7 +70,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = useCallback(async (email: string, password: string) => {
-    if (SUPABASE_UNCONFIGURED) throw new Error(UNCONFIGURED_MESSAGE);
+    if (SUPABASE_UNCONFIGURED) {
+      setUser(MOCK_USER);
+      return { user: MOCK_USER, session: null };
+    }
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
     const { data: sessionData } = await supabase.auth.getSession();
@@ -70,7 +83,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    if (SUPABASE_UNCONFIGURED) throw new Error(UNCONFIGURED_MESSAGE);
+    if (SUPABASE_UNCONFIGURED) {
+      setUser(MOCK_USER);
+      return { user: MOCK_USER, session: null };
+    }
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
     const { data: sessionData } = await supabase.auth.getSession();

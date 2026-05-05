@@ -113,7 +113,7 @@ export function SentimentMetricRows({ results, history }: Props) {
       detail: (
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex-1 min-w-[120px] max-w-[220px]">
-            <div className="h-1.5 rounded-full overflow-hidden flex bg-[var(--color-surface-alt)]">
+            <div className="h-1.5 rounded-full overflow-hidden flex bg-[var(--color-border)]">
               {positivePct > 0 && <div className="h-full" style={{ width: `${positivePct}%`, background: SURVEN_SEMANTIC.goodAlt }} />}
               {neutralPct > 0 && <div className="h-full" style={{ width: `${neutralPct}%`, background: SURVEN_SEMANTIC.neutral }} />}
               {negativePct > 0 && <div className="h-full" style={{ width: `${negativePct}%`, background: SURVEN_SEMANTIC.bad }} />}

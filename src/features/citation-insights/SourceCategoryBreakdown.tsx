@@ -102,7 +102,7 @@ export function SourceCategoryBreakdown({ results }: SourceCategoryBreakdownProp
         </Link>
       </div>
 
-      <div className="flex h-3 rounded-full overflow-hidden bg-[var(--color-surface-alt)] mb-5">
+      <div className="flex h-3 rounded-full overflow-hidden bg-[var(--color-border)] mb-5">
         {data.map((d) => (
           <div
             key={d.cat}
