@@ -129,30 +129,22 @@ export function CompetitorFixActions({
     >
       {/* Header band — same sage→amber→rust gradient as before. */}
       <div
-        className="px-5 py-3.5 border-b border-[var(--color-border)] flex items-center justify-between flex-wrap gap-3"
+        className="px-5 py-3.5 border-b border-[var(--color-border)] flex items-center gap-3"
         style={{
           background:
             "linear-gradient(135deg, rgba(150,162,131,0.28) 0%, rgba(184,160,48,0.14) 50%, rgba(201,123,69,0.14) 100%)",
         }}
       >
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div
-            className="h-8 w-8 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
-            style={{ backgroundColor: "rgba(150,162,131,0.22)" }}
-          >
-            <Sparkles className="h-4 w-4" style={{ color: COLORS.primary }} />
-          </div>
-          <SectionHeading
-            text="Ways to take the lead"
-            info="The highest-impact prompts to close gaps on and to defend, derived from your scan."
-          />
-        </div>
-        <p
-          className="text-[var(--color-fg-secondary)]"
-          style={{ fontSize: 13.5 }}
+        <div
+          className="h-8 w-8 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
+          style={{ backgroundColor: "rgba(150,162,131,0.22)" }}
         >
-          Top 3 of each. Click any row to view it in Prompt Tracker.
-        </p>
+          <Sparkles className="h-4 w-4" style={{ color: COLORS.primary }} />
+        </div>
+        <SectionHeading
+          text="Ways to take the lead"
+          info="The highest-impact prompts to close gaps on and to defend, derived from your scan."
+        />
       </div>
 
       {/* Two nested mini-cards — gaps first, wins second (stacked vertically
@@ -199,10 +191,12 @@ function NestedGapCard({
       ? `${items.length} ${items.length === 1 ? "gap" : "gaps"} to close`
       : `${items.length} ${items.length === 1 ? "prompt" : "prompts"} you own`;
 
+  // Trailing summary sits inline to the right of the title to keep the
+  // header tight (was a 2-line block above; the lead-in sentence got cut).
   const summary =
     variant === "gaps"
-      ? "Prompts where a competitor is cited and you aren't — highest-leverage targets."
-      : "You're cited and the competitor isn't — defend and amplify these positions.";
+      ? "highest-leverage targets"
+      : "defend and amplify these positions";
 
   const emptyText =
     variant === "gaps"
@@ -235,24 +229,26 @@ function NestedGapCard({
             {palette.tag}
           </p>
         </div>
-        <h3
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: 20,
-            fontWeight: 500,
-            color: "var(--color-fg)",
-            letterSpacing: "-0.01em",
-            lineHeight: 1.15,
-          }}
-        >
-          {title}
-        </h3>
-        <p
-          className="mt-1 text-[var(--color-fg-secondary)]"
-          style={{ fontSize: 12, lineHeight: 1.45 }}
-        >
-          {summary}
-        </p>
+        <div className="flex items-baseline justify-between gap-3 flex-wrap">
+          <h3
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: 20,
+              fontWeight: 500,
+              color: "var(--color-fg)",
+              letterSpacing: "-0.01em",
+              lineHeight: 1.15,
+            }}
+          >
+            {title}
+          </h3>
+          <p
+            className="text-[var(--color-fg-muted)]"
+            style={{ fontSize: 11.5, lineHeight: 1.4 }}
+          >
+            {summary}
+          </p>
+        </div>
       </div>
 
       {/* Rows */}
@@ -298,21 +294,6 @@ function NestedGapCard({
                     ? `${item.competitor} is cited by ${item.models.join(", ")} — ${businessName} isn't.`
                     : `Cited by ${item.models.join(", ")} — no competitor mentioned.`}
                 </p>
-                <div className="flex flex-wrap gap-1 mt-1.5">
-                  {item.models.map((m) => (
-                    <span
-                      key={m}
-                      className="rounded px-1.5 py-0.5 font-semibold"
-                      style={{
-                        fontSize: 9,
-                        backgroundColor: `${palette.accent}18`,
-                        color: palette.accentText,
-                      }}
-                    >
-                      {m}
-                    </span>
-                  ))}
-                </div>
                 <Link
                   href="/prompts"
                   className="group inline-flex items-center gap-1 mt-1.5 font-semibold transition-opacity hover:opacity-80"
