@@ -961,14 +961,15 @@ function HeroTitle({ data }: { data: PromptsData }) {
 }
 
 const HERO_DESCRIPTION =
-  "Surven monitors real questions customers ask AI tools and tracks how often you appear, where you rank, and what AI says about you when it does.";
+  "Each tracked prompt is a real customer question being asked of AI engines right now. Watching them weekly tells you which intents you're winning, which you're losing, and where one fix could move dozens of answers at once.";
 
 function HeroDescription() {
   return (
     <p
-      className="text-[var(--color-fg-muted)]"
-      style={{ fontSize: 14, lineHeight: 1.55, maxWidth: 760 }}
+      className="text-[var(--color-fg-muted)] mt-2"
+      style={{ fontSize: 15.5, lineHeight: 1.55, maxWidth: 760 }}
     >
+      <strong className="text-[var(--color-fg)] font-semibold">Why is this important?</strong>{" "}
       {HERO_DESCRIPTION}
     </p>
   );
@@ -2201,9 +2202,19 @@ function IntentFilterHeader({
 
   function toggle(intent: string) {
     setDraft((prev) => {
+      // Smart "filter to only this" behavior: if every intent is currently
+      // selected (the default state), clicking a single row should narrow
+      // to ONLY that intent — matches how spreadsheet/Notion filters work
+      // and avoids the foot-gun where unchecking one shows the OTHER four.
+      if (prev.size === visibleIntents.length) {
+        return new Set([intent]);
+      }
       const next = new Set(prev);
       if (next.has(intent)) next.delete(intent);
       else next.add(intent);
+      // If they unchecked the last remaining intent, treat as a reset
+      // (otherwise apply would silently re-select all and confuse them).
+      if (next.size === 0) return new Set(visibleIntents);
       return next;
     });
   }
@@ -2762,17 +2773,22 @@ function PromptsTable({
   }, []);
 
   // If the page was opened with #prompts-table (e.g. from Prompt Dominance
-  // CTAs), scroll it to the vertical center of the viewport.
+  // CTAs), scroll it to the vertical center of the viewport. Otherwise — for
+  // a normal sidebar click with no hash — default to the top of the page.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const hash = window.location.hash.replace(/^#/, "");
-    if (hash !== "prompts-table") return;
-    const t = setTimeout(() => {
-      document
-        .getElementById("prompts-table")
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 120);
-    return () => clearTimeout(t);
+    if (hash === "prompts-table") {
+      const t = setTimeout(() => {
+        document
+          .getElementById("prompts-table")
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 120);
+      return () => clearTimeout(t);
+    }
+    if (!hash) {
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
   }, []);
 
   // Canonical intent list — fixed order matching the product taxonomy.
@@ -2834,9 +2850,15 @@ function PromptsTable({
       }
       return true;
     });
+    // Filter on the SAME source the Intent column displays (primaryIntent
+    // from prompt text), not the legacy p.intent label from mock data.
+    // Otherwise a row tagged "Informational" in the data can render as
+    // "Local" in the column (because the column re-classifies from text)
+    // and confuse the user about why the filter "didn't work".
+    const labelFor = (p: PromptRow) => PROMPT_CATEGORIES[primaryIntent(p.text)].label;
     const intentFiltered = selectedIntents.size === allIntents.length
       ? base
-      : base.filter((p) => selectedIntents.has(p.intent));
+      : base.filter((p) => selectedIntents.has(labelFor(p)));
     const sorted = [...intentFiltered];
     sorted.sort((a, b) => {
       const cmp = comparePrompts(a, b, sort.column);
@@ -3906,7 +3928,7 @@ function CoverageDonut({ items }: { items: IntentCoverage[] }) {
         <div className="flex items-center justify-between gap-4">
           <SectionHeading
             text="Coverage by intent"
-            info="How well you're cited across each user-intent category — brand lookups, comparisons, transactional queries, etc."
+            info="How well you're cited across each user-intent category — informational, local, comparison, use-case, and transactional queries."
           />
           <span className="text-[var(--color-fg-muted)]" style={{ fontSize: 12 }}>
             {fmtVolume(totalVolume)} /mo · {total} prompts

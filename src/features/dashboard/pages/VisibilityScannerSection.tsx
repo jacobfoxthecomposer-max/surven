@@ -952,13 +952,14 @@ function HeroTitle({ data, treatment }: { data: ScannerData; treatment: Treatmen
 }
 
 const HERO_DESCRIPTION =
-  "AI visibility is how often AI tools name your business. We run real customer questions through ChatGPT, Claude, Gemini, and Google AI, then track what percent of replies mention you.";
+  "AI visibility tracks how often ChatGPT, Claude, Gemini, and Google AI name your business when answering customer questions. It's the new search ranking — if AI doesn't mention you, customers hear about whoever it does.";
 
 const NEXT_SCAN_PROMPT_COUNT = 248;
 
 function HeroDescription({ text }: { text: string }) {
   return (
-    <p className="text-[var(--color-fg-muted)]" style={{ fontSize: 14, lineHeight: 1.55, maxWidth: 760 }}>
+    <p className="text-[var(--color-fg-muted)] mt-2" style={{ fontSize: 15.5, lineHeight: 1.55, maxWidth: 760 }}>
+      <strong className="text-[var(--color-fg)] font-semibold">Why is this important?</strong>{" "}
       {text}
     </p>
   );

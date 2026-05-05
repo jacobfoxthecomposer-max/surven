@@ -190,8 +190,9 @@ export function CrawlabilityAuditPage({
             </>
           )}
         </h1>
-        <p className="text-sm text-[var(--color-fg-muted)] mt-1.5">
-          How easily AI models and search engines can crawl, index, and extract data from {businessName}.
+        <p className="text-[var(--color-fg-muted)] mt-2" style={{ fontSize: 15.5, lineHeight: 1.55, maxWidth: 760 }}>
+          <strong className="text-[var(--color-fg)] font-semibold">Why is this important?</strong>{" "}
+          AI engines can only cite pages they can crawl, parse, and trust. This audit checks whether {businessName} is technically reachable for ChatGPT, Claude, Gemini, and Perplexity — and flags the blockers stopping them from extracting your content.
         </p>
 
         {/* Premium: connected site indicator */}

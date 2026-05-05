@@ -100,9 +100,13 @@ export function inferIntents(
   )
     out.push("comparison");
 
-  // Local — near me / in [city]
+  // Local — near me / in [city, state] / in {known location placeholder}
+  // Tightened: bare "in [word]" was matching things like "in a plumber" or
+  // "in the morning". Now require an explicit geographic signal: "near me",
+  // "nearby", "local", "in my/the area", or "in [city], [state-code]" with
+  // the comma + 2-letter state to disambiguate from generic prepositions.
   if (
-    /\bnear me\b|\blocal\b|\bin (my|the) area\b|\bnearby\b|\b(in|around|near) [a-z]+(?:,?\s+[a-z]{2})?\b/.test(t)
+    /\bnear me\b|\blocal\b|\bin (my|the) area\b|\bnearby\b|\b(in|around|near) [a-z]+,\s+[a-z]{2}\b/.test(t)
   )
     out.push("local");
 

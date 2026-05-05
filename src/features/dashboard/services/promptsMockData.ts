@@ -13,10 +13,10 @@ const ENGINES = ["chatgpt", "claude", "gemini", "google_ai"] as const;
 type EngineId = (typeof ENGINES)[number];
 
 const INTENTS = [
-  "Brand lookup",
-  "Comparison",
-  "Local",
   "Informational",
+  "Local",
+  "Comparison",
+  "Use-case",
   "Transactional",
 ] as const;
 type IntentLabel = (typeof INTENTS)[number];
@@ -81,12 +81,16 @@ function comparisonPrompts(brand: string, competitors: string[]): string[] {
   return competitors.slice(0, 2).map((c) => `${brand} vs ${c}`);
 }
 
-function informationalPrompts(industry: string, city: string): string[] {
+function informationalPrompts(industry: string, _city: string): string[] {
   const lc = industry.toLowerCase();
-  const cityClause = city ? ` in ${city}` : "";
+  // Pure informational prompts — no geographic modifier so the filter
+  // doesn't surface anything that reads as Local. ("How to choose a X in
+  // City" is technically informational but users skim it as Local.)
   return [
-    `how to choose a ${lc}${cityClause}`,
     `what to look for in a ${lc}`,
+    `how to choose a ${lc}`,
+    `questions to ask a ${lc} before hiring`,
+    `${lc} pricing explained`,
   ];
 }
 
@@ -96,6 +100,16 @@ function transactionalPrompts(brand: string, industry: string): string[] {
     `${lc} reservations near me`,
     `book ${brand}`,
     `${brand} pricing`,
+  ];
+}
+
+function useCasePrompts(industry: string): string[] {
+  const lc = industry.toLowerCase();
+  // Problem-framed prompts — "best for X", "how do I…" jobs-to-be-done.
+  return [
+    `best ${lc} for first-time clients`,
+    `how do I find a reliable ${lc}`,
+    `top ${lc} for small businesses`,
   ];
 }
 
@@ -265,6 +279,7 @@ function transactionalExcerpt(
 function buildExcerpt(
   engine: EngineId,
   intent: IntentLabel,
+  isBranded: boolean,
   brand: string,
   industry: string,
   city: string,
@@ -272,9 +287,12 @@ function buildExcerpt(
   competitors: string[],
   comparisonTarget?: string
 ): string {
+  // Branded prompts always render with the brand-specific excerpt regardless
+  // of canonical intent (most map to Informational under the new taxonomy).
+  if (isBranded) {
+    return brandLookupExcerpt(engine, brand, industry, cited, competitors);
+  }
   switch (intent) {
-    case "Brand lookup":
-      return brandLookupExcerpt(engine, brand, industry, cited, competitors);
     case "Local":
       return localExcerpt(engine, brand, industry, city, cited, competitors);
     case "Comparison":
@@ -285,6 +303,8 @@ function buildExcerpt(
         cited
       );
     case "Informational":
+      return informationalExcerpt(engine, brand, industry, cited);
+    case "Use-case":
       return informationalExcerpt(engine, brand, industry, cited);
     case "Transactional":
       return transactionalExcerpt(engine, brand, industry, cited, competitors);
@@ -317,8 +337,11 @@ export function generatePromptsData(
   // Build prompt roster: 4 branded + 3 local + 2 comparison + 2 informational + 3 transactional = 14 max
   const promptSpecs: { intent: IntentLabel; type: "branded" | "unbranded"; text: string }[] = [];
 
+  // Branded lookups are still useful as branded-type prompts but their
+  // semantic intent maps to Informational under the canonical 5-intent
+  // taxonomy (Brand lookup was dropped).
   for (const text of brandedLookupPrompts(business.name, business.industry)) {
-    promptSpecs.push({ intent: "Brand lookup", type: "branded", text });
+    promptSpecs.push({ intent: "Informational", type: "branded", text });
   }
   for (const text of localPrompts(business.industry, business.city)) {
     promptSpecs.push({ intent: "Local", type: "unbranded", text });
@@ -328,6 +351,9 @@ export function generatePromptsData(
   }
   for (const text of informationalPrompts(business.industry, business.city)) {
     promptSpecs.push({ intent: "Informational", type: "unbranded", text });
+  }
+  for (const text of useCasePrompts(business.industry)) {
+    promptSpecs.push({ intent: "Use-case", type: "unbranded", text });
   }
   for (const text of transactionalPrompts(business.name, business.industry)) {
     promptSpecs.push({ intent: "Transactional", type: "unbranded", text });
@@ -339,27 +365,33 @@ export function generatePromptsData(
   const prompts: PromptRow[] = shuffled.map((spec, idx) => {
     // Volume pattern: branded smaller (500-3000), local highest (3000-12000), info mid, transactional mid
     let volume: number;
-    switch (spec.intent) {
-      case "Brand lookup":
-        volume = rint(rng, 500, 3500);
-        break;
-      case "Local":
-        volume = rint(rng, 3000, 12000);
-        break;
-      case "Comparison":
-        volume = rint(rng, 400, 1800);
-        break;
-      case "Informational":
-        volume = rint(rng, 2000, 9000);
-        break;
-      case "Transactional":
-        volume = rint(rng, 1500, 6000);
-        break;
+    // Branded type drives the highest hit-prob/lowest-volume bucket; everything
+    // else is keyed off intent.
+    if (spec.type === "branded") {
+      volume = rint(rng, 500, 3500);
+    } else {
+      switch (spec.intent) {
+        case "Local":
+          volume = rint(rng, 3000, 12000);
+          break;
+        case "Comparison":
+          volume = rint(rng, 400, 1800);
+          break;
+        case "Informational":
+          volume = rint(rng, 2000, 9000);
+          break;
+        case "Use-case":
+          volume = rint(rng, 1200, 5500);
+          break;
+        case "Transactional":
+          volume = rint(rng, 1500, 6000);
+          break;
+      }
     }
 
     // Branded prompts hit more engines on average; transactional/local hit fewer
     const baseHitProb =
-      spec.intent === "Brand lookup"
+      spec.type === "branded"
         ? 0.85
         : spec.intent === "Comparison"
         ? 0.55
@@ -367,6 +399,8 @@ export function generatePromptsData(
         ? 0.5
         : spec.intent === "Informational"
         ? 0.45
+        : spec.intent === "Use-case"
+        ? 0.4
         : 0.3; // transactional weakest
 
     const engineHits: Record<string, boolean> = {};
@@ -389,7 +423,7 @@ export function generatePromptsData(
 
     // Sentiment: branded slightly higher, transactional flatter
     const sentBase =
-      spec.intent === "Brand lookup"
+      spec.type === "branded"
         ? 0.6
         : spec.intent === "Comparison"
         ? 0.35
@@ -412,6 +446,7 @@ export function generatePromptsData(
       excerpt: buildExcerpt(
         engine,
         spec.intent,
+        spec.type === "branded",
         business.name,
         business.industry,
         business.city,
