@@ -81,12 +81,16 @@ function comparisonPrompts(brand: string, competitors: string[]): string[] {
   return competitors.slice(0, 2).map((c) => `${brand} vs ${c}`);
 }
 
-function informationalPrompts(industry: string, city: string): string[] {
+function informationalPrompts(industry: string, _city: string): string[] {
   const lc = industry.toLowerCase();
-  const cityClause = city ? ` in ${city}` : "";
+  // Pure informational prompts — no geographic modifier so the filter
+  // doesn't surface anything that reads as Local. ("How to choose a X in
+  // City" is technically informational but users skim it as Local.)
   return [
-    `how to choose a ${lc}${cityClause}`,
     `what to look for in a ${lc}`,
+    `how to choose a ${lc}`,
+    `questions to ask a ${lc} before hiring`,
+    `${lc} pricing explained`,
   ];
 }
 
