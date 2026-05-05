@@ -24,8 +24,6 @@ export function CompetitorVisibilityChart() {
         "claude",
         "gemini",
         "google_ai",
-        "perplexity",
-        "copilot",
       ]),
     [],
   );

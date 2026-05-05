@@ -291,7 +291,10 @@ function ProfileCard({
   const initials = user?.email?.[0]?.toUpperCase() || "U";
 
   const AvatarCircle = ({ size = "h-10 w-10" }: { size?: string }) => (
-    <div className={`${size} rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm`}>
+    <div
+      className={`${size} rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br flex items-center justify-center text-white font-semibold text-sm`}
+      style={{ backgroundImage: "linear-gradient(135deg, #96A283 0%, #7D8E6C 100%)" }}
+    >
       {avatarUrl ? (
         <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
       ) : uploading ? (

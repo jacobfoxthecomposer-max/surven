@@ -26,8 +26,6 @@ export function CompetitorShareOfVoiceChart() {
         "claude",
         "gemini",
         "google_ai",
-        "perplexity",
-        "copilot",
       ]),
     [],
   );
