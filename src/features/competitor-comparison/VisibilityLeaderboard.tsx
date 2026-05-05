@@ -7,6 +7,7 @@ import { AIOverview } from "@/components/atoms/AIOverview";
 import { BadgeDelta } from "@/components/atoms/BadgeDelta";
 import { SectionHeading } from "@/components/atoms/SectionHeading";
 import { COMPETITOR_PALETTE } from "@/utils/constants";
+import { PLAN_FEATURES, planLabel } from "@/utils/plans";
 import type { Scan, ScanResult, UserProfile } from "@/types/database";
 
 const ease = [0.16, 1, 0.3, 1] as const;
@@ -24,17 +25,10 @@ const YOU_COLOR = "#7D8E6C";
 // relation to 100%" at a glance.
 const BAR_GRADIENT =
   "linear-gradient(to right, #B54631 0%, #C97B45 33%, #96A283 66%, #5E7250 100%)";
-const MAX_COMPETITORS = 5; // Premium cap. Leaderboard shows up to 6 rows total
-                           // (you + 5 competitor slots, filled or empty CTA).
-
-// Per-plan competitor cap. `admin` is treated as `premium` for leaderboard
-// purposes — even unlimited-quota users only have 5 visible competitor slots.
-const PLAN_LIMITS: Record<UserProfile["plan"], number> = {
-  free: 0,
-  plus: 1,
-  premium: 5,
-  admin: 5,
-};
+// Premium cap from PLAN_FEATURES — leaderboard always renders 1 (you) + 5
+// competitor slots. Empty slots beyond the user's plan cap show the
+// "Upgrade to add" CTA.
+const MAX_COMPETITORS = PLAN_FEATURES.premium.maxCompetitors;
 
 // Same deterministic name → palette index used in the filter chips so a
 // competitor's color matches across the page.
@@ -165,7 +159,7 @@ export function VisibilityLeaderboard({
   // total of 5 competitor rows (you + 5 = 6 visible rows).
   const actualCompetitors = totalCompetitorCount ?? competitors.length;
   const emptySlots = Math.max(0, MAX_COMPETITORS - actualCompetitors);
-  const planLimit = PLAN_LIMITS[plan];
+  const planLimit = PLAN_FEATURES[plan].maxCompetitors;
   const canAddMore = actualCompetitors < planLimit;
   const ctaHref = canAddMore ? "/settings" : "/settings/billing";
   const ctaLabel = canAddMore ? "Add competitor" : "Upgrade to add";
@@ -342,7 +336,7 @@ export function VisibilityLeaderboard({
                 title={
                   canAddMore
                     ? `Add competitor #${slotRank - 1} of ${MAX_COMPETITORS}`
-                    : `${plan === "plus" ? "Plus" : "Free"} plan caps you at ${planLimit} competitor${planLimit === 1 ? "" : "s"} — upgrade to add more`
+                    : `${planLabel(plan)} plan caps you at ${planLimit} competitor${planLimit === 1 ? "" : "s"} — upgrade to add more`
                 }
               >
                 <span

@@ -14,19 +14,13 @@ import { AIOverview } from "@/components/atoms/AIOverview";
 import { BadgeDelta } from "@/components/atoms/BadgeDelta";
 import { SectionHeading } from "@/components/atoms/SectionHeading";
 import { COMPETITOR_PALETTE } from "@/utils/constants";
+import { PLAN_FEATURES } from "@/utils/plans";
 import type { Scan, ScanResult, UserProfile } from "@/types/database";
 
 const ease = [0.16, 1, 0.3, 1] as const;
 
 const YOU_COLOR = "#7D8E6C";
-const MAX_COMPETITORS = 5;
-
-const PLAN_LIMITS: Record<UserProfile["plan"], number> = {
-  free: 0,
-  plus: 1,
-  premium: 5,
-  admin: 5,
-};
+const MAX_COMPETITORS = PLAN_FEATURES.premium.maxCompetitors;
 
 function competitorColor(name: string): string {
   const hash = Math.abs(
@@ -183,7 +177,7 @@ export function CompetitorRankChart({
         value={`${grew ? "+" : ""}${your90dDelta.toFixed(1)}%`}
         title={
           flat
-            ? "No change in your visibility over the last 90 days."
+            ? "No change in your rank vs. the start of the range."
             : `${grew ? "Up" : "Down"} ${Math.abs(your90dDelta).toFixed(1)}% over the last 90 days.`
         }
       />
@@ -193,7 +187,7 @@ export function CompetitorRankChart({
   // Empty-slot calculation — mirrors VisibilityLeaderboard.
   const actualCompetitors = totalCompetitorCount ?? competitors.length;
   const emptySlots = Math.max(0, MAX_COMPETITORS - actualCompetitors);
-  const planLimit = PLAN_LIMITS[plan];
+  const planLimit = PLAN_FEATURES[plan].maxCompetitors;
   const canAddMore = actualCompetitors < planLimit;
   const ctaHref = canAddMore ? "/settings" : "/settings/billing";
   const ctaLabel = canAddMore ? "Add competitor" : "Upgrade to add";

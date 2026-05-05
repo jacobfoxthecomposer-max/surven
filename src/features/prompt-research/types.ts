@@ -15,12 +15,10 @@ export type TaxonomyCategory =
 
 export type IntentType =
   | "informational"
-  | "navigational"
-  | "transactional"
-  | "commercial"
   | "local"
-  | "validation"
-  | "operational";
+  | "comparison"
+  | "use_case"
+  | "transactional";
 
 export type EngineId = "chatgpt" | "claude" | "gemini" | "google_ai";
 

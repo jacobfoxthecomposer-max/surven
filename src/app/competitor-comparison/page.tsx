@@ -16,13 +16,11 @@ import { useScan } from "@/features/dashboard/hooks/useScan";
 import { CompetitorHero } from "@/features/competitor-comparison/CompetitorHero";
 import { VisibilityLeaderboard } from "@/features/competitor-comparison/VisibilityLeaderboard";
 import { CompetitorVisibilityChart } from "@/features/competitor-comparison/CompetitorVisibilityChart";
+import { PromptClusterDominance } from "@/features/competitor-comparison/PromptClusterDominance";
 import { CompetitorFixActions } from "@/features/competitor-comparison/CompetitorFixActions";
-import { CompetitorHeatmap } from "@/features/competitor-comparison/CompetitorHeatmap";
 import { CompetitorGaps } from "@/features/competitor-comparison/CompetitorGaps";
-import { CompetitorCitedDomains } from "@/features/competitor-comparison/CompetitorCitedDomains";
 import { CompetitorRankChart } from "@/features/competitor-comparison/CompetitorRankChart";
 import { CompetitorShareOfVoiceChart } from "@/features/competitor-comparison/CompetitorShareOfVoiceChart";
-import { FooterDiagnostic } from "@/features/competitor-comparison/FooterDiagnostic";
 import { BetaFeedbackFooter } from "@/components/organisms/BetaFeedbackFooter";
 import { AI_MODELS, COMPETITOR_PALETTE } from "@/utils/constants";
 
@@ -514,18 +512,18 @@ export default function CompetitorComparisonPage() {
 
         {hasResults && (
           <>
-            {/* Heatmap (mid-page reference) */}
-            <motion.div {...reveal}>
-              <CompetitorHeatmap
+            {/* Cluster dominance (wide) + Share of voice (narrow, donut-only)
+                side-by-side. items-stretch keeps both bottoms aligned. */}
+            <motion.div
+              {...reveal}
+              className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] gap-4 items-stretch"
+            >
+              <PromptClusterDominance
                 results={filteredResults}
                 businessName={business.name}
-                businessScore={score}
                 competitors={competitorNames}
+                industry={business.industry}
               />
-            </motion.div>
-
-            {/* Share of voice over time — cloned from AI Visibility Tracker */}
-            <motion.div {...reveal}>
               <CompetitorShareOfVoiceChart />
             </motion.div>
 
@@ -533,26 +531,9 @@ export default function CompetitorComparisonPage() {
             <motion.div {...reveal}>
               <CompetitorGaps
                 results={filteredResults}
-                businessName={business.name}
                 competitors={competitorNames}
               />
             </motion.div>
-
-            {/* Cited domains per competitor */}
-            <motion.div {...reveal}>
-              <CompetitorCitedDomains
-                results={filteredResults}
-                businessName={business.name}
-                competitors={competitorNames}
-              />
-            </motion.div>
-
-            {/* Footer 3-column diagnostic strip */}
-            <FooterDiagnostic
-              results={filteredResults}
-              businessName={business.name}
-              competitors={competitorNames}
-            />
 
             {/* Beta feedback callout — shared organism with Code Scanner. */}
             <BetaFeedbackFooter />

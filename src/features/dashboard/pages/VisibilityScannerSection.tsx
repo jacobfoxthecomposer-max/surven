@@ -2036,12 +2036,16 @@ export function ShareOfVoiceCard({
   insight,
   pieMode,
   aiOverviewVariant = "V1",
+  showChart = true,
 }: {
   data: ScannerData;
   stats: PositionStat[];
   insight: string;
   pieMode: SOVPieMode;
   aiOverviewVariant?: AIOverviewVariant;
+  /** Hide the right-side line chart and let the donut + list fill width.
+   *  Used on /competitor-comparison where SOV sits in a narrow slot. */
+  showChart?: boolean;
 }) {
   const sorted = useMemo(
     () => [...stats].sort((a, b) => b.current - a.current),
@@ -2050,6 +2054,147 @@ export function ShareOfVoiceCard({
 
   const [hoveredBrandId, setHoveredBrandId] = useState<string | null>(null);
 
+  // Layout split: when the chart is shown, use the original 3-col template.
+  // When the chart is hidden (cluster-comparison page slot), restructure to
+  // a vertical flex card so the donut + list grow to fill available height.
+  if (!showChart) {
+    // YOUR share-of-voice delta pill — corner header.
+    const youStat = sorted.find((s) => s.brand.isYou);
+    const yDelta = youStat?.delta ?? 0;
+    const flat = Math.abs(yDelta) <= 0.04;
+    const grew = yDelta > 0;
+
+    return (
+      <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 flex flex-col h-full min-w-0">
+        <div className="mb-1 pb-2 border-b border-[var(--color-border)] flex items-center justify-between gap-2">
+          <SectionHeading
+            text="Share of voice"
+            info="Your share of all brand mentions in AI answers."
+          />
+          <div className="shrink-0">
+            <BadgeDelta
+              variant="solid"
+              deltaType={flat ? "neutral" : grew ? "increase" : "decrease"}
+              value={`${grew ? "+" : ""}${yDelta.toFixed(1)}%`}
+              title={
+                flat
+                  ? "No change in your share over the last 90 days."
+                  : `${grew ? "Up" : "Down"} ${Math.abs(yDelta).toFixed(1)}% over the last 90 days.`
+              }
+            />
+          </div>
+        </div>
+        <div className="mt-3 mb-4">
+          <AIOverview text={insight} variant={aiOverviewVariant} size="sm" />
+        </div>
+
+        {/* Donut centered + larger so it absorbs vertical space. */}
+        <div className="flex justify-center my-2">
+          <SOVPie
+            stats={sorted}
+            size={200}
+            mode={pieMode}
+            hoveredBrandId={hoveredBrandId}
+            onHover={setHoveredBrandId}
+          />
+        </div>
+
+        {/* Brand list with horizontal share bars — fills the remaining
+            height with `flex-1`, distributes rows evenly via space-y. */}
+        <ol className="mt-4 flex-1 flex flex-col justify-between gap-1.5">
+          {sorted.map((s) => {
+            const flat = Math.abs(s.delta) <= 0.04;
+            const grew = s.delta > 0;
+            const deltaColor = flat
+              ? "var(--color-fg-muted)"
+              : grew
+                ? "#5E7250"
+                : "#B54631";
+            return (
+              <li
+                key={s.brand.id}
+                className="flex items-center gap-2 px-1.5 py-1 rounded-[var(--radius-sm)] transition-colors"
+                style={{
+                  background: s.brand.isYou
+                    ? "rgba(150,162,131,0.10)"
+                    : "transparent",
+                  borderLeft: s.brand.isYou
+                    ? `2px solid #7D8E6C`
+                    : "2px solid transparent",
+                  opacity:
+                    hoveredBrandId != null && hoveredBrandId !== s.brand.id
+                      ? 0.4
+                      : 1,
+                }}
+                onMouseEnter={() => setHoveredBrandId(s.brand.id)}
+                onMouseLeave={() => setHoveredBrandId(null)}
+              >
+                <span
+                  className="h-2 w-2 rounded-full shrink-0"
+                  style={{ backgroundColor: s.brand.color }}
+                />
+                <span
+                  className="truncate flex-1 min-w-0"
+                  style={{
+                    fontSize: 12,
+                    fontWeight: s.brand.isYou ? 700 : 500,
+                    color: s.brand.isYou
+                      ? "var(--color-fg)"
+                      : "var(--color-fg-secondary)",
+                  }}
+                  title={s.brand.name}
+                >
+                  {s.brand.isYou ? "You" : s.brand.name}
+                </span>
+                <div className="w-16 h-1.5 rounded-full bg-[var(--color-border)] overflow-hidden shrink-0">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${Math.min(100, s.current)}%`,
+                      backgroundColor: s.brand.color,
+                    }}
+                  />
+                </div>
+                <span
+                  className="tabular-nums shrink-0 text-right"
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    width: 44,
+                    color: s.brand.isYou
+                      ? "var(--color-fg)"
+                      : "var(--color-fg-secondary)",
+                  }}
+                >
+                  {s.current.toFixed(1)}%
+                </span>
+                <span
+                  className="tabular-nums shrink-0 text-right"
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    width: 40,
+                    color: deltaColor,
+                  }}
+                  title={
+                    flat
+                      ? "No change vs. start of range"
+                      : `${grew ? "Up" : "Down"} ${Math.abs(s.delta).toFixed(1)}% vs. start of range`
+                  }
+                >
+                  {flat
+                    ? "—"
+                    : `${grew ? "+" : "−"}${Math.abs(s.delta).toFixed(1)}%`}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+    );
+  }
+
+  // Original 3-col layout, unchanged for the AI Visibility Tracker page.
   return (
     <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 space-y-4 min-w-0">
       <div className="mb-1 pb-2 border-b border-[var(--color-border)]">

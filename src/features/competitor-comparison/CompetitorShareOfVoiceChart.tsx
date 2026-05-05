@@ -47,6 +47,7 @@ export function CompetitorShareOfVoiceChart() {
       insight={sovInsight}
       pieMode="donut-center"
       aiOverviewVariant="V1"
+      showChart={false}
     />
   );
 }

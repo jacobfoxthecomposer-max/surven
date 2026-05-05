@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import {
   Sparkles,
@@ -35,7 +36,14 @@ import { HoverHint } from "@/components/atoms/HoverHint";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { SectionHeading } from "@/components/atoms/SectionHeading";
 import { NextScanCard } from "@/components/atoms/NextScanCard";
+import { PromptsByCluster } from "@/features/dashboard/pages/PromptsByCluster";
+import { BetaFeedbackFooter } from "@/components/organisms/BetaFeedbackFooter";
+import { useActiveBusiness } from "@/features/business/hooks/useActiveBusiness";
 import { COLORS } from "@/utils/constants";
+import {
+  PROMPT_CATEGORIES,
+  primaryIntent,
+} from "@/utils/promptCategories";
 
 /* ============================================================================
  * Prompts Tracker — Section
@@ -74,6 +82,21 @@ const TOK = {
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
+// Deterministic per-(prompt, engine) "did the AI answer include a link?"
+// boolean. Until real link data lands, derive a stable yes/no from the
+// prompt id + engine name. If the engine didn't even mention you, it
+// can't have linked you (returns false). If it mentioned you, the link
+// presence is a deterministic 70% positive coin so most cited engines
+// also link, but some mention-without-link gaps show up.
+function linkHit(promptId: string, engine: string, mentioned: boolean): boolean {
+  if (!mentioned) return false;
+  const seed = `${promptId}|link|${engine}`;
+  const h = Math.abs(
+    [...seed].reduce((acc, c) => (acc * 31 + c.charCodeAt(0)) | 0, 0),
+  );
+  return (h % 1000) / 1000 < 0.7;
+}
+
 const reveal = {
   initial: { opacity: 0, y: 14 },
   whileInView: { opacity: 1, y: 0 },
@@ -88,16 +111,20 @@ const fadeUp = {
 } as const;
 
 // ─── INTENT COLOR SYSTEM ───────────────────────────────────────────────────
-// Single source of truth for intent colors. Used by the Coverage by Intent
-// donut, the prompts table cell pills, the Intent filter dropdown, and the
-// highlights table cells.
+// Aligned to the universal 6-category taxonomy in `utils/promptCategories.ts`
+// so the Coverage by Intent donut, the prompts table cell pills, the Intent
+// filter dropdown, and the highlights table cells all draw from the same
+// label set as the rest of the product (cluster dominance, sentiment by
+// type, etc.). Legacy labels mapped: Brand lookup -> Branded, Comparison ->
+// Comparative, Transactional -> Use-case (problem-framed). Mock data still
+// uses the old labels — this map normalizes both for backwards-compat.
 
 const INTENT_COLORS: Record<string, string> = {
-  "Brand lookup": "#7D8E6C", // sage
-  Comparison: "#7A8FA6", // slate-blue
-  Local: "#C9A845", // mustard
-  Informational: "#9B6FA6", // plum
-  Transactional: "#C97B45", // rust
+  Informational: "#9B7EC8",
+  Local: "#5BAF92",
+  Comparison: "#C97B45",
+  "Use-case": "#B8A030",
+  Transactional: "#6BA3F5",
 };
 
 // Tint + readable text color for an intent chip.
@@ -690,7 +717,7 @@ function usePromptsData(): PromptsData {
           id: "p1",
           text: "morgan and morgan reviews",
           type: "branded",
-          intent: "Brand lookup",
+          intent: "Comparison",
           volume: 8400,
           engineHits: { google_ai: true, chatgpt: true, claude: true, gemini: true },
           coverageDelta: 12,
@@ -707,7 +734,7 @@ function usePromptsData(): PromptsData {
           id: "p2",
           text: "is morgan and morgan a good lawyer",
           type: "branded",
-          intent: "Brand lookup",
+          intent: "Comparison",
           volume: 2300,
           engineHits: { google_ai: false, chatgpt: true, claude: true, gemini: true },
           coverageDelta: 8,
@@ -825,10 +852,10 @@ function usePromptsData(): PromptsData {
       ],
 
       intentCoverage: [
-        { intent: "Brand lookup", promptCount: 4, coveragePct: 88, volumeMonthly: 12600, avgPosition: 1.2, coverageDelta: 6.0, positiveSentimentPct: 82 },
-        { intent: "Comparison", promptCount: 3, coveragePct: 64, volumeMonthly: 2400, avgPosition: 1.8, coverageDelta: 3.0, positiveSentimentPct: 58 },
         { intent: "Informational", promptCount: 7, coveragePct: 41, volumeMonthly: 19100, avgPosition: 2.8, coverageDelta: 15.0, positiveSentimentPct: 41 },
         { intent: "Local", promptCount: 5, coveragePct: 56, volumeMonthly: 7800, avgPosition: 2.4, coverageDelta: 5.0, positiveSentimentPct: 64 },
+        { intent: "Comparison", promptCount: 7, coveragePct: 74, volumeMonthly: 15000, avgPosition: 1.4, coverageDelta: 4.0, positiveSentimentPct: 72 },
+        { intent: "Use-case", promptCount: 4, coveragePct: 52, volumeMonthly: 8400, avgPosition: 2.1, coverageDelta: 7.0, positiveSentimentPct: 55 },
         { intent: "Transactional", promptCount: 5, coveragePct: 28, volumeMonthly: 5500, avgPosition: 4.1, coverageDelta: -5.0, positiveSentimentPct: 28 },
       ],
 
@@ -842,7 +869,7 @@ function usePromptsData(): PromptsData {
       ],
 
       sentimentByType: [
-        { type: "Brand lookup", positive: 82, neutral: 14, negative: 4, total: 28 },
+        { type: "Use-case", positive: 82, neutral: 14, negative: 4, total: 28 },
         { type: "Comparison", positive: 58, neutral: 32, negative: 10, total: 19 },
         { type: "Local", positive: 64, neutral: 28, negative: 8, total: 22 },
         { type: "Informational", positive: 41, neutral: 49, negative: 10, total: 35 },
@@ -1169,29 +1196,12 @@ function StatCard({
           >
             {label}
           </p>
-          <span className="relative inline-flex items-center group">
+          <HoverHint hint={hint}>
             <Info
-              className="h-3.5 w-3.5 text-[var(--color-fg-muted)] group-hover:text-[var(--color-fg-secondary)] cursor-help transition-colors"
+              className="h-3.5 w-3.5 text-[var(--color-fg-muted)] hover:text-[var(--color-fg-secondary)] cursor-help transition-colors"
               aria-label="More info"
             />
-            <span
-              role="tooltip"
-              className="pointer-events-none absolute left-1/2 bottom-full z-50 mb-2 -translate-x-1/2 translate-y-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 transition-all duration-200 ease-out rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[12px] leading-snug text-[var(--color-fg-secondary)] shadow-md"
-              style={{ width: 260 }}
-            >
-              {hint}
-              <span
-                className="absolute left-1/2 top-full -translate-x-1/2 -mt-px"
-                style={{
-                  width: 0,
-                  height: 0,
-                  borderLeft: "5px solid transparent",
-                  borderRight: "5px solid transparent",
-                  borderTop: "5px solid var(--color-border)",
-                }}
-              />
-            </span>
-          </span>
+          </HoverHint>
         </div>
       </div>
       {centerStat ? (
@@ -1406,20 +1416,16 @@ interface LedgerRowSpec {
 }
 
 function InfoTooltip({ hint }: { hint: string }) {
+  // Delegates to the portal-based HoverHint atom so the tooltip escapes
+  // any ancestor `overflow-hidden` clipping context (e.g., the prompts
+  // table card) and renders on top of everything else.
   return (
-    <span className="relative inline-flex items-center group">
+    <HoverHint hint={hint}>
       <Info
-        className="h-3.5 w-3.5 text-[var(--color-fg-muted)] group-hover:text-[var(--color-fg-secondary)] cursor-help transition-colors"
+        className="h-3.5 w-3.5 text-[var(--color-fg-muted)] hover:text-[var(--color-fg-secondary)] cursor-help transition-colors"
         aria-label="More info"
       />
-      <span
-        role="tooltip"
-        className="pointer-events-none absolute left-1/2 bottom-full z-50 mb-2 -translate-x-1/2 translate-y-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 transition-all duration-200 ease-out rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[12px] leading-snug text-[var(--color-fg-secondary)] shadow-md"
-        style={{ width: 260 }}
-      >
-        {hint}
-      </span>
-    </span>
+    </HoverHint>
   );
 }
 
@@ -1879,27 +1885,7 @@ function BrandedCallout({
   const isClean = failCount === 0;
   const isPartial = failCount === 1;
 
-  if (isClean) {
-    return (
-      <div className="flex items-center gap-2.5">
-        <CheckCircle2
-          className="h-3.5 w-3.5 shrink-0"
-          style={{ color: TOK.greenFg }}
-        />
-        <p
-          className="flex-1"
-          style={{
-            fontSize: 13,
-            fontWeight: 600,
-            color: TOK.greenFg,
-            fontFamily: "var(--font-sans)",
-          }}
-        >
-          Every AI tool shows you first when customers search your business by name.
-        </p>
-      </div>
-    );
-  }
+  if (isClean) return null;
 
   const failedEngines = data.brandedTopRankFailEngines
     .map((id) => ENGINES.find((e) => e.id === id)?.label)
@@ -2158,27 +2144,60 @@ function IntentFilterHeader({
   selected: Set<string>;
   onApply: (next: Set<string>) => void;
 }) {
+  // Branded lives in its own column now — strip the legacy "Brand lookup"
+  // label from this dropdown so users don't filter twice.
+  const visibleIntents = useMemo(
+    () => allIntents.filter((i) => i !== "Brand lookup"),
+    [allIntents],
+  );
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Set<string>>(selected);
-  const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   // Sync draft from committed state every time we open the dropdown.
   useEffect(() => {
     if (open) setDraft(new Set(selected));
   }, [open, selected]);
 
+  // Recompute popover position when opening / on resize / scroll.
+  useEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setPos({ top: rect.bottom + 6, left: rect.left });
+    };
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open]);
+
   // Click-outside to dismiss without applying.
   useEffect(() => {
     if (!open) return;
     const onDocMouseDown = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (
+        !triggerRef.current?.contains(t) &&
+        !popoverRef.current?.contains(t)
+      )
+        setOpen(false);
     };
     document.addEventListener("mousedown", onDocMouseDown);
     return () => document.removeEventListener("mousedown", onDocMouseDown);
   }, [open]);
 
   const isFiltered =
-    selected.size > 0 && selected.size < allIntents.length;
+    selected.size > 0 && selected.size < visibleIntents.length;
 
   function toggle(intent: string) {
     setDraft((prev) => {
@@ -2195,7 +2214,7 @@ function IntentFilterHeader({
   }
 
   function selectAll() {
-    setDraft(new Set(allIntents));
+    setDraft(new Set(visibleIntents));
   }
 
   function clearAll() {
@@ -2203,8 +2222,9 @@ function IntentFilterHeader({
   }
 
   return (
-    <div ref={ref} className="relative inline-block">
+    <div className="inline-block">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="inline-flex items-center gap-1 group"
@@ -2240,48 +2260,54 @@ function IntentFilterHeader({
         />
       </button>
 
-      {open && (
-        <motion.div
-          initial={{ opacity: 0, y: -4 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.15, ease: EASE }}
-          className="absolute top-full left-0 mt-1.5 z-50 rounded-md shadow-lg overflow-hidden"
-          style={{
-            backgroundColor: "var(--color-surface)",
-            border: "1px solid var(--color-border)",
-            minWidth: 200,
-          }}
-        >
-          <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--color-border)]">
-            <span
-              className="font-semibold uppercase text-[var(--color-fg-muted)]"
-              style={{ fontSize: 10, letterSpacing: "0.08em" }}
-            >
-              Filter by intent
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={selectAll}
-                className="text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors"
-                style={{ fontSize: 11 }}
+      {open && mounted && pos &&
+        createPortal(
+          <motion.div
+            ref={popoverRef}
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.15, ease: EASE }}
+            className="rounded-md shadow-lg overflow-hidden"
+            style={{
+              position: "fixed",
+              top: pos.top,
+              left: pos.left,
+              zIndex: 9999,
+              backgroundColor: "var(--color-surface)",
+              border: "1px solid var(--color-border)",
+              minWidth: 200,
+            }}
+          >
+            <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--color-border)]">
+              <span
+                className="font-semibold uppercase text-[var(--color-fg-muted)]"
+                style={{ fontSize: 10, letterSpacing: "0.08em" }}
               >
-                All
-              </button>
-              <span className="text-[var(--color-border)]">·</span>
-              <button
-                type="button"
-                onClick={clearAll}
-                className="text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors"
-                style={{ fontSize: 11 }}
-              >
-                None
-              </button>
+                Filter by intent
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={selectAll}
+                  className="text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors"
+                  style={{ fontSize: 11 }}
+                >
+                  All
+                </button>
+                <span className="text-[var(--color-border)]">·</span>
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  className="text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors"
+                  style={{ fontSize: 11 }}
+                >
+                  None
+                </button>
+              </div>
             </div>
-          </div>
 
-          <div className="py-1.5">
-            {allIntents.map((intent) => {
+            <div className="py-1.5">
+              {visibleIntents.map((intent) => {
               const checked = draft.has(intent);
               const c = intentChip(intent);
               return (
@@ -2318,25 +2344,354 @@ function IntentFilterHeader({
             })}
           </div>
 
-          <div className="px-3 py-2 border-t border-[var(--color-border)] flex justify-end">
-            <motion.button
-              type="button"
-              onClick={apply}
-              whileTap={{ scale: 0.95 }}
-              transition={{ duration: 0.15, ease: EASE }}
-              className="rounded-[var(--radius-sm)] font-semibold transition-colors"
-              style={{
-                fontSize: 12,
-                padding: "5px 14px",
-                backgroundColor: COLORS.primary,
-                color: "white",
-              }}
-            >
-              Apply
-            </motion.button>
-          </div>
-        </motion.div>
-      )}
+            <div className="px-3 py-2 border-t border-[var(--color-border)] flex justify-end">
+              <motion.button
+                type="button"
+                onClick={apply}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: 0.15, ease: EASE }}
+                className="rounded-[var(--radius-sm)] font-semibold transition-colors"
+                style={{
+                  fontSize: 12,
+                  padding: "5px 14px",
+                  backgroundColor: COLORS.primary,
+                  color: "white",
+                }}
+              >
+                Apply
+              </motion.button>
+            </div>
+          </motion.div>,
+          document.body,
+        )}
+    </div>
+  );
+}
+
+// Brand-only filter dropdown for the Branded column header. Same portal +
+// fixed-positioning pattern as IntentFilterHeader so it can't be clipped
+// by the prompts-table card. Drives the existing onToggleFilter handler
+// so it stays in sync with the All/Branded/Unbranded chip cluster at the
+// top of the box.
+function BrandFilterHeader({
+  selectedFilters,
+  onToggleFilter,
+}: {
+  selectedFilters: Set<PromptsFilter>;
+  onToggleFilter: (f: PromptsFilter) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setPos({ top: rect.bottom + 6, left: rect.left });
+    };
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocMouseDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!triggerRef.current?.contains(t) && !popoverRef.current?.contains(t))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocMouseDown);
+    return () => document.removeEventListener("mousedown", onDocMouseDown);
+  }, [open]);
+
+  // Branded/Unbranded toggling matches the existing chip cluster: when
+  // BOTH chips are off, it's equivalent to "no filter on type" — so
+  // selecting both = no filter, selecting one = filter to just that.
+  const brandedSel = selectedFilters.has("branded");
+  const unbrandedSel = selectedFilters.has("unbranded");
+  const isFiltered =
+    (brandedSel && !unbrandedSel) || (!brandedSel && unbrandedSel);
+
+  return (
+    <div className="inline-block">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="inline-flex items-center gap-1 group"
+        style={{ fontFamily: "var(--font-sans)" }}
+      >
+        <span
+          className="font-semibold uppercase text-[var(--color-fg-muted)] group-hover:text-[var(--color-fg-secondary)] transition-colors"
+          style={{ fontSize: 11, letterSpacing: "0.08em" }}
+        >
+          Branded
+        </span>
+        <HoverHint hint="Prompts that mention your business name. Tracks how AI describes you when someone asks about your brand directly.">
+          <HelpCircle className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-70" />
+        </HoverHint>
+        {isFiltered && (
+          <span
+            className="inline-flex items-center justify-center rounded-full tabular-nums"
+            style={{
+              minWidth: 16,
+              height: 16,
+              fontSize: 10,
+              fontWeight: 700,
+              backgroundColor: COLORS.primary,
+              color: "white",
+              padding: "0 4px",
+            }}
+          >
+            1
+          </span>
+        )}
+        <ChevronDown
+          className={
+            "h-3 w-3 text-[var(--color-fg-muted)] transition-transform " +
+            (open ? "rotate-180" : "")
+          }
+        />
+      </button>
+
+      {open && mounted && pos &&
+        createPortal(
+          <motion.div
+            ref={popoverRef}
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.15, ease: EASE }}
+            className="rounded-md shadow-lg overflow-hidden"
+            style={{
+              position: "fixed",
+              top: pos.top,
+              left: pos.left,
+              zIndex: 9999,
+              backgroundColor: "var(--color-surface)",
+              border: "1px solid var(--color-border)",
+              minWidth: 200,
+            }}
+          >
+            <div className="px-3 py-2 border-b border-[var(--color-border)]">
+              <span
+                className="font-semibold uppercase text-[var(--color-fg-muted)]"
+                style={{ fontSize: 10, letterSpacing: "0.08em" }}
+              >
+                Filter by brand status
+              </span>
+            </div>
+
+            <div className="py-1.5">
+              {(
+                [
+                  { id: "branded" as const, label: "Branded prompts", color: "#7D8E6C" },
+                  { id: "unbranded" as const, label: "Unbranded prompts", color: "#6BA3F5" },
+                ]
+              ).map((opt) => {
+                const checked = selectedFilters.has(opt.id);
+                return (
+                  <label
+                    key={opt.id}
+                    className="flex items-center gap-2.5 px-3 py-1.5 cursor-pointer hover:bg-[var(--color-surface-alt)]/50 transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => onToggleFilter(opt.id)}
+                      className="h-3.5 w-3.5 cursor-pointer accent-[var(--color-primary)]"
+                    />
+                    <span
+                      className="inline-block rounded-full shrink-0"
+                      style={{ width: 9, height: 9, backgroundColor: opt.color }}
+                    />
+                    <span
+                      className="flex-1"
+                      style={{
+                        fontSize: 13,
+                        color: "var(--color-fg)",
+                        fontFamily: "var(--font-sans)",
+                      }}
+                    >
+                      {opt.label}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </motion.div>,
+          document.body,
+        )}
+    </div>
+  );
+}
+
+// Cited / not-cited filter dropdown for the Cited column header. Mirrors
+// BrandFilterHeader: portal-mounted, drives the existing onToggleFilter
+// handler (which already understands "cited" / "uncited"), and shows a
+// 1 badge when one of the two is selected exclusively.
+function CitedFilterHeader({
+  selectedFilters,
+  onToggleFilter,
+}: {
+  selectedFilters: Set<PromptsFilter>;
+  onToggleFilter: (f: PromptsFilter) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setPos({ top: rect.bottom + 6, left: rect.left });
+    };
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocMouseDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!triggerRef.current?.contains(t) && !popoverRef.current?.contains(t))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocMouseDown);
+    return () => document.removeEventListener("mousedown", onDocMouseDown);
+  }, [open]);
+
+  const citedSel = selectedFilters.has("cited");
+  const uncitedSel = selectedFilters.has("uncited");
+  const isFiltered = (citedSel && !uncitedSel) || (!citedSel && uncitedSel);
+
+  return (
+    <div className="inline-block">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="inline-flex items-center gap-1 group"
+        style={{ fontFamily: "var(--font-sans)" }}
+      >
+        <span
+          className="font-semibold uppercase text-[var(--color-fg-muted)] group-hover:text-[var(--color-fg-secondary)] transition-colors"
+          style={{ fontSize: 11, letterSpacing: "0.08em" }}
+        >
+          Cited
+        </span>
+        <HoverHint hint="Which AI engines linked to your site in their answer.">
+          <HelpCircle className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-70" />
+        </HoverHint>
+        {isFiltered && (
+          <span
+            className="inline-flex items-center justify-center rounded-full tabular-nums"
+            style={{
+              minWidth: 16,
+              height: 16,
+              fontSize: 10,
+              fontWeight: 700,
+              backgroundColor: COLORS.primary,
+              color: "white",
+              padding: "0 4px",
+            }}
+          >
+            1
+          </span>
+        )}
+        <ChevronDown
+          className={
+            "h-3 w-3 text-[var(--color-fg-muted)] transition-transform " +
+            (open ? "rotate-180" : "")
+          }
+        />
+      </button>
+
+      {open && mounted && pos &&
+        createPortal(
+          <motion.div
+            ref={popoverRef}
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.15, ease: EASE }}
+            className="rounded-md shadow-lg overflow-hidden"
+            style={{
+              position: "fixed",
+              top: pos.top,
+              left: pos.left,
+              zIndex: 9999,
+              backgroundColor: "var(--color-surface)",
+              border: "1px solid var(--color-border)",
+              minWidth: 200,
+            }}
+          >
+            <div className="px-3 py-2 border-b border-[var(--color-border)]">
+              <span
+                className="font-semibold uppercase text-[var(--color-fg-muted)]"
+                style={{ fontSize: 10, letterSpacing: "0.08em" }}
+              >
+                Filter by citation
+              </span>
+            </div>
+            <div className="py-1.5">
+              {(
+                [
+                  { id: "cited" as const, label: "Cited", color: "#7D8E6C" },
+                  { id: "uncited" as const, label: "Not cited", color: "#B54631" },
+                ]
+              ).map((opt) => {
+                const checked = selectedFilters.has(opt.id);
+                return (
+                  <label
+                    key={opt.id}
+                    className="flex items-center gap-2.5 px-3 py-1.5 cursor-pointer hover:bg-[var(--color-surface-alt)]/50 transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => onToggleFilter(opt.id)}
+                      className="h-3.5 w-3.5 cursor-pointer accent-[var(--color-primary)]"
+                    />
+                    <span
+                      className="inline-block rounded-full shrink-0"
+                      style={{ width: 9, height: 9, backgroundColor: opt.color }}
+                    />
+                    <span
+                      className="flex-1"
+                      style={{
+                        fontSize: 13,
+                        color: "var(--color-fg)",
+                        fontFamily: "var(--font-sans)",
+                      }}
+                    >
+                      {opt.label}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </motion.div>,
+          document.body,
+        )}
     </div>
   );
 }
@@ -2358,21 +2713,85 @@ function PromptsTable({
   data: PromptsData;
   onSeeBranded?: () => void;
 }) {
+  const { activeBusiness } = useActiveBusiness();
+  // Faded teaser prompt rendered in the Add prompts row at the bottom.
+  // Pulled from the active business's industry + city so it reads as a
+  // realistic next-prompt suggestion. Falls back to a generic template
+  // when no business is loaded (e.g. local dev with the auth bypass).
+  const teaserPrompt = useMemo(() => {
+    const industry = activeBusiness?.industry?.toLowerCase() ?? "service";
+    const city = activeBusiness?.city ?? "your city";
+    const samples = [
+      `Best ${industry} in ${city} for new clients`,
+      `Most affordable ${industry} near ${city}`,
+      `Top-rated ${industry} in ${city} open this weekend`,
+      `Who do locals recommend for ${industry} in ${city}?`,
+    ];
+    // Stable per-render: pick by business id hash so the same business
+    // always sees the same teaser (until they change businesses).
+    const seed = activeBusiness?.id ?? "fallback";
+    const h = Math.abs(
+      [...seed].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 0),
+    );
+    return samples[h % samples.length];
+  }, [activeBusiness?.id, activeBusiness?.industry, activeBusiness?.city]);
+
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
   const [pageSize, setPageSize] = useState<number | "all">(20);
+  // Two-mode view: the existing data-dense table, OR the
+  // industry-specific themes view (PromptsByCluster). Hash-aware so that
+  // deep-links from the cluster card on /competitor-comparison
+  // (`#cluster-personal-injury` etc.) auto-flip into themes mode.
+  const [viewMode, setViewMode] = useState<"list" | "themes">("list");
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sync = () => {
+      const h = window.location.hash.replace(/^#/, "");
+      if (
+        h === "themes" ||
+        h === "prompts-by-cluster" ||
+        h.startsWith("cluster-")
+      ) {
+        setViewMode("themes");
+      }
+    };
+    sync();
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, []);
 
-  // Distinct intents available, derived from current prompts (stable order).
-  const allIntents = useMemo(() => {
-    const seen: string[] = [];
-    for (const p of prompts) if (!seen.includes(p.intent)) seen.push(p.intent);
-    return seen;
-  }, [prompts]);
+  // If the page was opened with #prompts-table (e.g. from Prompt Dominance
+  // CTAs), scroll it to the vertical center of the viewport.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash.replace(/^#/, "");
+    if (hash !== "prompts-table") return;
+    const t = setTimeout(() => {
+      document
+        .getElementById("prompts-table")
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+    return () => clearTimeout(t);
+  }, []);
 
-  // Selected intents for filtering. Default to all selected (no filter).
-  const [selectedIntents, setSelectedIntents] = useState<Set<string>>(
-    () => new Set(allIntents),
+  // Canonical intent list — fixed order matching the product taxonomy.
+  // Using a static list (not derived from prompts) so all 5 intents always
+  // appear in the filter dropdown, even when some have zero matching prompts.
+  const allIntents = useMemo(
+    () => Object.keys(INTENT_COLORS),
+    [],
   );
+
+  // Selected intents for filtering. If the URL has ?intent=X on mount,
+  // pre-select just that intent so the table lands filtered to that intent.
+  const [selectedIntents, setSelectedIntents] = useState<Set<string>>(() => {
+    if (typeof window !== "undefined") {
+      const param = new URLSearchParams(window.location.search).get("intent");
+      if (param) return new Set([param]);
+    }
+    return new Set(allIntents);
+  });
 
   // Re-sync if the underlying intent set changes (e.g., new prompts arrive).
   useEffect(() => {
@@ -2381,8 +2800,9 @@ function PromptsTable({
       for (const i of allIntents) {
         if (prev.size === 0 || prev.has(i)) next.add(i);
       }
-      // If the previous set covered everything before, keep it covering everything.
-      if (next.size === 0) return new Set(allIntents);
+      // prev was explicitly filtered to an intent not in current prompts — preserve it
+      // so the table shows empty state instead of silently showing all prompts.
+      if (next.size === 0) return prev.size > 0 ? prev : new Set(allIntents);
       return next;
     });
   }, [allIntents]);
@@ -2403,9 +2823,14 @@ function PromptsTable({
         if (wantUnbranded && p.type !== "unbranded") return false;
       }
       if (statusActive) {
-        const cited = p.position != null;
-        if (wantCited && !cited) return false;
-        if (wantUncited && cited) return false;
+        // "Cited" axis is now link presence — at least one engine
+        // included a link in its answer (matches the Cited column dots).
+        const engineIds = ["chatgpt", "claude", "gemini", "google_ai"] as const;
+        const linked = engineIds.some((e) =>
+          linkHit(p.id, e, !!p.engineHits[e]),
+        );
+        if (wantCited && !linked) return false;
+        if (wantUncited && linked) return false;
       }
       return true;
     });
@@ -2452,20 +2877,109 @@ function PromptsTable({
       className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] scroll-mt-6"
     >
       <div className="grid grid-cols-3 items-center gap-3 px-6 py-4 border-b border-[var(--color-border)]">
-        <div className="flex items-center gap-2.5">
-          <h2
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: 44,
-              fontWeight: 500,
-              color: "var(--color-fg)",
-              letterSpacing: "-0.01em",
-              lineHeight: 1,
-            }}
-          >
-            Tracked Prompts
-          </h2>
-          <InfoTooltip hint="Every prompt we run on your behalf, ranked by monthly search volume." />
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2.5">
+            <h2
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 44,
+                fontWeight: 500,
+                color: "var(--color-fg)",
+                letterSpacing: "-0.01em",
+                lineHeight: 1,
+              }}
+            >
+              Tracked Prompts
+            </h2>
+            <InfoTooltip hint="Every prompt we run on your behalf, ranked by monthly search volume." />
+          </div>
+
+          {/* General ↔ Personalized view toggle. Pinned next to the title so
+              the user reads "Tracked Prompts · General | Personalized" as
+              one cluster. Personalized pill has a subtle sage glow to hint
+              "this is the AI-personalized view." */}
+          <div className="inline-flex items-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] p-1 gap-1">
+            <HoverHint hint="Data-dense list of every prompt with engine hit map and sentiment.">
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                aria-pressed={viewMode === "list"}
+                className={
+                  "inline-flex items-center gap-2 px-5 py-2 rounded-[var(--radius-md)] transition-colors capitalize whitespace-nowrap " +
+                  (viewMode === "list"
+                    ? "bg-[var(--color-primary)] text-white"
+                    : "text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-alt)]")
+                }
+                style={{
+                  fontSize: 18,
+                  fontFamily: "var(--font-display)",
+                  fontWeight: 500,
+                  letterSpacing: "0.01em",
+                }}
+              >
+                General
+              </button>
+            </HoverHint>
+            <HoverHint hint="Personalized themes — prompts grouped by industry-specific topics. Powers the cluster gap analysis on Competitor Comparison.">
+              <button
+                type="button"
+                onClick={() => setViewMode("themes")}
+                aria-pressed={viewMode === "themes"}
+                className={
+                  "inline-flex items-center gap-2 px-5 py-2 rounded-[var(--radius-md)] capitalize whitespace-nowrap transition-all " +
+                  (viewMode === "themes" ? "text-white" : "")
+                }
+                style={{
+                  fontSize: 18,
+                  fontFamily: "var(--font-display)",
+                  fontWeight: 500,
+                  letterSpacing: "0.01em",
+                  // Always render the multi-stop sage→gold→amber gradient so
+                  // the pill ALWAYS reads as a "smart / AI-powered" tab.
+                  // When inactive the gradient sits at low alpha behind the
+                  // text; when active it goes full and the outer glow intensifies.
+                  background:
+                    viewMode === "themes"
+                      ? "linear-gradient(135deg, #96A283 0%, #B8A030 55%, #C97B45 100%)"
+                      : "linear-gradient(135deg, rgba(150,162,131,0.22) 0%, rgba(184,160,48,0.18) 55%, rgba(201,123,69,0.18) 100%)",
+                  color:
+                    viewMode === "themes" ? "#fff" : "#5E7250",
+                  boxShadow:
+                    viewMode === "themes"
+                      ? "0 0 22px -2px rgba(150,162,131,0.85), 0 0 8px rgba(184,160,48,0.55), 0 0 0 1px rgba(150,162,131,0.45) inset"
+                      : "0 0 12px -2px rgba(150,162,131,0.45), 0 0 0 1px rgba(150,162,131,0.35) inset",
+                }}
+                onMouseEnter={(e) => {
+                  if (viewMode !== "themes") {
+                    e.currentTarget.style.boxShadow =
+                      "0 0 18px -2px rgba(150,162,131,0.75), 0 0 0 1px rgba(150,162,131,0.55) inset";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (viewMode !== "themes") {
+                    e.currentTarget.style.boxShadow =
+                      "0 0 12px -2px rgba(150,162,131,0.45), 0 0 0 1px rgba(150,162,131,0.35) inset";
+                  }
+                }}
+              >
+                <span
+                  className="h-2.5 w-2.5 rounded-full shrink-0"
+                  style={{
+                    background:
+                      viewMode === "themes"
+                        ? "#fff"
+                        : "linear-gradient(135deg, #96A283, #C97B45)",
+                    boxShadow:
+                      viewMode === "themes"
+                        ? "0 0 8px rgba(255,255,255,0.9), 0 0 14px rgba(255,255,255,0.5)"
+                        : "0 0 8px rgba(150,162,131,0.85)",
+                  }}
+                  aria-hidden
+                />
+                Personalized
+              </button>
+            </HoverHint>
+          </div>
         </div>
         <div className="justify-self-center inline-flex items-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] p-1 gap-1">
           <HoverHint hint={PROMPTS_TAB_HINTS.all}>
@@ -2560,29 +3074,15 @@ function PromptsTable({
               Reset sort
             </motion.button>
           )}
-          <HoverHint hint="Research and add new prompts to track.">
-            <motion.a
-              href="/prompt-research"
-              whileTap={{ scale: 0.96 }}
-              whileHover={{ y: -1 }}
-              transition={{ duration: 0.15, ease: EASE }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] border transition-all"
-              style={{
-                fontSize: 13,
-                fontFamily: "var(--font-sans)",
-                fontWeight: 600,
-                color: COLORS.primaryHover,
-                borderColor: "rgba(150,162,131,0.45)",
-                backgroundColor: "rgba(150,162,131,0.10)",
-              }}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add prompts
-            </motion.a>
-          </HoverHint>
         </div>
       </div>
 
+      {viewMode === "themes" ? (
+        <div className="px-6 py-5">
+          <PromptsByCluster selectedFilters={selectedFilters} />
+        </div>
+      ) : (
+        <>
       {/* Branded warning (minimalist text) + sage-boxed AI summary using
           good/fix structure — fix portion auto-tints rust to match the
           branded < 95% red coding rule. */}
@@ -2675,7 +3175,7 @@ function PromptsTable({
               </th>
               <th className="py-2 pr-4">
                 <span
-                  className="inline-flex items-center font-semibold uppercase text-[var(--color-fg-muted)]"
+                  className="inline-flex items-center gap-1 font-semibold uppercase text-[var(--color-fg-muted)]"
                   style={{
                     fontSize: 11,
                     letterSpacing: "0.08em",
@@ -2683,7 +3183,22 @@ function PromptsTable({
                   }}
                 >
                   Status
+                  <HoverHint hint="Which AI engines mentioned your business in their answer.">
+                    <HelpCircle className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-70" />
+                  </HoverHint>
                 </span>
+              </th>
+              <th className="py-2 pr-4">
+                <CitedFilterHeader
+                  selectedFilters={selectedFilters}
+                  onToggleFilter={onToggleFilter}
+                />
+              </th>
+              <th className="py-2 pr-4">
+                <BrandFilterHeader
+                  selectedFilters={selectedFilters}
+                  onToggleFilter={onToggleFilter}
+                />
               </th>
               <th className="py-2 pr-4">
                 <IntentFilterHeader
@@ -2697,23 +3212,8 @@ function PromptsTable({
                 />
               </th>
               <th className="py-2 pr-4">
-                <span className="inline-flex items-center gap-1">
-                  <SortableHeader label="Coverage" column="coverage" sort={sort} onSort={handleSort} onReset={handleResetSort} />
-                  <span className="relative inline-flex items-center group">
-                    <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help" />
-                    <span
-                      role="tooltip"
-                      className="pointer-events-none absolute left-1/2 bottom-full z-50 mb-2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[12px] leading-snug text-[var(--color-fg-secondary)] shadow-md font-normal"
-                      style={{ width: 220 }}
-                    >
-                      % of AI engines mentioning you on this prompt + 30-day change.
-                    </span>
-                  </span>
-                </span>
-              </th>
-              <th className="py-2 pr-4">
                 <div className="flex justify-end">
-                  <SortableHeader label="Position" column="position" sort={sort} onSort={handleSort} onReset={handleResetSort} />
+                  <SortableHeader label="Avg Rank" column="position" sort={sort} onSort={handleSort} onReset={handleResetSort} />
                 </div>
               </th>
               <th className="py-2 pl-4">
@@ -2747,12 +3247,9 @@ function PromptsTable({
                     className="cursor-pointer hover:bg-[var(--color-surface-alt)]/40 transition-colors"
                     style={{
                       borderBottom: rowBorder,
-                      // Branded prompts get a subtle full-row sage tint to
-                      // visually distinguish them from unbranded rows.
-                      backgroundColor:
-                        p.type === "branded"
-                          ? "rgba(150,162,131,0.07)"
-                          : undefined,
+                      // Branded distinction now lives in the dedicated
+                      // Brand column; rows render with no special tint.
+                      background: "transparent",
                     }}
                     aria-expanded={isOpen}
                   >
@@ -2764,170 +3261,315 @@ function PromptsTable({
                         }
                       />
                     </td>
-                    <td className="py-2 pr-4">
-                      <span
-                        style={{
-                          fontFamily: "var(--font-display)",
-                          fontSize: 19,
-                          color: "var(--color-fg)",
-                          letterSpacing: "-0.01em",
-                        }}
+                    {/* Prompt text — Inter 13, matches Personalized table */}
+                    <td className="py-2.5 px-5">
+                      <p
+                        className="text-[var(--color-fg)] leading-snug"
+                        style={{ fontSize: 13 }}
                       >
-                        "{p.text}"
+                        &ldquo;{p.text}&rdquo;
+                      </p>
+                    </td>
+                    {/* Volume — tabular Inter 12 */}
+                    <td className="py-2.5 px-4 text-right">
+                      <span
+                        className="tabular-nums text-[var(--color-fg-secondary)]"
+                        style={{ fontSize: 12, fontWeight: 600 }}
+                      >
+                        {p.volume.toLocaleString()}
                       </span>
                     </td>
-                    <td className="py-2 pr-4">
-                      <div className="flex items-baseline gap-1">
+                    {/* Status — per-engine dot row. One small dot per AI
+                        model (ChatGPT / Claude / Gemini / Google AI). Sage
+                        if that engine cited the brand, faded if not. If
+                        ZERO engines cited, the whole group goes rust on a
+                        red-tinted pill so it reads as urgent. */}
+                    <td className="py-2.5 px-4">
+                      {(() => {
+                        const engineIds = [
+                          "chatgpt",
+                          "claude",
+                          "gemini",
+                          "google_ai",
+                        ] as const;
+                        const hits = engineIds.map((e) => !!p.engineHits[e]);
+                        const cited = hits.filter(Boolean).length;
+                        const allMissed = cited === 0;
+                        const lowCoverage = cited === 1;
+                        const tone = allMissed
+                          ? "rust"
+                          : lowCoverage
+                            ? "amber"
+                            : "ok";
+                        const TONE = {
+                          rust: {
+                            bg: "rgba(181,70,49,0.10)",
+                            border: "transparent",
+                            dot: "#B54631",
+                            text: "#B54631",
+                          },
+                          amber: {
+                            bg: "rgba(201,123,69,0.10)",
+                            border: "transparent",
+                            dotMissed: "rgba(107,109,107,0.3)",
+                            text: "#A06210",
+                          },
+                        } as const;
+                        return (
+                          <div
+                            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full"
+                            style={{
+                              backgroundColor:
+                                tone === "rust"
+                                  ? TONE.rust.bg
+                                  : tone === "amber"
+                                    ? TONE.amber.bg
+                                    : "transparent",
+                              border:
+                                tone === "rust"
+                                  ? `1px solid ${TONE.rust.border}`
+                                  : tone === "amber"
+                                    ? `1px solid ${TONE.amber.border}`
+                                    : "1px solid transparent",
+                            }}
+                            title={
+                              allMissed
+                                ? "Zero AI engines cited you on this prompt — visibility leak"
+                                : lowCoverage
+                                  ? "Only 1 of 4 AI engines cited you — weak coverage"
+                                  : `Cited by ${cited} of 4 AI engines`
+                            }
+                          >
+                            {engineIds.map((e, i) => (
+                              <span
+                                key={e}
+                                className="rounded-full"
+                                style={{
+                                  width: 7,
+                                  height: 7,
+                                  backgroundColor: allMissed
+                                    ? "#B54631"
+                                    : hits[i]
+                                      ? "#7D8E6C"
+                                      : "rgba(107,109,107,0.3)",
+                                }}
+                              />
+                            ))}
+                            {(allMissed || lowCoverage) && (
+                              <span
+                                className="uppercase tracking-wider"
+                                style={{
+                                  fontSize: 9.5,
+                                  fontWeight: 700,
+                                  color: allMissed
+                                    ? TONE.rust.text
+                                    : TONE.amber.text,
+                                  letterSpacing: "0.08em",
+                                  marginLeft: 2,
+                                }}
+                              >
+                                {cited}/4
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </td>
+                    {/* Cited — same visual treatment as Status (4-dot pill),
+                        but semantics are "did this engine include a LINK in
+                        its answer?" rather than "did it mention you?". An
+                        engine can mention you without linking — that's a
+                        weaker citation. Synthesized deterministically from
+                        prompt id + engine until real link data lands. */}
+                    <td className="py-2.5 px-4">
+                      {(() => {
+                        const engineIds = [
+                          "chatgpt",
+                          "claude",
+                          "gemini",
+                          "google_ai",
+                        ] as const;
+                        const links = engineIds.map((e) =>
+                          linkHit(p.id, e, !!p.engineHits[e]),
+                        );
+                        const linked = links.filter(Boolean).length;
+                        const allMissed = linked === 0;
+                        const lowCoverage = linked === 1;
+                        return (
+                          <div
+                            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full"
+                            style={{
+                              backgroundColor: allMissed
+                                ? "rgba(181,70,49,0.10)"
+                                : lowCoverage
+                                  ? "rgba(201,123,69,0.10)"
+                                  : "transparent",
+                              border: "1px solid transparent",
+                            }}
+                            title={
+                              allMissed
+                                ? "Zero AI engines linked to you in their answer"
+                                : lowCoverage
+                                  ? "Only 1 of 4 AI engines linked to you"
+                                  : `Linked by ${linked} of 4 AI engines`
+                            }
+                          >
+                            {engineIds.map((e, i) => (
+                              <span
+                                key={e}
+                                className="rounded-full"
+                                style={{
+                                  width: 7,
+                                  height: 7,
+                                  backgroundColor: allMissed
+                                    ? "#B54631"
+                                    : links[i]
+                                      ? "#7D8E6C"
+                                      : "rgba(107,109,107,0.3)",
+                                }}
+                              />
+                            ))}
+                            {(allMissed || lowCoverage) && (
+                              <span
+                                className="uppercase tracking-wider"
+                                style={{
+                                  fontSize: 9.5,
+                                  fontWeight: 700,
+                                  color: allMissed ? "#B54631" : "#A06210",
+                                  letterSpacing: "0.08em",
+                                  marginLeft: 2,
+                                }}
+                              >
+                                {linked}/4
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </td>
+                    {/* Brand — own column. Compact sage pill if branded,
+                        em-dash otherwise. Driven by p.type which the
+                        existing data model already tracks. */}
+                    <td className="py-2.5 px-4 text-center">
+                      {p.type === "branded" ? (
                         <span
-                          className="tabular-nums"
+                          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 whitespace-nowrap"
                           style={{
-                            fontFamily: "var(--font-display)",
-                            fontSize: 22,
-                            fontWeight: 500,
-                            color: "var(--color-fg)",
-                            letterSpacing: "-0.01em",
+                            fontSize: 9.5,
+                            fontWeight: 700,
+                            color: "#7D8E6C",
+                            backgroundColor: "#7D8E6C1F",
                           }}
+                          title="Prompt includes your brand name directly."
                         >
-                          {fmtVolume(p.volume)}
+                          <span
+                            className="rounded-full shrink-0"
+                            style={{
+                              width: 4,
+                              height: 4,
+                              backgroundColor: "#7D8E6C",
+                            }}
+                          />
+                          Branded
                         </span>
+                      ) : (
                         <span
                           className="text-[var(--color-fg-muted)]"
-                          style={{ fontSize: 12.5 }}
+                          style={{ fontSize: 12 }}
                         >
-                          /mo
+                          —
                         </span>
-                      </div>
+                      )}
                     </td>
-                    <td className="py-2 pr-4">
+                    {/* Intent — single primary intent pill (branded lives
+                        in its own column now). */}
+                    <td className="py-2.5 px-4 text-center">
                       {(() => {
-                        const cited = p.position != null;
+                        const id = primaryIntent(p.text);
+                        const cat = PROMPT_CATEGORIES[id];
                         return (
                           <span
-                            className="inline-flex items-center gap-1.5"
+                            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 whitespace-nowrap"
                             style={{
-                              fontSize: 12.5,
-                              color: cited ? "#5E7250" : "#B54631",
-                              fontFamily: "var(--font-sans)",
-                              fontWeight: 500,
+                              fontSize: 10.5,
+                              fontWeight: 700,
+                              color: cat.color,
+                              backgroundColor: `${cat.color}1F`,
                             }}
+                            title={cat.description}
                           >
                             <span
                               className="rounded-full shrink-0"
                               style={{
-                                width: 8,
-                                height: 8,
-                                backgroundColor: cited ? "#5E7250" : "#B54631",
+                                width: 5,
+                                height: 5,
+                                backgroundColor: cat.color,
                               }}
                             />
-                            {cited ? "Cited" : "Not cited"}
+                            {cat.label}
                           </span>
                         );
                       })()}
                     </td>
-                    <td className="py-2 pr-4 overflow-hidden">
-                      {(() => {
-                        const c = intentChip(p.intent);
-                        return (
-                          <span
-                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-medium max-w-full"
-                            style={{
-                              fontSize: 12.5,
-                              color: c.fg,
-                              backgroundColor: c.bg,
-                              border: `1px solid ${c.border}`,
-                            }}
-                            title={p.intent}
-                          >
-                            <span
-                              className="rounded-full shrink-0"
-                              style={{ width: 7, height: 7, backgroundColor: c.fg }}
-                            />
-                            <span className="truncate">{p.intent}</span>
-                          </span>
-                        );
-                      })()}
-                    </td>
-                    <td className="py-2 pr-4">
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className="relative rounded-full bg-[var(--color-border)]"
-                          style={{ width: 110, height: 7 }}
-                        >
-                          <div
-                            className="absolute inset-y-0 left-0 rounded-full"
-                            style={{
-                              width: `${coveragePct}%`,
-                              backgroundColor:
-                                p.type === "branded"
-                                  ? // Branded: <95% is a credibility leak — red
-                                    coveragePct >= 95
-                                    ? COLORS.primary
-                                    : "#B54631"
-                                  : hits / totalEngines >= 0.6
-                                  ? COLORS.primary
-                                  : hits / totalEngines >= 0.4
-                                  ? "#C97B45"
-                                  : "#B54631",
-                            }}
-                          />
-                        </div>
-                        <span
-                          style={{
-                            fontFamily: "var(--font-display)",
-                            fontSize: 19,
-                            fontWeight: 500,
-                            color:
-                              p.type === "branded" && coveragePct < 95
-                                ? "#B54631"
-                                : "var(--color-fg)",
-                            letterSpacing: "-0.01em",
-                          }}
-                        >
-                          {coveragePct}%
-                        </span>
-                        {p.coverageDelta !== undefined && p.coverageDelta !== 0 && (
-                          <DeltaPill
-                            deltaType={p.coverageDelta > 0 ? "increase" : "decrease"}
-                            value={`${Math.abs(p.coverageDelta).toFixed(1)}%`}
-                          />
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-2 pr-4 text-right tabular-nums">
+                    {/* Position — color-coded by tier (sage at #1, rust
+                        at last). Lower rank = better. */}
+                    <td className="py-2.5 px-4 text-right">
                       {p.position === null ? (
                         <span
                           className="text-[var(--color-fg-muted)]"
-                          style={{ fontSize: 18 }}
+                          style={{
+                            fontFamily: "ui-monospace, monospace",
+                            fontSize: 12,
+                          }}
                         >
                           —
                         </span>
                       ) : (
-                        <span
-                          style={{
-                            fontFamily: "var(--font-display)",
-                            fontSize: 22,
-                            color: "var(--color-fg)",
-                            fontWeight: 500,
-                          }}
-                        >
-                          #{p.position.toFixed(1)}
-                        </span>
+                        (() => {
+                          const r = p.position;
+                          const color =
+                            r <= 1.5
+                              ? "#5E7250"
+                              : r <= 2.5
+                                ? "#7D8E6C"
+                                : r <= 3.5
+                                  ? "#7E6B17"
+                                  : r <= 4.5
+                                    ? "#A06210"
+                                    : "#B54631";
+                          return (
+                            <span
+                              className="inline-flex items-center justify-center tabular-nums rounded-md"
+                              style={{
+                                fontFamily: "ui-monospace, monospace",
+                                fontSize: 12,
+                                fontWeight: 700,
+                                color,
+                                backgroundColor: `${color}1F`,
+                                padding: "2px 8px",
+                                minWidth: 44,
+                              }}
+                              title="Avg rank when mentioned — lower is better"
+                            >
+                              #{r.toFixed(1)}
+                            </span>
+                          );
+                        })()
                       )}
                     </td>
-                    <td className="py-2 pl-4">
-                      <div className="flex justify-end">
-                        <span
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium"
-                          style={{
-                            fontSize: 13.5,
-                            color: sent.color,
-                            backgroundColor: sent.bg,
-                          }}
-                        >
-                          <SentIcon className="h-4 w-4" />
-                          {sent.label}
-                        </span>
-                      </div>
+                    {/* Sentiment — compact pill, no icon */}
+                    <td className="py-2.5 px-5 text-right">
+                      <span
+                        className="inline-flex items-center rounded-full px-2.5 py-0.5"
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: sent.color,
+                          backgroundColor: sent.bg,
+                        }}
+                      >
+                        {sent.label}
+                      </span>
                     </td>
                   </motion.tr>
                   {isOpen && (
@@ -2938,7 +3580,7 @@ function PromptsTable({
                       style={{ borderBottom: rowBorder }}
                     >
                       <td
-                        colSpan={8}
+                        colSpan={9}
                         className="px-4 py-5"
                         style={{ backgroundColor: "rgba(150,162,131,0.06)" }}
                       >
@@ -3030,6 +3672,59 @@ function PromptsTable({
                 </Fragment>
               );
             })}
+            {/* Bottom CTA row — designed as a "ghost" preview of what
+                the user's NEXT tracked prompt could look like. Plus icon
+                + faded sample query on the left (italic, ~40% opacity),
+                Add prompts label on the right. Whole row is the link to
+                /prompt-research. */}
+            <tr>
+              <td colSpan={9} className="p-0">
+                <motion.a
+                  href="/prompt-research"
+                  whileTap={{ scale: 0.99 }}
+                  className="flex items-center justify-between gap-4 px-6 py-3 transition-colors hover:bg-[var(--color-surface-alt)]/60 group"
+                  style={{
+                    fontFamily: "var(--font-sans)",
+                    borderTop: "1px dashed var(--color-border)",
+                  }}
+                >
+                  <span className="flex items-center gap-3 min-w-0 flex-1">
+                    <span
+                      className="inline-flex items-center justify-center rounded-full shrink-0 transition-transform group-hover:scale-110"
+                      style={{
+                        width: 22,
+                        height: 22,
+                        backgroundColor: "rgba(150,162,131,0.18)",
+                        color: COLORS.primaryHover,
+                      }}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </span>
+                    <span
+                      className="truncate italic"
+                      style={{
+                        fontSize: 13,
+                        color: "var(--color-fg-muted)",
+                        opacity: 0.7,
+                      }}
+                    >
+                      &ldquo;{teaserPrompt}&rdquo;
+                    </span>
+                  </span>
+                  <span
+                    className="inline-flex items-center gap-1 shrink-0 uppercase tracking-wider transition-colors group-hover:text-[var(--color-primary)]"
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      letterSpacing: "0.08em",
+                      color: COLORS.primaryHover,
+                    }}
+                  >
+                    Add prompts
+                  </span>
+                </motion.a>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -3094,6 +3789,8 @@ function PromptsTable({
           </div>
         </div>
       </div>
+        </>
+      )}
 
     </section>
   );
@@ -3204,7 +3901,7 @@ function CoverageDonut({ items }: { items: IntentCoverage[] }) {
   const hoveredSlice = slices.find((s) => s.intent === hovered);
 
   return (
-    <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+    <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 flex flex-col h-full">
       <div className="mb-5 pb-3 border-b border-[var(--color-border)]">
         <div className="flex items-center justify-between gap-4">
           <SectionHeading
@@ -3617,6 +4314,12 @@ function HighlightsTable({
   const toggleRow = (id: string) =>
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
 
+  const PAGE_OPTIONS = [3, 10, "all"] as const;
+  type PageOption = (typeof PAGE_OPTIONS)[number];
+  const [pageSize, setPageSize] = useState<PageOption>(3);
+  const visibleItems =
+    pageSize === "all" ? items : items.slice(0, pageSize as number);
+
   const palette =
     variant === "best"
       ? {
@@ -3635,20 +4338,13 @@ function HighlightsTable({
   return (
     <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col h-full">
       {/* Header — mirrors PromptsTable header style */}
-      <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[var(--color-border)]">
+      <div className="flex items-center px-5 py-4 border-b border-[var(--color-border)]">
         <SectionHeading text={title} info={info} />
-        <a
-          href="#prompts-table"
-          className="inline-flex items-center gap-1 font-medium hover:underline whitespace-nowrap"
-          style={{ fontSize: 12.5, color: COLORS.primaryHover }}
-        >
-          View all
-          <ArrowRight className="h-3.5 w-3.5" />
-        </a>
       </div>
 
-      {/* Table */}
-      <div className="px-3 py-2 overflow-x-auto flex-1">
+      {/* Table — no horizontal scroll. Cells, dots and pills are sized
+          to fit a 50/50 grid layout without overflow. */}
+      <div className="px-2 py-2 flex-1">
         {items.length === 0 ? (
           <p
             className="text-[var(--color-fg-muted)] py-6 text-center"
@@ -3657,45 +4353,63 @@ function HighlightsTable({
             {emptyText}
           </p>
         ) : (
-          <table className="w-full" style={{ fontSize: 12.5, tableLayout: "fixed" }}>
+          <table
+            className="w-full"
+            style={{ fontSize: 12, tableLayout: "fixed" }}
+          >
+            {/* Strict per-column widths so the table can never overflow the
+                50/50 grid card. Prompt absorbs leftover space; data cols
+                get just enough room for their compacted contents. */}
             <colgroup>
-              <col style={{ width: 22 }} />
+              <col style={{ width: 18 }} />
               <col />
-              <col style={{ width: 60 }} />
-              <col style={{ width: 108 }} />
-              <col style={{ width: 96 }} />
-              <col style={{ width: 76 }} />
-              <col style={{ width: 92 }} />
+              <col style={{ width: 50 }} />
+              <col style={{ width: 56 }} />
+              <col style={{ width: 56 }} />
+              <col style={{ width: 64 }} />
+              <col style={{ width: 70 }} />
+              <col style={{ width: 50 }} />
+              <col style={{ width: 64 }} />
             </colgroup>
             <thead>
               <tr style={{ borderBottom: "2px solid rgba(60,62,60,0.22)" }}>
-                <th />
-                {["Prompt", "Volume", "Intent", "Coverage", "Position", "Sentiment"].map(
-                  (label, idx) => (
-                    <th
-                      key={label}
-                      className={
-                        "py-2 pr-2 " +
-                        (idx === 4 || idx === 5 ? "text-right" : "text-left")
-                      }
-                    >
-                      <span
-                        className="font-semibold uppercase text-[var(--color-fg-muted)]"
-                        style={{
-                          fontSize: 10.5,
-                          letterSpacing: "0.08em",
-                          fontFamily: "var(--font-sans)",
-                        }}
-                      >
-                        {label}
-                      </span>
-                    </th>
-                  ),
-                )}
+                <th className="w-4" />
+                {(
+                  [
+                    { label: "Prompt", align: "left" as const },
+                    { label: "Vol", align: "right" as const },
+                    { label: "Status", align: "center" as const },
+                    { label: "Cited", align: "center" as const },
+                    { label: "Brand", align: "center" as const },
+                    { label: "Intent", align: "center" as const },
+                    { label: "Rank", align: "right" as const },
+                    { label: "Sent", align: "right" as const },
+                  ]
+                ).map(({ label, align }) => (
+                  <th
+                    key={label}
+                    className={
+                      "py-2 px-1 uppercase tracking-wider text-[var(--color-fg-muted)] " +
+                      (align === "right"
+                        ? "text-right"
+                        : align === "center"
+                          ? "text-center"
+                          : "text-left")
+                    }
+                    style={{
+                      fontSize: 9.5,
+                      fontWeight: 600,
+                      letterSpacing: "0.06em",
+                      fontFamily: "var(--font-sans)",
+                    }}
+                  >
+                    {label}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {items.map((item, idx) => {
+              {visibleItems.map((item, idx) => {
                 const p = item.prompt;
                 const hits = Object.values(p.engineHits).filter(Boolean).length;
                 const totalEngines = Object.keys(p.engineHits).length;
@@ -3720,21 +4434,24 @@ function HighlightsTable({
                       style={{ borderBottom: rowBorder }}
                       aria-expanded={isOpen}
                     >
-                      <td className="py-2 pr-1 align-middle">
+                      <td className="py-2 pl-2 pr-0.5 align-middle">
                         <ChevronDown
                           className={
-                            "h-4 w-4 text-[var(--color-fg-muted)] transition-transform duration-200 " +
+                            "h-3.5 w-3.5 text-[var(--color-fg-muted)] transition-transform duration-200 " +
                             (isOpen ? "rotate-180" : "")
                           }
                         />
                       </td>
-                      <td className="py-2 pr-2 align-top">
-                        {/* Reason chip stacked above the prompt text */}
+                      <td className="py-2 pl-1 pr-2 align-middle">
+                        {/* Reason chip stacked ABOVE the prompt so the
+                            prompt column doesn't have to share its width
+                            with the chip — gives the quoted text full
+                            row width and prevents overflow. */}
                         <span
-                          className="inline-flex items-center px-1.5 py-0.5 rounded-full font-semibold uppercase whitespace-nowrap mb-1"
+                          className="inline-flex items-center px-1.5 py-px rounded-full font-semibold uppercase whitespace-nowrap mb-1"
                           style={{
-                            fontSize: 9.5,
-                            letterSpacing: "0.08em",
+                            fontSize: 8.5,
+                            letterSpacing: "0.06em",
                             backgroundColor: palette.tagBg,
                             color: palette.tagFg,
                             border: `1px solid ${palette.tagBorder}`,
@@ -3743,131 +4460,222 @@ function HighlightsTable({
                           {item.reasonTag}
                         </span>
                         <p
-                          style={{
-                            fontFamily: "var(--font-display)",
-                            fontSize: 15.5,
-                            color: "var(--color-fg)",
-                            letterSpacing: "-0.01em",
-                            lineHeight: 1.25,
-                            wordBreak: "break-word",
-                          }}
+                          className="text-[var(--color-fg)] leading-snug truncate"
+                          style={{ fontSize: 12 }}
                         >
-                          "{p.text}"
+                          &ldquo;{p.text}&rdquo;
                         </p>
                       </td>
-                      <td className="py-2 pr-2 align-middle">
-                        <div className="flex items-baseline gap-0.5">
+                      <td className="py-2 px-1 text-right align-middle">
+                        <span
+                          className="tabular-nums text-[var(--color-fg-secondary)]"
+                          style={{ fontSize: 11, fontWeight: 600 }}
+                        >
+                          {p.volume.toLocaleString()}
+                        </span>
+                      </td>
+                      {/* Status — per-engine dot row (mention). Compacted. */}
+                      <td className="py-2 px-1 align-middle">
+                        {(() => {
+                          const engineIds = [
+                            "chatgpt",
+                            "claude",
+                            "gemini",
+                            "google_ai",
+                          ] as const;
+                          const hitsArr = engineIds.map(
+                            (e) => !!p.engineHits[e],
+                          );
+                          const cited = hitsArr.filter(Boolean).length;
+                          const allMissed = cited === 0;
+                          const lowCoverage = cited === 1;
+                          return (
+                            <div
+                              className="inline-flex items-center gap-1 px-1 py-0.5 rounded-full"
+                              style={{
+                                backgroundColor: allMissed
+                                  ? "rgba(181,70,49,0.10)"
+                                  : lowCoverage
+                                    ? "rgba(201,123,69,0.10)"
+                                    : "transparent",
+                              }}
+                            >
+                              {engineIds.map((e, i) => (
+                                <span
+                                  key={e}
+                                  className="rounded-full"
+                                  style={{
+                                    width: 5,
+                                    height: 5,
+                                    backgroundColor: allMissed
+                                      ? "#B54631"
+                                      : hitsArr[i]
+                                        ? "#7D8E6C"
+                                        : "rgba(107,109,107,0.3)",
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </td>
+                      {/* Cited — per-engine link presence. */}
+                      <td className="py-2 px-1 align-middle">
+                        {(() => {
+                          const engineIds = [
+                            "chatgpt",
+                            "claude",
+                            "gemini",
+                            "google_ai",
+                          ] as const;
+                          const links = engineIds.map((e) =>
+                            linkHit(p.id, e, !!p.engineHits[e]),
+                          );
+                          const linked = links.filter(Boolean).length;
+                          const allMissed = linked === 0;
+                          const lowCoverage = linked === 1;
+                          return (
+                            <div
+                              className="inline-flex items-center gap-1 px-1 py-0.5 rounded-full"
+                              style={{
+                                backgroundColor: allMissed
+                                  ? "rgba(181,70,49,0.10)"
+                                  : lowCoverage
+                                    ? "rgba(201,123,69,0.10)"
+                                    : "transparent",
+                              }}
+                            >
+                              {engineIds.map((e, i) => (
+                                <span
+                                  key={e}
+                                  className="rounded-full"
+                                  style={{
+                                    width: 5,
+                                    height: 5,
+                                    backgroundColor: allMissed
+                                      ? "#B54631"
+                                      : links[i]
+                                        ? "#7D8E6C"
+                                        : "rgba(107,109,107,0.3)",
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </td>
+                      {/* Branded — single sage dot if branded, em-dash
+                          otherwise. The narrowest possible representation
+                          to keep the column at 56px. */}
+                      <td className="py-2 px-1 text-center align-middle">
+                        {p.type === "branded" ? (
                           <span
-                            className="tabular-nums"
+                            className="inline-block rounded-full"
                             style={{
-                              fontFamily: "var(--font-display)",
-                              fontSize: 17,
-                              fontWeight: 500,
-                              color: "var(--color-fg)",
-                              letterSpacing: "-0.01em",
+                              width: 8,
+                              height: 8,
+                              backgroundColor: "#7D8E6C",
                             }}
-                          >
-                            {fmtVolume(p.volume)}
-                          </span>
+                            title="Branded prompt"
+                          />
+                        ) : (
                           <span
                             className="text-[var(--color-fg-muted)]"
                             style={{ fontSize: 11 }}
                           >
-                            /mo
+                            —
                           </span>
-                        </div>
+                        )}
                       </td>
-                      <td className="py-2 pr-2 align-middle overflow-hidden">
+                      {/* Intent — pill compacted: smaller font, tighter padding. */}
+                      <td className="py-2 px-1 text-center align-middle">
                         {(() => {
-                          const c = intentChip(p.intent);
+                          const intentId = primaryIntent(p.text);
+                          const cat = PROMPT_CATEGORIES[intentId];
                           return (
                             <span
-                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full font-medium max-w-full"
+                              className="inline-flex items-center gap-1 rounded-full px-1.5 py-px whitespace-nowrap"
                               style={{
-                                fontSize: 11,
-                                color: c.fg,
-                                backgroundColor: c.bg,
-                                border: `1px solid ${c.border}`,
+                                fontSize: 9.5,
+                                fontWeight: 700,
+                                color: cat.color,
+                                backgroundColor: `${cat.color}1F`,
+                                maxWidth: "100%",
                               }}
-                              title={p.intent}
+                              title={cat.description}
                             >
                               <span
                                 className="rounded-full shrink-0"
-                                style={{ width: 6, height: 6, backgroundColor: c.fg }}
+                                style={{
+                                  width: 4,
+                                  height: 4,
+                                  backgroundColor: cat.color,
+                                }}
                               />
-                              <span className="truncate">{p.intent}</span>
+                              <span className="truncate">{cat.label}</span>
                             </span>
                           );
                         })()}
                       </td>
-                      <td className="py-2 pr-2 align-middle">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="relative rounded-full bg-[var(--color-border)]"
-                            style={{ width: 64, height: 6 }}
-                          >
-                            <div
-                              className="absolute inset-y-0 left-0 rounded-full"
-                              style={{
-                                width: `${coveragePct}%`,
-                                backgroundColor:
-                                  hits / totalEngines >= 0.6
-                                    ? COLORS.primary
-                                    : hits / totalEngines >= 0.4
-                                    ? "#C97B45"
-                                    : "#B54631",
-                              }}
-                            />
-                          </div>
-                          <span
-                            className="tabular-nums"
-                            style={{
-                              fontFamily: "var(--font-display)",
-                              fontSize: 15,
-                              fontWeight: 500,
-                              color: "var(--color-fg)",
-                              letterSpacing: "-0.01em",
-                            }}
-                          >
-                            {coveragePct}%
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-2 pr-2 text-right align-middle tabular-nums">
+                      {/* Avg Rank — compacted color-coded pill. */}
+                      <td className="py-2 px-1 text-right align-middle">
                         {p.position === null ? (
                           <span
                             className="text-[var(--color-fg-muted)]"
-                            style={{ fontSize: 15 }}
+                            style={{
+                              fontFamily: "ui-monospace, monospace",
+                              fontSize: 11,
+                            }}
                           >
                             —
                           </span>
                         ) : (
-                          <span
-                            style={{
-                              fontFamily: "var(--font-display)",
-                              fontSize: 17,
-                              color: "var(--color-fg)",
-                              fontWeight: 500,
-                            }}
-                          >
-                            #{p.position.toFixed(1)}
-                          </span>
+                          (() => {
+                            const r = p.position;
+                            const color =
+                              r <= 1.5
+                                ? "#5E7250"
+                                : r <= 2.5
+                                  ? "#7D8E6C"
+                                  : r <= 3.5
+                                    ? "#7E6B17"
+                                    : r <= 4.5
+                                      ? "#A06210"
+                                      : "#B54631";
+                            return (
+                              <span
+                                className="inline-flex items-center justify-center tabular-nums rounded-md"
+                                style={{
+                                  fontFamily: "ui-monospace, monospace",
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  color,
+                                  backgroundColor: `${color}1F`,
+                                  padding: "1px 5px",
+                                  minWidth: 36,
+                                }}
+                              >
+                                #{r.toFixed(1)}
+                              </span>
+                            );
+                          })()
                         )}
                       </td>
-                      <td className="py-2 pl-1 align-middle">
-                        <div className="flex justify-end">
-                          <span
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md font-medium"
-                            style={{
-                              fontSize: 11.5,
-                              color: sent.color,
-                              backgroundColor: sent.bg,
-                            }}
-                          >
-                            <SentIcon className="h-3 w-3" />
-                            {sent.label}
-                          </span>
-                        </div>
+                      {/* Sentiment — abbreviated pill (Pos/Neu/Neg) so the
+                          column fits in 64px without overflow. */}
+                      <td className="py-2 px-1 text-right align-middle">
+                        <span
+                          className="inline-flex items-center rounded-full px-1.5 py-px"
+                          style={{
+                            fontSize: 9.5,
+                            fontWeight: 700,
+                            color: sent.color,
+                            backgroundColor: sent.bg,
+                          }}
+                          title={sent.label}
+                        >
+                          {sent.label.slice(0, 3)}
+                        </span>
                       </td>
                     </motion.tr>
 
@@ -3879,7 +4687,7 @@ function HighlightsTable({
                         style={{ borderBottom: rowBorder }}
                       >
                         <td
-                          colSpan={7}
+                          colSpan={9}
                           className="px-4 py-4"
                           style={{ backgroundColor: "rgba(150,162,131,0.06)" }}
                         >
@@ -3999,13 +4807,42 @@ function HighlightsTable({
         )}
       </div>
 
-      {/* Footer CTA */}
-      <div className="px-5 py-3 border-t border-[var(--color-border)]">
+      {/* Footer — CTA on left, SHOW cluster on right */}
+      <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-[var(--color-border)]">
         <CtaLink
           icon={footerCta.icon}
           label={footerCta.label}
           href={footerCta.href}
         />
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span
+            className="uppercase tracking-wider text-[var(--color-fg-muted)] font-semibold"
+            style={{ fontSize: 10, letterSpacing: "0.08em", fontFamily: "var(--font-sans)" }}
+          >
+            Show
+          </span>
+          <div className="inline-flex items-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] p-0.5 gap-0.5">
+            {PAGE_OPTIONS.map((opt) => {
+              const active = pageSize === opt;
+              const label = opt === "all" ? "All" : String(opt);
+              return (
+                <button
+                  key={opt}
+                  onClick={() => setPageSize(opt)}
+                  className={
+                    "px-2.5 py-0.5 rounded transition-colors font-medium " +
+                    (active
+                      ? "bg-[var(--color-primary)] text-white"
+                      : "text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-alt)]")
+                  }
+                  style={{ fontSize: 12, fontFamily: "var(--font-sans)", cursor: active ? "default" : "pointer" }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -4194,22 +5031,30 @@ function SentimentByTypeCard({ items }: { items: SentimentByType[] }) {
       )}
 
       <div className="flex-1 flex flex-col justify-between">
-        {sorted.map((row) => (
+        {sorted.map((row) => {
+          const intentColor = INTENT_COLORS[row.type] ?? "#888";
+          return (
           <div
             key={row.type}
             className="grid grid-cols-[140px_1fr_auto] items-center gap-3"
           >
             <span
-              className="truncate"
+              className="inline-flex items-center gap-1 rounded-full whitespace-nowrap"
               style={{
-                fontFamily: "var(--font-display)",
-                fontSize: 15,
-                color: "var(--color-fg)",
-                letterSpacing: "-0.01em",
+                fontSize: 11,
+                fontWeight: 700,
+                color: intentColor,
+                backgroundColor: `${intentColor}1F`,
+                padding: "3px 8px 3px 6px",
+                maxWidth: "100%",
               }}
               title={`${row.positive}% positive · ${row.neutral}% neutral · ${row.negative}% negative`}
             >
-              {row.type}
+              <span
+                className="rounded-full shrink-0"
+                style={{ width: 5, height: 5, backgroundColor: intentColor }}
+              />
+              <span className="truncate">{row.type}</span>
             </span>
             <div className="flex h-2 rounded-full overflow-hidden bg-[var(--color-border)]">
               <div
@@ -4241,7 +5086,7 @@ function SentimentByTypeCard({ items }: { items: SentimentByType[] }) {
               {row.total} mentions
             </span>
           </div>
-        ))}
+        ); })}
       </div>
 
       <div className="mt-4 pt-3 border-t border-[var(--color-border)]">
@@ -4277,7 +5122,47 @@ interface InsightCardProps {
   items: InsightItemData[];
 }
 
+const INSIGHT_PAGE_SIZE = 3;
+
+function InsightNavArrow({
+  dir,
+  onClick,
+  disabled,
+}: {
+  dir: "up" | "down";
+  onClick: () => void;
+  disabled: boolean;
+}) {
+  const Icon = dir === "up" ? ChevronUp : ChevronDown;
+  const wrapperPad = dir === "up" ? "pt-2 pb-1" : "pt-1 pb-2";
+  return (
+    <div className={`flex justify-center ${wrapperPad}`}>
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        aria-label={dir === "up" ? "Show previous" : "Show next"}
+        className={
+          "rounded-full p-1 transition-colors " +
+          (disabled
+            ? "text-[var(--color-border)] cursor-default"
+            : "text-[var(--color-fg-secondary)] hover:text-[var(--color-fg)] hover:bg-[var(--color-surface-alt)] cursor-pointer")
+        }
+      >
+        <Icon className="h-5 w-5" />
+      </button>
+    </div>
+  );
+}
+
 function InsightCard({ variant, tag, title, summary, items }: InsightCardProps) {
+  const [page, setPage] = useState(0);
+  const totalPages = Math.max(1, Math.ceil(items.length / INSIGHT_PAGE_SIZE));
+  const visibleItems = items.slice(
+    page * INSIGHT_PAGE_SIZE,
+    page * INSIGHT_PAGE_SIZE + INSIGHT_PAGE_SIZE,
+  );
+
   const palette =
     variant === "wins"
       ? {
@@ -4337,65 +5222,73 @@ function InsightCard({ variant, tag, title, summary, items }: InsightCardProps) 
         </p>
       </div>
 
-      {/* Sub-cards */}
-      <motion.div
-        initial="initial"
-        whileInView="whileInView"
-        viewport={{ once: true, margin: "-60px" }}
-        transition={{ staggerChildren: 0.07, delayChildren: 0.08 }}
-        className="flex-1 p-4 space-y-3"
-      >
-        {items.map((item, idx) => {
-          const ItemIcon = INSIGHT_ICON[item.iconKey];
-          return (
-            <motion.div
-              key={idx}
-              variants={{
-                initial: { opacity: 0 },
-                whileInView: { opacity: 1 },
-              }}
-              transition={{ duration: 0.4, ease: EASE }}
-              whileHover={{ y: -2 }}
-              className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 flex items-start gap-3 hover:bg-[var(--color-surface-alt)]/40 transition-colors"
-            >
+      {/* Sub-cards with up/down arrow paging */}
+      <div className="flex-1 flex flex-col px-4 pb-2">
+        <InsightNavArrow
+          dir="up"
+          onClick={() => setPage((p) => Math.max(0, p - 1))}
+          disabled={page === 0}
+        />
+
+        <motion.div
+          key={page}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, ease: EASE }}
+          className="space-y-3"
+        >
+          {visibleItems.map((item, idx) => {
+            const ItemIcon = INSIGHT_ICON[item.iconKey];
+            return (
               <div
-                className="h-9 w-9 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
-                style={{ backgroundColor: palette.tileBg }}
+                key={idx}
+                className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 flex items-start gap-3 hover:bg-[var(--color-surface-alt)]/40 transition-colors"
               >
-                <ItemIcon className="h-4 w-4" style={{ color: palette.accent }} />
+                <div
+                  className="h-9 w-9 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: palette.tileBg }}
+                >
+                  <ItemIcon className="h-4 w-4" style={{ color: palette.accent }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p
+                    style={{
+                      fontFamily: "var(--font-display)",
+                      fontSize: 17,
+                      fontWeight: 500,
+                      color: "var(--color-fg)",
+                      letterSpacing: "-0.01em",
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {item.title}
+                  </p>
+                  <p
+                    className="text-[var(--color-fg-muted)] mt-1"
+                    style={{ fontSize: 12.5, lineHeight: 1.5 }}
+                  >
+                    {item.description}
+                  </p>
+                  <a
+                    href={item.cta.href}
+                    className="group inline-flex items-center gap-1 mt-2 font-semibold transition-opacity hover:opacity-80"
+                    style={{ fontSize: 12.5, color: palette.accentText }}
+                  >
+                    {item.cta.label}
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                  </a>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: 17,
-                    fontWeight: 500,
-                    color: "var(--color-fg)",
-                    letterSpacing: "-0.01em",
-                    lineHeight: 1.2,
-                  }}
-                >
-                  {item.title}
-                </p>
-                <p
-                  className="text-[var(--color-fg-muted)] mt-1"
-                  style={{ fontSize: 12.5, lineHeight: 1.5 }}
-                >
-                  {item.description}
-                </p>
-                <a
-                  href={item.cta.href}
-                  className="group inline-flex items-center gap-1 mt-2 font-semibold transition-opacity hover:opacity-80"
-                  style={{ fontSize: 12.5, color: palette.accentText }}
-                >
-                  {item.cta.label}
-                  <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-                </a>
-              </div>
-            </motion.div>
-          );
-        })}
-      </motion.div>
+            );
+          })}
+        </motion.div>
+
+        <InsightNavArrow
+          dir="down"
+          onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+          disabled={page >= totalPages - 1}
+        />
+      </div>
     </section>
   );
 }
@@ -4605,12 +5498,8 @@ export function PromptsSection() {
         <FlaggedPromptsCard items={highlights.flagged} />
       </motion.div>
 
-      <motion.div {...reveal}>
+      <motion.div {...reveal} className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-5 items-stretch">
         <CoverageDonut items={data.intentCoverage} />
-      </motion.div>
-
-      <motion.div {...reveal} className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <CitationSourcesCard items={data.citationSources} />
         <SentimentByTypeCard items={data.sentimentByType} />
       </motion.div>
 
@@ -4669,6 +5558,8 @@ export function PromptsSection() {
           />
         </div>
       </motion.div>
+
+      <BetaFeedbackFooter />
     </div>
   );
 }
