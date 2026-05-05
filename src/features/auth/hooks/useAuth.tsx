@@ -66,7 +66,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    // "Remember me" support — when the user opted out at sign-in, sign them
+    // out as soon as the tab closes. sessionStorage is per-tab, so the flag
+    // disappears with the tab even when localStorage still holds the session.
+    function handleBeforeUnload() {
+      try {
+        if (sessionStorage.getItem("surven.tempSession") === "1") {
+          // Fire-and-forget — browser may not wait for the promise.
+          supabase.auth.signOut();
+        }
+      } catch {
+        // ignore (storage blocked)
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
   }, []);
 
   const signUp = useCallback(async (email: string, password: string) => {
