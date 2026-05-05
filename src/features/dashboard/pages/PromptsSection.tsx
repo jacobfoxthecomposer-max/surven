@@ -2201,9 +2201,19 @@ function IntentFilterHeader({
 
   function toggle(intent: string) {
     setDraft((prev) => {
+      // Smart "filter to only this" behavior: if every intent is currently
+      // selected (the default state), clicking a single row should narrow
+      // to ONLY that intent — matches how spreadsheet/Notion filters work
+      // and avoids the foot-gun where unchecking one shows the OTHER four.
+      if (prev.size === visibleIntents.length) {
+        return new Set([intent]);
+      }
       const next = new Set(prev);
       if (next.has(intent)) next.delete(intent);
       else next.add(intent);
+      // If they unchecked the last remaining intent, treat as a reset
+      // (otherwise apply would silently re-select all and confuse them).
+      if (next.size === 0) return new Set(visibleIntents);
       return next;
     });
   }
