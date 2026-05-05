@@ -487,6 +487,74 @@ function extractBodyExcerpt(html: string): string {
   return decodeBasicEntities(stripped.slice(0, 1500));
 }
 
+/**
+ * Pull a brand name from on-page signals. og:site_name is the cleanest source — it's
+ * specifically the property OpenGraph defines for "what's the website called." Falls
+ * through to <meta name="application-name">, which serves the same role for PWAs and
+ * is widely set by Next.js metadata.applicationName.
+ *
+ * Returns null if the page exposes no canonical brand name.
+ */
+function deriveBrandFromHtml(html: string): string | undefined {
+  const ogSiteName =
+    /<meta\s+[^>]*property\s*=\s*["']og:site_name["'][^>]*\scontent\s*=\s*["']([^"']+)["']/i.exec(html) ??
+    /<meta\s+[^>]*content\s*=\s*["']([^"']+)["'][^>]*\sproperty\s*=\s*["']og:site_name["']/i.exec(html);
+  if (ogSiteName?.[1]?.trim()) return decodeBasicEntities(ogSiteName[1]!.trim());
+
+  const appName =
+    /<meta\s+[^>]*name\s*=\s*["']application-name["'][^>]*\scontent\s*=\s*["']([^"']+)["']/i.exec(html) ??
+    /<meta\s+[^>]*content\s*=\s*["']([^"']+)["'][^>]*\sname\s*=\s*["']application-name["']/i.exec(html);
+  if (appName?.[1]?.trim()) return decodeBasicEntities(appName[1]!.trim());
+
+  return undefined;
+}
+
+/**
+ * Derive a brand name from the site URL when on-page signals are absent.
+ * surven.vercel.app  → "Surven"
+ * the-hidden-still.com → "The Hidden Still"
+ * api.example.co.uk → "Example"
+ * Strips well-known platform subdomains (vercel.app, netlify.app, etc.) and TLDs.
+ */
+function deriveBrandFromDomain(siteUrl: string): string | undefined {
+  let host: string;
+  try { host = new URL(siteUrl).hostname.toLowerCase(); }
+  catch { return undefined; }
+
+  // Strip leading www.
+  host = host.replace(/^www\./, "");
+
+  // Strip platform subdomains.
+  const platformSuffixes = [".vercel.app", ".netlify.app", ".pages.dev", ".github.io", ".webflow.io", ".wixsite.com"];
+  for (const suffix of platformSuffixes) {
+    if (host.endsWith(suffix)) {
+      host = host.slice(0, host.length - suffix.length);
+      break;
+    }
+  }
+
+  // Strip the rest of the TLD chain — common multi-part: .co.uk, .com.au, .com, etc.
+  // Take the last "real" segment that isn't a country/generic TLD.
+  const parts = host.split(".");
+  let brandSegment: string;
+  if (parts.length === 1) {
+    brandSegment = parts[0]!;
+  } else {
+    const tldsToStrip = new Set(["com", "net", "org", "io", "co", "uk", "us", "au", "de", "fr", "es", "it", "ca", "info", "biz", "app", "dev", "ai"]);
+    let i = parts.length - 1;
+    while (i > 0 && tldsToStrip.has(parts[i]!)) i--;
+    brandSegment = parts[i]!;
+  }
+  if (!brandSegment) return undefined;
+
+  // Title-case, splitting on hyphens or underscores.
+  return brandSegment
+    .split(/[-_]/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
 function decodeBasicEntities(s: string): string {
   return s
     .replace(/&amp;/g, "&")
