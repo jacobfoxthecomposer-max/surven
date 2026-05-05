@@ -1,6 +1,11 @@
 import { redirect } from "next/navigation";
 import { LoginForm } from "./LoginForm";
 
+
+import type { Metadata } from "next";
+export const metadata: Metadata = {
+  openGraph: { url: "https://surven.vercel.app/login", type: "website" },
+};
 const SUPABASE_UNCONFIGURED =
   !process.env.NEXT_PUBLIC_SUPABASE_URL ||
   process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder");
