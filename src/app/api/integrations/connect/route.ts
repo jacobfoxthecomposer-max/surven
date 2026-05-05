@@ -9,6 +9,9 @@ import {
   validateVercel,
   validateWordpress,
   validateWebflow,
+  validateWix,
+  validateShopify,
+  normalizeShopDomain,
 } from "@/utils/platformValidators";
 import { enqueueJob } from "@/services/jobQueue";
 import { writeAuditLog, ipFromRequest } from "@/services/auditLog";
@@ -41,6 +44,21 @@ const ConnectSchema = z.discriminatedUnion("platform", [
     businessId: z.string().uuid(),
     token: z.string().min(10),
     siteId: z.string().min(1),
+  }),
+  z.object({
+    platform: z.literal("wix"),
+    businessId: z.string().uuid(),
+    apiKey: z.string().min(10),
+    siteId: z.string().min(1),
+    accountId: z.string().min(1),
+    siteUrl: z.string().url(),
+  }),
+  z.object({
+    platform: z.literal("shopify"),
+    businessId: z.string().uuid(),
+    shopDomain: z.string().min(3),
+    clientId: z.string().min(10),
+    clientSecret: z.string().min(10),
   }),
 ]);
 
@@ -154,6 +172,42 @@ export async function POST(request: NextRequest) {
       });
       credsBlob = { token: data.token };
       row = { site_id: data.siteId };
+      break;
+    }
+    case "wix": {
+      validation = await validateWix({
+        apiKey: data.apiKey,
+        siteId: data.siteId,
+        accountId: data.accountId,
+      });
+      credsBlob = {
+        apiKey: data.apiKey,
+        accountId: data.accountId,
+      };
+      row = { site_id: data.siteId, site_url: data.siteUrl };
+      break;
+    }
+    case "shopify": {
+      const shopDomain = normalizeShopDomain(data.shopDomain);
+      if (!shopDomain) {
+        return NextResponse.json(
+          { error: "validation_failed", message: "Invalid shop domain. Use mystore.myshopify.com format." },
+          { status: 422 }
+        );
+      }
+      validation = await validateShopify({
+        shopDomain,
+        clientId: data.clientId,
+        clientSecret: data.clientSecret,
+      });
+      credsBlob = {
+        clientId: data.clientId,
+        clientSecret: data.clientSecret,
+      };
+      row = {
+        site_id: shopDomain,
+        site_url: `https://${shopDomain}`,
+      };
       break;
     }
   }

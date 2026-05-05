@@ -70,6 +70,28 @@ const PLATFORM_META: Record<
       label: "Create Webflow token",
     },
   },
+  wix: {
+    label: "Wix",
+    description: "Connect your Wix site to get copy-paste fix instructions tailored to the Wix Editor. Full auto-deploy isn't supported yet — Wix's API doesn't expose page SEO, alt text, or custom code to standard API keys.",
+    icon: Globe,
+    color: "#FFE100",
+    tokenHelp: "In your Wix dashboard: Settings → Headless Settings → API Keys. Generate a key with permissions for Business Info and Manage Sites. You'll also need your Site ID and Account ID (visible in Wix dashboard URL). Used for verifying ownership only — fixes are still manual.",
+    tokenLink: {
+      url: "https://manage.wix.com/account/api-keys",
+      label: "Create Wix API key",
+    },
+  },
+  shopify: {
+    label: "Shopify",
+    description: "Connection verifies your store and surfaces guided fix instructions tailored to Shopify Admin. Full auto-deploy is available with the Surven Managed plan.",
+    icon: Globe,
+    color: "#96BF48",
+    tokenHelp: "In Shopify Admin → Settings → Apps and sales channels → Develop apps → create an app with Admin API scopes (read/write products, themes, content), install it on the store, then copy the Client ID + Client Secret from the API credentials tab.",
+    tokenLink: {
+      url: "https://admin.shopify.com",
+      label: "Open Shopify Admin",
+    },
+  },
 };
 
 export function SiteConnectionCard({
@@ -92,6 +114,11 @@ export function SiteConnectionCard({
   const [username, setUsername] = useState("");
   const [appPassword, setAppPassword] = useState("");
   const [siteId, setSiteId] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [accountId, setAccountId] = useState("");
+  const [shopDomain, setShopDomain] = useState("");
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
 
   const meta = PLATFORM_META[platform];
   const Icon = meta.icon;
@@ -116,6 +143,10 @@ export function SiteConnectionCard({
         username,
         applicationPassword: appPassword,
       };
+    } else if (platform === "wix") {
+      payload = { platform, businessId, apiKey, siteId, accountId, siteUrl };
+    } else if (platform === "shopify") {
+      payload = { platform, businessId, shopDomain, clientId, clientSecret };
     } else {
       payload = { platform, businessId, token, siteId };
     }
@@ -134,6 +165,11 @@ export function SiteConnectionCard({
       setUsername("");
       setAppPassword("");
       setSiteId("");
+      setApiKey("");
+      setAccountId("");
+      setShopDomain("");
+      setClientId("");
+      setClientSecret("");
     }
     setSubmitting(false);
   }
@@ -151,6 +187,8 @@ export function SiteConnectionCard({
     if (platform === "vercel") return connection.site_id ? `Project ${connection.site_id}` : "";
     if (platform === "wordpress") return connection.site_url ?? "";
     if (platform === "webflow") return connection.site_id ? `Site ${connection.site_id}` : "";
+    if (platform === "wix") return connection.site_id ? `Site ${connection.site_id.slice(0, 8)}…` : "";
+    if (platform === "shopify") return connection.site_id ?? "";
     return "";
   })();
 
@@ -357,6 +395,79 @@ export function SiteConnectionCard({
                     </>
                   )}
 
+                  {platform === "wix" && (
+                    <>
+                      <Input
+                        label="Site URL"
+                        type="url"
+                        value={siteUrl}
+                        onChange={(e) => setSiteUrl(e.target.value)}
+                        placeholder="https://yoursite.wixsite.com/your-site"
+                        required
+                        disabled={submitting}
+                      />
+                      <Input
+                        label="API Key"
+                        type="password"
+                        value={apiKey}
+                        onChange={(e) => setApiKey(e.target.value)}
+                        placeholder="IST.xxxxx..."
+                        required
+                        disabled={submitting}
+                      />
+                      <Input
+                        label="Site ID"
+                        type="text"
+                        value={siteId}
+                        onChange={(e) => setSiteId(e.target.value)}
+                        placeholder="UUID — find in Wix dashboard URL"
+                        required
+                        disabled={submitting}
+                      />
+                      <Input
+                        label="Account ID"
+                        type="text"
+                        value={accountId}
+                        onChange={(e) => setAccountId(e.target.value)}
+                        placeholder="UUID — find in Wix dashboard URL"
+                        required
+                        disabled={submitting}
+                      />
+                    </>
+                  )}
+
+                  {platform === "shopify" && (
+                    <>
+                      <Input
+                        label="Shop Domain"
+                        type="text"
+                        value={shopDomain}
+                        onChange={(e) => setShopDomain(e.target.value)}
+                        placeholder="mystore.myshopify.com"
+                        required
+                        disabled={submitting}
+                      />
+                      <Input
+                        label="Client ID"
+                        type="text"
+                        value={clientId}
+                        onChange={(e) => setClientId(e.target.value)}
+                        placeholder="Find in your Shopify app's API credentials tab"
+                        required
+                        disabled={submitting}
+                      />
+                      <Input
+                        label="Client Secret"
+                        type="password"
+                        value={clientSecret}
+                        onChange={(e) => setClientSecret(e.target.value)}
+                        placeholder="Reveal once in API credentials tab"
+                        required
+                        disabled={submitting}
+                      />
+                    </>
+                  )}
+
                   {error && (
                     <div
                       className="text-sm rounded-md p-3 border-l-4"
@@ -427,6 +538,12 @@ function ConnectedView({
         )}
         {platform === "webflow" && (
           <Field label="Site ID" value={connection.site_id ?? "—"} />
+        )}
+        {platform === "wix" && (
+          <Field label="Site ID" value={connection.site_id ?? "—"} />
+        )}
+        {platform === "shopify" && (
+          <Field label="Shop Domain" value={connection.site_id ?? "—"} />
         )}
         <Field label="Last verified" value={verifiedAt} />
       </div>

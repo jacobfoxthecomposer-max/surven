@@ -4,7 +4,7 @@ import { ScrollReveal } from "@/components/molecules/ScrollReveal";
 
 const stats = [
   { value: "4", label: "AI models tracked", suffix: "" },
-  { value: "6", label: "Consumer prompts per scan", suffix: "+" },
+  { value: "150", label: "Consumer prompts per scan", suffix: "+" },
   { value: "100", label: "Visibility score scale", suffix: "" },
   { value: "Real-time", label: "Results on every scan", suffix: "" },
 ];

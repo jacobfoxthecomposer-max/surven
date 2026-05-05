@@ -4,6 +4,16 @@
  * Vercel/Netlify auto-deploy triggers from the push.
  */
 
+import { GithubClient } from "@/services/github/githubClient";
+import {
+  injectPerPageIntoHtml,
+  injectPerPageIntoNextJs,
+  type PerPageInjectResult,
+  type PageInjectionRequest,
+  type NextJsPageInjectionRequest,
+} from "./perPageHtmlInjector";
+import type { MetadataField } from "@/services/nextJsMetadataWriter";
+
 const GITHUB_API = "https://api.github.com";
 const TIMEOUT_MS = 15_000;
 const COMMIT_AUTHOR = {
@@ -172,4 +182,195 @@ export async function applyFixToGithub(opts: GithubApplyFixOptions): Promise<App
 
 export function isFixTypeSupportedForGithub(fixType: string | undefined): fixType is SupportedFixType {
   return fixType === "robots" || fixType === "sitemap" || fixType === "llms";
+}
+
+/**
+ * Per-finding HTML fix support. Each entry pairs a crawlability finding ID with:
+ *   - htmlBuilder: produces the snippet + idempotency marker for plain-HTML repos
+ *   - nextJsField: produces the metadata field path + value literal for Next.js repos
+ *
+ * Either or both may be present. Currently every wired finding supports both.
+ */
+interface HtmlFixSpec {
+  htmlBuilder?: (url: string) => { snippet: string; existingMarker: RegExp };
+  nextJsField?: (url: string) => MetadataField;
+  /** If true, injects into root layout.tsx once (site-wide) instead of per-page. */
+  isSiteWide?: boolean;
+}
+
+const HTML_FIX_BUILDERS: Record<string, HtmlFixSpec> = {
+  canonical_missing: {
+    htmlBuilder: (url) => ({
+      snippet: `<link rel="canonical" href="${escapeHtmlAttr(url)}" />`,
+      existingMarker: /<link\s+[^>]*rel\s*=\s*["']canonical["'][^>]*>/i,
+    }),
+    nextJsField: (url) => ({
+      path: ["alternates", "canonical"],
+      valueLiteral: JSON.stringify(url),
+    }),
+  },
+  viewport_meta_missing: {
+    htmlBuilder: () => ({
+      snippet: `<meta name="viewport" content="width=device-width, initial-scale=1" />`,
+      existingMarker: /<meta\s+[^>]*name\s*=\s*["']viewport["'][^>]*>/i,
+    }),
+    nextJsField: () => ({
+      path: ["viewport"],
+      valueLiteral: `{ width: "device-width", initialScale: 1 }`,
+    }),
+    isSiteWide: true,
+  },
+  og_tags_missing: {
+    htmlBuilder: (url) => ({
+      // Inject minimal OG block. Per-page url + reasonable defaults.
+      // og:title and og:description fall back to page title / meta description if absent
+      // on the resulting page; this keeps the snippet concise.
+      snippet: `<meta property="og:url" content="${escapeHtmlAttr(url)}" />\n  <meta property="og:type" content="website" />`,
+      existingMarker: /<meta\s+[^>]*property\s*=\s*["']og:url["'][^>]*>/i,
+    }),
+    nextJsField: (url) => ({
+      path: ["openGraph"],
+      valueLiteral: `{ url: ${JSON.stringify(url)}, type: "website" }`,
+    }),
+  },
+};
+
+export function isHtmlFixSupportedForGithub(findingId: string): boolean {
+  return findingId in HTML_FIX_BUILDERS;
+}
+
+export interface ApplyHtmlFixOptions {
+  token: string;
+  repo: string;
+  branch: string;
+  findingId: string;
+  findingTitle: string;
+  /** URLs from the finding's `affectedUrls` field. */
+  affectedUrls: string[];
+}
+
+export interface ApplyHtmlFixResult {
+  ok: boolean;
+  perPageResult?: PerPageInjectResult;
+  error?: string;
+  manualNote?: string;
+  manualSnippet?: string;
+}
+
+/**
+ * Apply an HTML-class fix across affected pages.
+ *
+ * Dispatches by framework:
+ *   - Plain HTML repos → injects per-page snippets into <head> via perPageHtmlInjector
+ *   - Next.js repos    → writes per-route metadata fields via perPageNextJsInjector
+ *
+ * For site-wide fixes (e.g. viewport_meta_missing), targets the homepage URL
+ * for HTML and the root layout.tsx for Next.js, regardless of how many
+ * affectedUrls were sent.
+ */
+export async function applyHtmlFixToGithub(opts: ApplyHtmlFixOptions): Promise<ApplyHtmlFixResult> {
+  const spec = HTML_FIX_BUILDERS[opts.findingId];
+  if (!spec) {
+    return {
+      ok: false,
+      error: `No HTML fix builder for finding "${opts.findingId}".`,
+    };
+  }
+
+  if (opts.affectedUrls.length === 0) {
+    return {
+      ok: false,
+      error: "No affected URLs sent with this finding — re-scan and retry.",
+    };
+  }
+
+  const client = new GithubClient(opts.token, opts.repo);
+
+  let fileTree: Set<string>;
+  try {
+    fileTree = await client.getFileTree(opts.branch);
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Couldn't read repo file tree",
+    };
+  }
+
+  const isNextJs =
+    fileTree.has("next.config.js") ||
+    fileTree.has("next.config.mjs") ||
+    fileTree.has("next.config.ts") ||
+    fileTree.has("next.config.cjs");
+
+  // Resolve which URLs to actually edit. Site-wide fixes collapse to one URL
+  // (the home origin) so we don't redundantly write the same field N times.
+  const urlsToProcess = spec.isSiteWide
+    ? [originForUrl(opts.affectedUrls[0])]
+    : opts.affectedUrls;
+
+  const commitMessage = `fix(crawlability): ${opts.findingTitle}\n\nApplied via Surven Optimizer (finding: ${opts.findingId}, ${urlsToProcess.length} ${spec.isSiteWide ? "site-wide" : "page"} edit(s))`;
+
+  if (isNextJs) {
+    if (!spec.nextJsField) {
+      return {
+        ok: false,
+        manualNote: "This repo is Next.js but Surven doesn't have a Next.js writer for this fix yet.",
+        manualSnippet: opts.affectedUrls
+          .map((u) => spec.htmlBuilder ? spec.htmlBuilder(u).snippet : "")
+          .filter(Boolean)
+          .join("\n"),
+      };
+    }
+    const requests: NextJsPageInjectionRequest[] = urlsToProcess.map((url) => ({
+      url: spec.isSiteWide ? originForUrl(url) : url,
+      field: spec.nextJsField!(url),
+      useRootLayout: spec.isSiteWide,
+    }));
+    const result = await injectPerPageIntoNextJs(
+      client,
+      opts.repo,
+      opts.branch,
+      requests,
+      commitMessage,
+      fileTree,
+    );
+    return {
+      ok: result.succeeded.length > 0,
+      perPageResult: result,
+      error: result.succeeded.length === 0 ? "No routes were updated — see per-route details." : undefined,
+    };
+  }
+
+  // Plain HTML branch
+  if (!spec.htmlBuilder) {
+    return {
+      ok: false,
+      manualNote: "This fix is wired for Next.js only — open the file manually for plain HTML.",
+    };
+  }
+  const requests: PageInjectionRequest[] = urlsToProcess.map((url) => {
+    const built = spec.htmlBuilder!(url);
+    return { url, snippet: built.snippet, existingMarker: built.existingMarker };
+  });
+
+  const result = await injectPerPageIntoHtml(client, opts.repo, opts.branch, requests, commitMessage, fileTree);
+
+  return {
+    ok: result.succeeded.length > 0,
+    perPageResult: result,
+    error: result.succeeded.length === 0 ? "No pages were updated — see per-page details." : undefined,
+  };
+}
+
+function originForUrl(url: string): string {
+  try {
+    return new URL(url).origin + "/";
+  } catch {
+    return url;
+  }
+}
+
+
+function escapeHtmlAttr(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 }

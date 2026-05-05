@@ -1,9 +1,58 @@
 import { useState, useEffect } from "react";
 import { Search, ChevronDown, X, Settings, ArrowLeft, Wrench, ExternalLink, CheckCircle2, AlertCircle, Loader2, Flame, Code2 } from "lucide-react";
-import type { AuditFinding, ApplyFixResponse } from "../shared/types";
+import type { AuditFinding, ApplyFixResponse, PerPageFixResult } from "../shared/types";
 import { computeVisibilityScore } from "../shared/scoring";
 import { getInstructionsForPlatform, getDisplayName, type CmsPlatform, type FixKind } from "../shared/platformInstructions";
 import "./styles.css";
+
+interface ManagedPlanCta {
+  url: string;
+  headline: string;
+  body: string;
+  buttonLabel: string;
+}
+
+function ManagedPlanCard({ cta }: { cta?: ManagedPlanCta }) {
+  if (!cta) return null;
+  return (
+    <div
+      style={{
+        marginTop: "10px",
+        padding: "12px",
+        background: "linear-gradient(135deg, rgba(125,142,108,0.08), rgba(125,142,108,0.02))",
+        border: "1px solid rgba(125,142,108,0.35)",
+        borderLeft: "3px solid #7D8E6C",
+        borderRadius: "6px",
+      }}
+    >
+      <div style={{ fontSize: "12px", fontWeight: 600, color: "#3D3F3D", marginBottom: "6px" }}>
+        {cta.headline}
+      </div>
+      <div style={{ fontSize: "11px", lineHeight: "1.5", color: "#555", marginBottom: "10px" }}>
+        {cta.body}
+      </div>
+      <a
+        href={cta.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "5px",
+          padding: "7px 12px",
+          background: "#7D8E6C",
+          color: "white",
+          textDecoration: "none",
+          borderRadius: "4px",
+          fontSize: "11px",
+          fontWeight: 600,
+        }}
+      >
+        {cta.buttonLabel} <ExternalLink size={11} />
+      </a>
+    </div>
+  );
+}
 
 type FixState =
   | { status: "idle" }
@@ -11,8 +60,9 @@ type FixState =
   | { status: "preview"; current: string | null; suggested: string; rewriteKind: "meta_desc" | "title_tag" }
   | { status: "preview-faq"; pairs: Array<{ question: string; answer: string }>; snippet: string }
   | { status: "preview-alt"; suggestions: Array<{ src: string; alt: string | null; error: string | null }> }
-  | { status: "success"; commitUrl?: string; filePath?: string; snippet?: string; manualNote?: string; suggested?: string }
-  | { status: "manual"; snippet?: string; suggested?: string; manualNote: string; rewriteKind?: "meta_desc" | "title_tag" | "faq_page" | "alt_text" }
+  | { status: "success"; commitUrl?: string; filePath?: string; snippet?: string; manualNote?: string; suggested?: string; platform?: string }
+  | { status: "success-per-page"; commitUrl?: string; perPageResult: PerPageFixResult; managedPlanCta?: ManagedPlanCta; platform?: string }
+  | { status: "manual"; snippet?: string; suggested?: string; manualNote: string; rewriteKind?: "meta_desc" | "title_tag" | "faq_page" | "alt_text"; managedPlanCta?: ManagedPlanCta }
   | { status: "ambiguous"; reasons: string[] }
   | { status: "error"; message: string; connectUrl?: string; snippet?: string };
 
@@ -53,6 +103,130 @@ const REWRITE_LABELS: Record<"meta_desc" | "title_tag", { button: string; whatIt
 
 function getGenerateUrl(auditUrl: string): string {
   return auditUrl.replace(/\/api\/audit\/run\/?$/, "/api/audit/generate");
+}
+
+/**
+ * Maps the backend's `platform` field on a successful fix response to the
+ * link label shown on the success card. Defaults to GitHub since that's
+ * where most auto-deploys land. WordPress success returns the post edit URL,
+ * not a commit URL — labelling it "View commit on GitHub" was misleading.
+ */
+function commitLinkLabel(platform?: string): string {
+  switch (platform) {
+    case "wordpress":
+      return "View in WordPress admin";
+    case "wix":
+      return "View in Wix Dashboard";
+    case "shopify":
+      return "View in Shopify admin";
+    case "github":
+    default:
+      return "View commit on GitHub";
+  }
+}
+
+/**
+ * Validates that the configured audit URL is well-formed and ends with the
+ * expected /api/audit/run path. Returns null if valid, or an error message.
+ */
+function validateAuditUrl(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return "Enter your Surven API URL.";
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return "That's not a valid URL — paste the full https://… link.";
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return "URL must use http:// or https://.";
+  }
+  if (!/\/api\/audit\/run\/?$/.test(parsed.pathname)) {
+    return "URL should end in /api/audit/run.";
+  }
+  return null;
+}
+
+/**
+ * Returns true for tabs the extension can audit (http/https pages).
+ * chrome://, about:, file://, view-source: pages can't be reached by content
+ * scripts so we refuse early with a clear message.
+ */
+function isInjectableUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  return /^https?:\/\//i.test(url);
+}
+
+/**
+ * Safe URL.pathname — returns input unchanged if URL parsing fails.
+ * Used in render paths where a bad URL must not crash the React tree.
+ */
+function safePathname(url: string): string {
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * Safe URL.hostname — same idea as safePathname but for the host.
+ */
+function safeHostname(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * Compile-time exhaustiveness assertion. Used at the end of fix-state render
+ * branches so any future addition to FixState that isn't handled becomes a
+ * TypeScript build error rather than silently falling through to a default
+ * "Fix" button (which is what the audit caught us on).
+ *
+ * Usage:
+ *   if (state.status === "applying" || state.status === "preview" || …) return …;
+ *   return assertHandled(state);  // TS error if any FixState variant unmatched
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function assertHandled(_unhandled: never): null {
+  return null;
+}
+
+/**
+ * Guard against tab navigation between audit and fix. If the user audited site
+ * A and then navigated to site B, applying a fix would send context from B to
+ * A's repo. We refuse with a clear message instead.
+ *
+ * Returns { ok: true, tab } when the active tab matches the audited site, or
+ * { ok: false, message } with a user-facing error otherwise.
+ */
+async function guardActiveTab(
+  auditedSiteUrl: string | null,
+): Promise<{ ok: true; tab: chrome.tabs.Tab & { id: number } } | { ok: false; message: string }> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id) {
+    return { ok: false, message: "No active tab. Open the page you audited and try again." };
+  }
+  if (!tab.url) {
+    return { ok: false, message: "No active tab. Open the page you audited and try again." };
+  }
+  if (!isInjectableUrl(tab.url)) {
+    return { ok: false, message: "Open the page you audited (an http(s) page), then retry." };
+  }
+  if (auditedSiteUrl) {
+    const auditedHost = safeHostname(auditedSiteUrl);
+    const currentHost = safeHostname(tab.url);
+    if (auditedHost !== currentHost) {
+      return {
+        ok: false,
+        message: `You audited ${auditedHost} but you're now on ${currentHost}. Re-scan to fix this site, or navigate back to ${auditedHost}.`,
+      };
+    }
+  }
+  return { ok: true, tab: tab as chrome.tabs.Tab & { id: number } };
 }
 
 const WHAT_IS_IT: Record<string, string> = {
@@ -112,6 +286,7 @@ export default function App() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [draftSettings, setDraftSettings] = useState<Settings>({ apiUrl: "", apiKey: "" });
+  const [settingsError, setSettingsError] = useState<string | null>(null);
   const [state, setState] = useState<AuditState>({ loading: false, findings: [], fromCache: false });
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [whatIsItId, setWhatIsItId] = useState<string | null>(null);
@@ -148,9 +323,15 @@ export default function App() {
 
   async function applyFix(finding: AuditFinding) {
     if (!settings?.apiUrl || !settings?.apiKey || !finding.fixCode || !finding.fixType) return;
-    const targetUrl = siteUrl ?? (await chrome.tabs.query({ active: true, currentWindow: true }))[0]?.url;
-    if (!targetUrl) return;
 
+    // Guard: refuse if active tab doesn't match the audited site.
+    const guard = await guardActiveTab(siteUrl);
+    if (!guard.ok) {
+      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: guard.message } }));
+      return;
+    }
+
+    const targetUrl = siteUrl ?? guard.tab.url!;
     setFixStates((s) => ({ ...s, [finding.id]: { status: "applying" } }));
 
     try {
@@ -166,9 +347,24 @@ export default function App() {
           findingTitle: finding.title,
           fixType: finding.fixType,
           fixCode: finding.fixCode,
+          affectedUrls: finding.affectedUrls,
         }),
       });
       const data = (await res.json()) as ApplyFixResponse;
+
+      // Manual-required (e.g. Next.js detected) → render the manual paste card with CTA.
+      if (!res.ok && data.manualSnippet) {
+        setFixStates((s) => ({
+          ...s,
+          [finding.id]: {
+            status: "manual",
+            snippet: data.manualSnippet!,
+            manualNote: data.manualNote ?? "Auto-update isn't available for this fix. Paste manually.",
+            managedPlanCta: data.managedPlanCta,
+          },
+        }));
+        return;
+      }
 
       if (!res.ok) {
         setFixStates((s) => ({
@@ -182,9 +378,24 @@ export default function App() {
         return;
       }
 
+      // Per-page HTML fix → use the per-page success state with detail.
+      if (data.perPageResult) {
+        setFixStates((s) => ({
+          ...s,
+          [finding.id]: {
+            status: "success-per-page",
+            commitUrl: data.commitUrl,
+            perPageResult: data.perPageResult!,
+            managedPlanCta: data.managedPlanCta,
+            platform: data.platform,
+          },
+        }));
+        return;
+      }
+
       setFixStates((s) => ({
         ...s,
-        [finding.id]: { status: "success", commitUrl: data.commitUrl, filePath: data.filePath },
+        [finding.id]: { status: "success", commitUrl: data.commitUrl, filePath: data.filePath, platform: data.platform },
       }));
     } catch (err) {
       setFixStates((s) => ({
@@ -201,11 +412,12 @@ export default function App() {
 
     setFixStates((s) => ({ ...s, [finding.id]: { status: "applying" } }));
 
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) {
-      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: "No active tab found" } }));
+    const guard = await guardActiveTab(siteUrl);
+    if (!guard.ok) {
+      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: guard.message } }));
       return;
     }
+    const tab = guard.tab;
 
     let pageContext: unknown;
     try {
@@ -255,6 +467,7 @@ export default function App() {
         error?: string;
         message?: string;
         connectUrl?: string;
+        platform?: string;
       } = {};
       if (rawText) {
         try {
@@ -284,7 +497,7 @@ export default function App() {
       if (data.ok === false && data.snippet && data.manualNote) {
         setFixStates((s) => ({
           ...s,
-          [finding.id]: { status: "manual", snippet: data.snippet!, manualNote: data.manualNote! },
+          [finding.id]: { status: "manual", snippet: data.snippet!, manualNote: data.manualNote!, managedPlanCta: (data as { managedPlanCta?: ManagedPlanCta }).managedPlanCta },
         }));
         return;
       }
@@ -309,6 +522,7 @@ export default function App() {
           commitUrl: data.commitUrl,
           filePath: data.filePath,
           snippet: data.snippet,
+          platform: data.platform,
         },
       }));
     } catch (err) {
@@ -338,11 +552,12 @@ export default function App() {
 
     setFixStates((s) => ({ ...s, [finding.id]: { status: "applying" } }));
 
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) {
-      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: "No active tab found" } }));
+    const guard = await guardActiveTab(siteUrl);
+    if (!guard.ok) {
+      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: guard.message } }));
       return;
     }
+    const tab = guard.tab;
 
     let pageContext: unknown;
     try {
@@ -427,11 +642,12 @@ export default function App() {
 
     setFixStates((s) => ({ ...s, [finding.id]: { status: "applying" } }));
 
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) {
-      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: "No active tab found" } }));
+    const guard = await guardActiveTab(siteUrl);
+    if (!guard.ok) {
+      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: guard.message } }));
       return;
     }
+    const tab = guard.tab;
 
     let pageContext: unknown;
     try {
@@ -465,6 +681,7 @@ export default function App() {
         error?: string;
         message?: string;
         connectUrl?: string;
+        platform?: string;
       } = {};
       try {
         data = rawText ? JSON.parse(rawText) : {};
@@ -479,7 +696,7 @@ export default function App() {
       if (data.ok === false && data.manualNote) {
         setFixStates((s) => ({
           ...s,
-          [finding.id]: { status: "manual", snippet: suggested, suggested, manualNote: data.manualNote!, rewriteKind },
+          [finding.id]: { status: "manual", snippet: suggested, suggested, manualNote: data.manualNote!, rewriteKind, managedPlanCta: (data as { managedPlanCta?: ManagedPlanCta }).managedPlanCta },
         }));
         return;
       }
@@ -494,7 +711,7 @@ export default function App() {
 
       setFixStates((s) => ({
         ...s,
-        [finding.id]: { status: "success", commitUrl: data.commitUrl, filePath: data.filePath, suggested },
+        [finding.id]: { status: "success", commitUrl: data.commitUrl, filePath: data.filePath, suggested, platform: data.platform },
       }));
     } catch (err) {
       setFixStates((s) => ({
@@ -508,11 +725,12 @@ export default function App() {
     if (!settings?.apiUrl || !settings?.apiKey) return;
     setFixStates((s) => ({ ...s, [finding.id]: { status: "applying" } }));
 
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) {
-      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: "No active tab found" } }));
+    const guard = await guardActiveTab(siteUrl);
+    if (!guard.ok) {
+      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: guard.message } }));
       return;
     }
+    const tab = guard.tab;
 
     let pageContext: unknown;
     try {
@@ -576,11 +794,12 @@ export default function App() {
     const { pairs } = current;
     setFixStates((s) => ({ ...s, [finding.id]: { status: "applying" } }));
 
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) {
-      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: "No active tab found" } }));
+    const guard = await guardActiveTab(siteUrl);
+    if (!guard.ok) {
+      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: guard.message } }));
       return;
     }
+    const tab = guard.tab;
 
     let pageContext: unknown;
     try {
@@ -614,6 +833,7 @@ export default function App() {
         error?: string;
         message?: string;
         connectUrl?: string;
+        platform?: string;
       } = {};
       try { data = rawText ? JSON.parse(rawText) : {}; } catch {
         setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: `Server returned an unparseable response (status ${res.status}).` } }));
@@ -623,7 +843,7 @@ export default function App() {
       if (data.ok === false && data.manualNote) {
         setFixStates((s) => ({
           ...s,
-          [finding.id]: { status: "manual", snippet: data.snippet, manualNote: data.manualNote!, rewriteKind: "faq_page" },
+          [finding.id]: { status: "manual", snippet: data.snippet, manualNote: data.manualNote!, rewriteKind: "faq_page", managedPlanCta: (data as { managedPlanCta?: ManagedPlanCta }).managedPlanCta },
         }));
         return;
       }
@@ -633,7 +853,7 @@ export default function App() {
         return;
       }
 
-      setFixStates((s) => ({ ...s, [finding.id]: { status: "success", commitUrl: data.commitUrl, filePath: data.filePath, snippet: data.snippet } }));
+      setFixStates((s) => ({ ...s, [finding.id]: { status: "success", commitUrl: data.commitUrl, filePath: data.filePath, snippet: data.snippet, platform: data.platform } }));
     } catch (err) {
       setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: err instanceof Error ? err.message : "Network error" } }));
     }
@@ -643,11 +863,12 @@ export default function App() {
     if (!settings?.apiUrl || !settings?.apiKey) return;
     setFixStates((s) => ({ ...s, [finding.id]: { status: "applying" } }));
 
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) {
-      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: "No active tab found" } }));
+    const guard = await guardActiveTab(siteUrl);
+    if (!guard.ok) {
+      setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: guard.message } }));
       return;
     }
+    const tab = guard.tab;
 
     let pageContext: unknown;
     let imagesNeedingAlt: Array<{ src: string; surroundingText?: string }> = [];
@@ -739,16 +960,28 @@ export default function App() {
       });
 
       const rawText = await res.text();
-      let data: { ok?: boolean; commitUrl?: string; filePath?: string; manualNote?: string; error?: string; message?: string; connectUrl?: string } = {};
+      let data: { ok?: boolean; commitUrl?: string; filePath?: string; manualNote?: string; error?: string; message?: string; connectUrl?: string; platform?: string } = {};
       try { data = rawText ? JSON.parse(rawText) : {}; } catch {
         setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: `Server returned an unparseable response (status ${res.status}).` } }));
         return;
       }
 
       if (data.ok === false && data.manualNote) {
+        // For alt-text manual fallback, format the per-image replacements as a
+        // copy-pasteable snippet so users (e.g. on Wix/Squarespace) can see the
+        // generated alt text alongside the platform instructions.
+        const altSnippet = replacements
+          .map((r, i) => `${i + 1}. Image: ${r.src}\n   Alt text: ${r.alt}`)
+          .join("\n\n");
         setFixStates((s) => ({
           ...s,
-          [finding.id]: { status: "manual", manualNote: data.manualNote!, rewriteKind: "alt_text" },
+          [finding.id]: {
+            status: "manual",
+            snippet: altSnippet,
+            manualNote: data.manualNote!,
+            rewriteKind: "alt_text",
+            managedPlanCta: (data as { managedPlanCta?: ManagedPlanCta }).managedPlanCta,
+          },
         }));
         return;
       }
@@ -758,7 +991,7 @@ export default function App() {
         return;
       }
 
-      setFixStates((s) => ({ ...s, [finding.id]: { status: "success", commitUrl: data.commitUrl, filePath: data.filePath } }));
+      setFixStates((s) => ({ ...s, [finding.id]: { status: "success", commitUrl: data.commitUrl, filePath: data.filePath, platform: data.platform } }));
     } catch (err) {
       setFixStates((s) => ({ ...s, [finding.id]: { status: "error", message: err instanceof Error ? err.message : "Network error" } }));
     }
@@ -766,10 +999,19 @@ export default function App() {
 
   useEffect(() => {
     chrome.storage.local.get("surven_settings", (data) => {
-      if (data.surven_settings) {
-        setSettings(data.surven_settings as Settings);
-        setDraftSettings(data.surven_settings as Settings);
+      if (!data.surven_settings) return;
+      const stored = data.surven_settings as Settings;
+      // Validate stored apiUrl. If it's malformed (older extension version,
+      // hand-edited storage), treat as no-settings and force re-entry.
+      const urlError = validateAuditUrl(stored.apiUrl ?? "");
+      if (urlError) {
+        setDraftSettings(stored);
+        setSettingsError(urlError);
+        // Leave settings null so the settings panel renders.
+        return;
       }
+      setSettings(stored);
+      setDraftSettings(stored);
     });
   }, []);
 
@@ -779,6 +1021,18 @@ export default function App() {
       apiKey: draftSettings.apiKey.trim(),
       showBadge: draftSettings.showBadge ?? true,
     };
+
+    const urlError = validateAuditUrl(trimmed.apiUrl);
+    if (urlError) {
+      setSettingsError(urlError);
+      return;
+    }
+    if (!trimmed.apiKey) {
+      setSettingsError("Paste your Surven API key.");
+      return;
+    }
+
+    setSettingsError(null);
     await chrome.storage.local.set({ surven_settings: trimmed });
     setSettings(trimmed);
     setSettingsOpen(false);
@@ -822,9 +1076,29 @@ export default function App() {
         setState({ loading: false, findings: [], error: "No active tab found", fromCache: false });
         return;
       }
+      if (!isInjectableUrl(tab.url)) {
+        setState({
+          loading: false,
+          findings: [],
+          error: "Open a regular http(s) page first — Surven can't audit chrome:// or extension pages.",
+          fromCache: false,
+        });
+        return;
+      }
+      // Don't audit while the page is still loading — DOM is incomplete and
+      // the cached findings would be stale for 24h.
+      if (tab.status && tab.status !== "complete") {
+        setState({
+          loading: false,
+          findings: [],
+          error: "Page is still loading. Wait for it to finish, then re-scan.",
+          fromCache: false,
+        });
+        return;
+      }
 
       setSiteUrl(tab.url);
-      const hostname = new URL(tab.url).hostname;
+      const hostname = safeHostname(tab.url);
       const cacheKey = `audit_${hostname}`;
 
       // Check cache
@@ -864,6 +1138,17 @@ export default function App() {
       }
 
       if (!res.ok) {
+        // 401/403 → API key issue. Auto-open settings panel + clear message.
+        if (res.status === 401 || res.status === 403) {
+          setState({
+            loading: false,
+            findings: [],
+            error: "Your Surven API key was rejected — it may have expired or been revoked. Open Settings to paste a fresh key.",
+            fromCache: false,
+          });
+          setSettingsOpen(true);
+          return;
+        }
         const fallback =
           res.status === 504
             ? "Audit timed out. Try a smaller site or re-scan to retry."
@@ -900,13 +1185,17 @@ export default function App() {
 
   async function rerunAudit() {
     if (!settings?.apiUrl) return;
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab?.url) {
-      const hostname = new URL(tab.url).hostname;
-      await chrome.storage.local.remove(`audit_${hostname}`);
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab?.url && isInjectableUrl(tab.url)) {
+        const hostname = safeHostname(tab.url);
+        await chrome.storage.local.remove(`audit_${hostname}`);
+      }
+      setState({ loading: false, findings: [], fromCache: false });
+      runAudit();
+    } catch (err) {
+      setState({ loading: false, findings: [], error: err instanceof Error ? err.message : "Re-run failed", fromCache: false });
     }
-    setState({ loading: false, findings: [], fromCache: false });
-    runAudit();
   }
 
   // Settings screen
@@ -991,6 +1280,14 @@ export default function App() {
               </div>
             </div>
           </label>
+          {settingsError && (
+            <div
+              role="alert"
+              style={{ padding: "10px", background: "#FEE2E2", border: "1px solid #B54631", borderRadius: "4px", fontSize: "12px", color: "#B54631" }}
+            >
+              {settingsError}
+            </div>
+          )}
           <button
             onClick={saveSettings}
             disabled={!draftSettings.apiUrl || !draftSettings.apiKey}
@@ -1294,9 +1591,65 @@ export default function App() {
                                     rel="noopener noreferrer"
                                     style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#96A283", textDecoration: "none" }}
                                   >
-                                    View commit on GitHub <ExternalLink size={11} />
+                                    {commitLinkLabel(fixState.platform)} <ExternalLink size={11} />
                                   </a>
                                 )}
+                              </div>
+                            );
+                          }
+                          if (fixState.status === "success-per-page") {
+                            const r = fixState.perPageResult;
+                            const allSucceeded = r.failed.length === 0 && r.skipped.length === 0;
+                            return (
+                              <div
+                                style={{
+                                  padding: "10px",
+                                  background: allSucceeded ? "#F0FDF4" : "#FEF3C7",
+                                  border: `1px solid ${allSucceeded ? "#96A283" : "#C97B45"}`,
+                                  borderRadius: "4px",
+                                  fontSize: "12px",
+                                  color: "#3D3F3D",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "6px" }}>
+                                  <CheckCircle2 size={14} style={{ color: allSucceeded ? "#96A283" : "#C97B45" }} />
+                                  {r.succeeded.length} of {r.total} page(s) updated
+                                </div>
+                                {r.skipped.length > 0 && (
+                                  <details style={{ marginBottom: "6px", fontSize: "11px" }}>
+                                    <summary style={{ cursor: "pointer", color: "#7C5800", fontWeight: 500 }}>{r.skipped.length} skipped</summary>
+                                    <ul style={{ margin: "4px 0 0 18px", padding: 0, color: "#666" }}>
+                                      {r.skipped.map((s, i) => (
+                                        <li key={i} style={{ marginBottom: "2px" }}>
+                                          <code style={{ background: "#EDE8DC", padding: "1px 3px", borderRadius: "2px", fontSize: "10px" }}>{safePathname(s.url)}</code>: {s.reason}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </details>
+                                )}
+                                {r.failed.length > 0 && (
+                                  <details style={{ marginBottom: "6px", fontSize: "11px" }}>
+                                    <summary style={{ cursor: "pointer", color: "#B54631", fontWeight: 500 }}>{r.failed.length} couldn&apos;t be updated</summary>
+                                    <ul style={{ margin: "4px 0 0 18px", padding: 0, color: "#666" }}>
+                                      {r.failed.map((f, i) => (
+                                        <li key={i} style={{ marginBottom: "2px" }}>
+                                          <code style={{ background: "#EDE8DC", padding: "1px 3px", borderRadius: "2px", fontSize: "10px" }}>{safePathname(f.url)}</code>: {f.reason}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </details>
+                                )}
+                                {fixState.commitUrl && (
+                                  <a
+                                    href={fixState.commitUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#96A283", textDecoration: "none", fontSize: "11px" }}
+                                  >
+                                    {commitLinkLabel(fixState.platform)} <ExternalLink size={11} />
+                                  </a>
+                                )}
+                                <ManagedPlanCard cta={fixState.managedPlanCta} />
                               </div>
                             );
                           }
@@ -1320,6 +1673,57 @@ export default function App() {
                                 <div style={{ fontSize: "11px", color: "#3D3F3D", lineHeight: "1.4", padding: "8px 10px", background: "white", borderRadius: "4px" }}>
                                   <strong>Try this:</strong> open the actual website you want to optimize (your client&apos;s real homepage, not a dashboard about it) and run the auditor there.
                                 </div>
+                              </div>
+                            );
+                          }
+                          if (fixState.status === "manual") {
+                            // Map the finding's fix type into the platform-instructions FixKind
+                            // so the user gets concrete steps tailored to their CMS.
+                            const platformFixKind: FixKind | null =
+                              finding.fixType === "html" || finding.fixType === "config"
+                                ? "schema_org"  // closest existing instruction set for head injection
+                                : finding.fixType === "robots" || finding.fixType === "sitemap" || finding.fixType === "llms"
+                                  ? null  // these are file-level — no per-CMS paste UI
+                                  : null;
+                            const instructions = platformFixKind ? getInstructionsForPlatform(detectedPlatform, platformFixKind) : null;
+                            return (
+                              <div style={{ padding: "12px", background: "#FEF3C7", border: "1px solid #C97B45", borderRadius: "6px", fontSize: "12px", color: "#3D3F3D" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "6px", color: "#C97B45" }}>
+                                  <AlertCircle size={14} /> Auto-deploy not available
+                                </div>
+                                <div style={{ marginBottom: "10px", lineHeight: "1.4", fontSize: "11px", color: "#666" }}>
+                                  {fixState.manualNote}
+                                </div>
+                                {instructions && (
+                                  <div style={{ background: "white", border: "1px solid #E5D8B8", borderRadius: "4px", padding: "10px", marginBottom: "10px" }}>
+                                    <div style={{ fontWeight: 600, fontSize: "11px", marginBottom: "6px", color: "#3D3F3D" }}>Steps for {instructions.platformName}:</div>
+                                    <ol style={{ margin: 0, paddingLeft: "18px", fontSize: "11px", lineHeight: "1.55" }}>
+                                      {instructions.steps.map((step, i) => (
+                                        <li key={i} style={{ marginBottom: "3px" }}>{step}</li>
+                                      ))}
+                                    </ol>
+                                    {instructions.note && (
+                                      <div style={{ marginTop: "8px", padding: "6px 8px", background: "#FFF8E1", borderRadius: "3px", fontSize: "10px", color: "#7C5800", fontStyle: "italic" }}>
+                                        💡 {instructions.note}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                {fixState.snippet && (
+                                  <details style={{ marginBottom: "8px" }}>
+                                    <summary style={{ cursor: "pointer", fontWeight: 500, color: "#3D3F3D", fontSize: "11px" }}>Preview the snippet</summary>
+                                    <pre style={{ marginTop: "6px", padding: "8px", background: "#1A1C1A", color: "#F2EEE3", borderRadius: "4px", fontSize: "10px", overflow: "auto", maxHeight: "200px", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{fixState.snippet}</pre>
+                                  </details>
+                                )}
+                                {fixState.snippet && (
+                                  <button
+                                    onClick={() => copyToClipboard(fixState.snippet ?? "")}
+                                    style={{ padding: "8px 12px", background: "#C97B45", border: "none", color: "white", borderRadius: "4px", fontSize: "12px", cursor: "pointer", fontWeight: 600, width: "100%" }}
+                                  >
+                                    📋 Copy snippet to clipboard
+                                  </button>
+                                )}
+                                <ManagedPlanCard cta={fixState.managedPlanCta} />
                               </div>
                             );
                           }
@@ -1432,7 +1836,7 @@ export default function App() {
                                     rel="noopener noreferrer"
                                     style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#96A283", textDecoration: "none" }}
                                   >
-                                    View commit on GitHub <ExternalLink size={11} />
+                                    {commitLinkLabel(fixState.platform)} <ExternalLink size={11} />
                                   </a>
                                 )}
                               </div>
@@ -1453,10 +1857,10 @@ export default function App() {
                                 }}
                               >
                                 <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, marginBottom: "6px", color: "#C97B45" }}>
-                                  <AlertCircle size={14} /> Add this to {getDisplayName(detectedPlatform)} manually
+                                  <AlertCircle size={14} /> Couldn&apos;t auto-deploy to {getDisplayName(detectedPlatform)}
                                 </div>
                                 <div style={{ marginBottom: "10px", lineHeight: "1.4", fontSize: "11px", color: "#666" }}>
-                                  We can&apos;t auto-deploy to {getDisplayName(detectedPlatform)} (yet) — but here&apos;s exactly where to paste it:
+                                  {fixState.manualNote || `We can't auto-deploy to ${getDisplayName(detectedPlatform)} for this fix type. Here's how to add it manually:`}
                                 </div>
 
                                 <div style={{ background: "white", border: "1px solid #E5D8B8", borderRadius: "4px", padding: "10px", marginBottom: "10px" }}>
@@ -1504,6 +1908,7 @@ export default function App() {
                                 >
                                   📋 Copy snippet to clipboard
                                 </button>
+                                <ManagedPlanCard cta={fixState.managedPlanCta} />
                               </div>
                             );
                           }
@@ -1685,7 +2090,7 @@ export default function App() {
                                     rel="noopener noreferrer"
                                     style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#96A283", textDecoration: "none", fontSize: "11px" }}
                                   >
-                                    View commit on GitHub <ExternalLink size={11} />
+                                    {commitLinkLabel(fixState.platform)} <ExternalLink size={11} />
                                   </a>
                                 )}
                               </div>
@@ -1701,7 +2106,7 @@ export default function App() {
                                   <AlertCircle size={14} /> Add this to {getDisplayName(detectedPlatform)} manually
                                 </div>
                                 <div style={{ marginBottom: "10px", lineHeight: "1.4", fontSize: "11px", color: "#666" }}>
-                                  We can&apos;t auto-update {getDisplayName(detectedPlatform)} (yet) — but here&apos;s exactly where to paste it:
+                                  {fixState.manualNote || `We can't auto-update ${getDisplayName(detectedPlatform)} for this fix type. Here's how to add it manually:`}
                                 </div>
 
                                 {fixState.suggested && (
@@ -1745,6 +2150,7 @@ export default function App() {
                                     📋 Copy to clipboard
                                   </button>
                                 )}
+                                <ManagedPlanCard cta={fixState.managedPlanCta} />
                               </div>
                             );
                           }
@@ -1862,7 +2268,7 @@ export default function App() {
                                 )}
                                 {fixState.commitUrl && (
                                   <a href={fixState.commitUrl} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#96A283", textDecoration: "none", fontSize: "11px" }}>
-                                    View commit on GitHub <ExternalLink size={11} />
+                                    {commitLinkLabel(fixState.platform)} <ExternalLink size={11} />
                                   </a>
                                 )}
                               </div>
@@ -1895,6 +2301,7 @@ export default function App() {
                                     📋 Copy snippet to clipboard
                                   </button>
                                 )}
+                                <ManagedPlanCard cta={fixState.managedPlanCta} />
                               </div>
                             );
                           }
@@ -1909,13 +2316,19 @@ export default function App() {
                                   This page looks like a dashboard or directory. AI-generated FAQs would describe the wrong business. Open the actual website you want to optimize.
                                 </div>
                                 {fixState.reasons.length > 0 && (
-                                  <details style={{ fontSize: "11px" }}>
+                                  <details style={{ fontSize: "11px", marginBottom: "8px" }}>
                                     <summary style={{ cursor: "pointer", color: "#666", fontWeight: 500 }}>Why we think so</summary>
                                     <ul style={{ margin: "4px 0 0 18px", padding: 0, color: "#666" }}>
                                       {fixState.reasons.map((r, i) => <li key={i} style={{ marginBottom: "2px" }}>{r}</li>)}
                                     </ul>
                                   </details>
                                 )}
+                                <button
+                                  onClick={() => setFixStates((s) => { const next = { ...s }; delete next[finding.id]; return next; })}
+                                  style={{ padding: "6px 10px", background: "transparent", border: "1px solid #C97B45", color: "#C97B45", borderRadius: "4px", fontSize: "11px", cursor: "pointer", fontWeight: 500 }}
+                                >
+                                  Dismiss
+                                </button>
                               </div>
                             );
                           }
@@ -2007,7 +2420,7 @@ export default function App() {
                                 </div>
                                 {fixState.commitUrl && (
                                   <a href={fixState.commitUrl} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#96A283", textDecoration: "none", fontSize: "11px" }}>
-                                    View commit on GitHub <ExternalLink size={11} />
+                                    {commitLinkLabel(fixState.platform)} <ExternalLink size={11} />
                                   </a>
                                 )}
                               </div>
@@ -2022,7 +2435,7 @@ export default function App() {
                                   <AlertCircle size={14} /> Add image descriptions to {getDisplayName(detectedPlatform)} manually
                                 </div>
                                 <div style={{ marginBottom: "10px", lineHeight: "1.4", fontSize: "11px", color: "#666" }}>
-                                  We can&apos;t auto-edit images on {getDisplayName(detectedPlatform)} (yet) — but here&apos;s where to paste each description:
+                                  {fixState.manualNote || `We can't auto-edit images on ${getDisplayName(detectedPlatform)} for this fix type. Here's how to add them manually:`}
                                 </div>
                                 <div style={{ background: "white", border: "1px solid #E5D8B8", borderRadius: "4px", padding: "10px" }}>
                                   <div style={{ fontWeight: 600, fontSize: "11px", marginBottom: "6px" }}>Steps for {instructions.platformName}:</div>

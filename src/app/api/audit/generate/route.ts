@@ -19,13 +19,30 @@ import { createServerClient } from "@/services/supabaseServer";
 import { decryptCredentials } from "@/utils/credentialsEncryption";
 import { applyHtmlInject } from "@/features/crawlability/services/applyFix/htmlInjectHandler";
 import { applyFixToWordpress } from "@/features/crawlability/services/applyFix/wordpressHandler";
+// Wix + Shopify dispatch are currently disabled — auto-deploy is GitHub + WordPress only.
+// The handlers stay in the codebase (wixHandler.ts, shopifyHandler.ts) so re-enabling
+// is a one-import + one-dispatch-branch + one-runner-function restore from git history.
+// import { applyFixToWix } from "@/features/crawlability/services/applyFix/wixHandler";
+// import { applyFixToShopify } from "@/features/crawlability/services/applyFix/shopifyHandler";
+
 import { generateSchema, type SchemaKind, type PageContext } from "@/services/schemaGenerator";
 import { rewriteMetaDescription, rewriteTitleTag, generateFaqPairs, generateAltText } from "@/services/llmRewriter";
 import { writeAuditLog, ipFromRequest } from "@/services/auditLog";
+import { MANAGED_PLAN_CTA, PAID_PLANS } from "@/utils/managedPlanCta";
+
+/**
+ * Inject the Managed-plan upsell into any commit result that didn't successfully auto-deploy.
+ * Structured field the side panel can render — extension falls back gracefully if missing.
+ */
+function withManagedPlanCta<T extends { ok?: boolean; manualSnippet?: string; manualNote?: string }>(
+  result: T,
+): T & { managedPlanCta?: typeof MANAGED_PLAN_CTA } {
+  const isManualFallback = result.ok === false || !!result.manualSnippet || !!result.manualNote;
+  if (!isManualFallback) return result;
+  return { ...result, managedPlanCta: MANAGED_PLAN_CTA };
+}
 
 export const maxDuration = 30;
-
-const PAID_PLANS = ["plus", "premium", "admin"];
 
 const PageContextSchema = z.object({
   url: z.string().url(),
@@ -117,6 +134,7 @@ interface ConnectionRow {
   repo: string | null;
   branch: string | null;
   site_url: string | null;
+  site_id: string | null;
   status: string;
 }
 
@@ -131,7 +149,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const [keyData] = keyRows;
-  if (!keyData.valid || !PAID_PLANS.includes(keyData.plan)) {
+  if (!keyData.valid || !(PAID_PLANS as readonly string[]).includes(keyData.plan)) {
     return NextResponse.json({ error: "Premium plan required" }, { status: 403 });
   }
 
@@ -189,7 +207,7 @@ export async function POST(request: NextRequest) {
       origin: request.nextUrl.origin,
       ipAddress: ipFromRequest(request),
     });
-    return NextResponse.json({ ...commitResult, snippet: result.jsonLd, schemaType });
+    return NextResponse.json(withManagedPlanCta({ ...commitResult, snippet: result.jsonLd, schemaType }));
   }
 
   if (kind === "meta_desc") {
@@ -223,7 +241,7 @@ export async function POST(request: NextRequest) {
       origin: request.nextUrl.origin,
       ipAddress: ipFromRequest(request),
     });
-    return NextResponse.json({ ...commitResult, suggested: description, current: pageContext.description ?? null });
+    return NextResponse.json(withManagedPlanCta({ ...commitResult, suggested: description, current: pageContext.description ?? null }));
   }
 
   if (kind === "title_tag") {
@@ -257,7 +275,7 @@ export async function POST(request: NextRequest) {
       origin: request.nextUrl.origin,
       ipAddress: ipFromRequest(request),
     });
-    return NextResponse.json({ ...commitResult, suggested: title, current: pageContext.title ?? null });
+    return NextResponse.json(withManagedPlanCta({ ...commitResult, suggested: title, current: pageContext.title ?? null }));
   }
 
   if (kind === "faq_page") {
@@ -303,7 +321,7 @@ export async function POST(request: NextRequest) {
       origin: request.nextUrl.origin,
       ipAddress: ipFromRequest(request),
     });
-    return NextResponse.json({ ...commitResult, snippet: schemaResult.jsonLd, pairs, schemaType: "FAQPage" });
+    return NextResponse.json(withManagedPlanCta({ ...commitResult, snippet: schemaResult.jsonLd, pairs, schemaType: "FAQPage" }));
   }
 
   if (kind === "alt_text") {
@@ -318,7 +336,7 @@ export async function POST(request: NextRequest) {
         origin: request.nextUrl.origin,
         ipAddress: ipFromRequest(request),
       });
-      return NextResponse.json({ ...commitResult, replacements });
+      return NextResponse.json(withManagedPlanCta({ ...commitResult, replacements }));
     }
 
     if (!images || images.length === 0) {
@@ -366,12 +384,14 @@ async function commitToConnectedRepo(args: CommitArgs) {
     }
   })();
 
-  // Fetch ALL active connections for this user (GitHub + WordPress + future platforms).
-  // We pick the one whose site_url matches the audited URL by hostname.
+  // Fetch ALL active connections for this user (GitHub + WordPress + Wix + future platforms).
+  // We pick the one whose site_url or site_id matches the audited URL.
   const { data: connections } = await supabaseAdmin
     .from("site_connections")
-    .select("id, user_id, business_id, platform, credentials, repo, branch, site_url, status")
+    .select("id, user_id, business_id, platform, credentials, repo, branch, site_url, site_id, status")
     .eq("user_id", args.userId)
+    // Auto-deploy: GitHub + WordPress only. Wix + Shopify connections are stored
+    // for verification/future-use but route to manual paste with a Managed-plan CTA.
     .in("platform", ["github", "wordpress"])
     .eq("status", "active")
     .returns<ConnectionRow[]>();
@@ -380,7 +400,7 @@ async function commitToConnectedRepo(args: CommitArgs) {
     return {
       ok: false,
       error: "no_connection",
-      message: "Connect a site (GitHub or WordPress) to your Surven account to enable auto-update.",
+      message: "Connect a site (GitHub, WordPress, or Shopify) to your Surven account to enable auto-update.",
       connectUrl: `${args.origin}/settings`,
       manualNote: "No site connection — copy the snippet below and paste it into your site manually.",
     };
@@ -420,6 +440,9 @@ async function commitToConnectedRepo(args: CommitArgs) {
   if (connection.platform === "wordpress") {
     return await runWordpressCommit(supabaseAdmin, connection, args);
   }
+  // Wix + Shopify dispatch disabled — handlers stay dormant for one-line re-enable.
+  // if (connection.platform === "wix") return await runWixCommit(supabaseAdmin, connection, args);
+  // if (connection.platform === "shopify") return await runShopifyCommit(supabaseAdmin, connection, args);
   if (connection.platform === "github") {
     return await runGithubCommit(supabaseAdmin, connection, args);
   }
@@ -445,7 +468,12 @@ async function runGithubCommit(
     const creds = decryptCredentials<{ token: string }>(connection.credentials);
     token = creds.token;
   } catch {
-    return { ok: false, error: "encryption_unavailable", message: "Stored credentials couldn't be decrypted. Reconnect GitHub." };
+    return {
+      ok: false,
+      error: "encryption_unavailable",
+      message: "Stored credentials couldn't be decrypted. Reconnect GitHub.",
+      connectUrl: `${args.origin}/settings`,
+    };
   }
 
   const { data: pendingRow } = await supabaseAdmin
@@ -616,6 +644,7 @@ async function runWordpressCommit(
     filePath: result.filePath,
   };
 }
+
 
 export async function GET() {
   return NextResponse.json(

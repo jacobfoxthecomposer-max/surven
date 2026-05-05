@@ -26,6 +26,7 @@ import { AIOverview } from "@/components/atoms/AIOverview";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { useCrawlabilityAudit } from "@/features/crawlability/hooks/useCrawlabilityAudit";
 import { useSiteConnections } from "@/features/crawlability/hooks/useSiteConnections";
+import { useIsFirstTimeUser } from "@/features/auth/hooks/useIsFirstTimeUser";
 import { CrawlabilityScoreGauge } from "@/features/crawlability/components/CrawlabilityScoreGauge";
 import { StatusCodeDonut } from "@/features/crawlability/components/StatusCodeDonut";
 import { CategoryScoresBars } from "@/features/crawlability/components/CategoryScoresBars";
@@ -55,6 +56,7 @@ export function CrawlabilityAuditPage({
 }: CrawlabilityAuditPageProps) {
   const [siteUrl, setSiteUrl] = useState("");
   const { scanning, result, error, runScan, reset, markFindingApplied } = useCrawlabilityAudit();
+  const { isFirstTime } = useIsFirstTimeUser();
 
   const isFree = plan === "free";
   const isPremium = plan === "premium" || plan === "admin";
@@ -278,7 +280,7 @@ export function CrawlabilityAuditPage({
                 className="inline-flex items-center gap-2 px-5 py-3 rounded-[var(--radius-md)] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium text-sm shadow-md transition-colors"
               >
                 <Crown className="h-4 w-4" />
-                Upgrade to Plus
+                {isFirstTime ? "Try Free Trial" : "Upgrade to Plus"}
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <p className="text-xs text-[var(--color-fg-muted)]">

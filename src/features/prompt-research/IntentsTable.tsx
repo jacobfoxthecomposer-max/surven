@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { ChartExplainer } from "@/components/atoms/ChartExplainer";
@@ -13,8 +13,9 @@ import {
   ArrowDown,
   CheckCircle2,
   ListChecks,
+  ChevronRight,
 } from "lucide-react";
-import type { Intent, TaxonomyCategory } from "./types";
+import type { EngineId, Intent, TaxonomyCategory, Variant } from "./types";
 import {
   TAXONOMY_LABEL,
   TAXONOMY_COLOR,
@@ -35,8 +36,18 @@ export function IntentsTable({ intents, onSendToTracker }: IntentsTableProps) {
   const [taxonomyFilter, setTaxonomyFilter] = useState<TaxonomyCategory | "all">("all");
   const [trackerFilter, setTrackerFilter] = useState<"all" | "tracked" | "untracked">("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [sortKey, setSortKey] = useState<SortKey>("importance");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const toggleExpand = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -257,6 +268,7 @@ export function IntentsTable({ intents, onSendToTracker }: IntentsTableProps) {
               ) : (
                 sorted.map((i) => {
                   const isSelected = selected.has(i.id);
+                  const isExpanded = expanded.has(i.id);
                   const coverageColor =
                     i.overallCoverage >= 60
                       ? "#7D8E6C"
@@ -264,64 +276,88 @@ export function IntentsTable({ intents, onSendToTracker }: IntentsTableProps) {
                       ? "#B8A030"
                       : "#B54631";
                   return (
-                    <tr
-                      key={i.id}
-                      className={
-                        "border-b border-[var(--color-border)] last:border-b-0 transition-colors " +
-                        (isSelected
-                          ? "bg-[var(--color-primary)]/5"
-                          : "hover:bg-[var(--color-surface-alt)]/50")
-                      }
-                    >
-                      <td className="py-2.5 pr-2">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleOne(i.id)}
-                          className="cursor-pointer accent-[var(--color-primary)]"
-                        />
-                      </td>
-                      <td className="py-2.5 pr-3 text-[var(--color-fg)]">
-                        <span className="block truncate max-w-[420px]" title={i.canonical}>
-                          {i.canonical}
-                        </span>
-                      </td>
-                      <td className="py-2.5 pr-3">
-                        <span
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-sm)]"
-                          style={{
-                            backgroundColor: `${TAXONOMY_COLOR[i.taxonomy]}1f`,
-                            color: TAXONOMY_COLOR[i.taxonomy],
-                            fontSize: 11,
-                            fontWeight: 500,
-                          }}
-                        >
-                          {TAXONOMY_LABEL[i.taxonomy]}
-                        </span>
-                      </td>
-                      <td className="py-2.5 pr-3 text-[var(--color-fg-secondary)]">
-                        {INTENT_LABEL[i.intentType]}
-                      </td>
-                      <td className="py-2.5 pr-3 text-right text-[var(--color-fg-secondary)]">
-                        {i.variants.length}
-                      </td>
-                      <td
-                        className="py-2.5 pr-3 text-right font-medium"
-                        style={{ color: coverageColor }}
+                    <Fragment key={i.id}>
+                      <tr
+                        className={
+                          "border-b border-[var(--color-border)] transition-colors " +
+                          (isExpanded ? "bg-[var(--color-surface-alt)]/30 " : "") +
+                          (isSelected
+                            ? "bg-[var(--color-primary)]/5"
+                            : "hover:bg-[var(--color-surface-alt)]/50")
+                        }
                       >
-                        {i.overallCoverage}%
-                      </td>
-                      <td className="py-2.5 pr-3 text-right text-[var(--color-fg-secondary)]">
-                        {i.importance}
-                      </td>
-                      <td className="py-2.5 pl-2 text-right">
-                        {i.inTracker ? (
-                          <CheckCircle2 className="h-4 w-4 text-[var(--color-primary)] inline-block" />
-                        ) : (
-                          <span className="text-[var(--color-fg-muted)] opacity-60">—</span>
-                        )}
-                      </td>
-                    </tr>
+                        <td className="py-2.5 pr-2">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleOne(i.id)}
+                            className="cursor-pointer accent-[var(--color-primary)]"
+                          />
+                        </td>
+                        <td className="py-2.5 pr-3 text-[var(--color-fg)]">
+                          <span className="block truncate max-w-[420px]" title={i.canonical}>
+                            {i.canonical}
+                          </span>
+                        </td>
+                        <td className="py-2.5 pr-3">
+                          <span
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-sm)]"
+                            style={{
+                              backgroundColor: `${TAXONOMY_COLOR[i.taxonomy]}1f`,
+                              color: TAXONOMY_COLOR[i.taxonomy],
+                              fontSize: 11,
+                              fontWeight: 500,
+                            }}
+                          >
+                            {TAXONOMY_LABEL[i.taxonomy]}
+                          </span>
+                        </td>
+                        <td className="py-2.5 pr-3 text-[var(--color-fg-secondary)]">
+                          {INTENT_LABEL[i.intentType]}
+                        </td>
+                        <td className="py-2.5 pr-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() => toggleExpand(i.id)}
+                            className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] px-1.5 py-0.5 text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-fg)] transition-colors"
+                            aria-expanded={isExpanded}
+                            aria-label={isExpanded ? "Hide variants" : "Show variants"}
+                            title={isExpanded ? "Hide variants" : "See all variants"}
+                          >
+                            {i.variants.length}
+                            <ChevronRight
+                              className="h-3 w-3 transition-transform"
+                              style={{
+                                transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
+                              }}
+                            />
+                          </button>
+                        </td>
+                        <td
+                          className="py-2.5 pr-3 text-right font-medium"
+                          style={{ color: coverageColor }}
+                        >
+                          {i.overallCoverage}%
+                        </td>
+                        <td className="py-2.5 pr-3 text-right text-[var(--color-fg-secondary)]">
+                          {i.importance}
+                        </td>
+                        <td className="py-2.5 pl-2 text-right">
+                          {i.inTracker ? (
+                            <CheckCircle2 className="h-4 w-4 text-[var(--color-primary)] inline-block" />
+                          ) : (
+                            <span className="text-[var(--color-fg-muted)] opacity-60">—</span>
+                          )}
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr className="border-b border-[var(--color-border)] last:border-b-0 bg-[var(--color-surface-alt)]/40">
+                          <td colSpan={8} className="py-3 px-3">
+                            <VariantList variants={i.variants} />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   );
                 })
               )}
@@ -345,7 +381,7 @@ export function IntentsTable({ intents, onSendToTracker }: IntentsTableProps) {
             },
             {
               label: "Variants & Coverage",
-              body: "Variants is how many paraphrasings live under that intent. Coverage is the percent of those variants where AI mentions your brand. Coverage above 60% (sage) is strong, 30–60% (yellow) is mid-pack, under 30% (rust) is a gap.",
+              body: "Variants is how many paraphrasings live under that intent — click the count to expand the row and read every variant with its per-engine coverage. Coverage is the percent of those variants where AI mentions your brand. Coverage above 60% (sage) is strong, 30–60% (yellow) is mid-pack, under 30% (rust) is a gap.",
             },
             {
               label: "Importance & Tracked",
@@ -356,6 +392,96 @@ export function IntentsTable({ intents, onSendToTracker }: IntentsTableProps) {
         />
       </div>
     </Card>
+  );
+}
+
+const ENGINE_LABELS: Record<EngineId, string> = {
+  chatgpt: "ChatGPT",
+  claude: "Claude",
+  gemini: "Gemini",
+  google_ai: "Google AI",
+};
+
+const ENGINE_ORDER: EngineId[] = ["chatgpt", "claude", "gemini", "google_ai"];
+
+function coverageColor(pct: number): string {
+  if (pct >= 60) return "#7D8E6C";
+  if (pct >= 30) return "#B8A030";
+  return "#B54631";
+}
+
+function VariantList({ variants }: { variants: Variant[] }) {
+  if (variants.length === 0) {
+    return (
+      <p className="text-xs text-[var(--color-fg-muted)] italic">
+        No variants yet.
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      <p
+        className="uppercase tracking-wider font-semibold text-[var(--color-fg-muted)]"
+        style={{ fontSize: 10 }}
+      >
+        All variants ({variants.length})
+      </p>
+      <ul className="space-y-2">
+        {variants.map((v, idx) => (
+          <li
+            key={v.id}
+            className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] p-3"
+          >
+            <div className="flex items-start gap-2.5">
+              <span
+                className="shrink-0 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-surface-alt)] text-[var(--color-fg-muted)] font-semibold"
+                style={{ fontSize: 10 }}
+              >
+                {idx + 1}
+              </span>
+              <p
+                className="flex-1 text-[var(--color-fg)] leading-snug"
+                style={{ fontSize: 13 }}
+              >
+                {v.text}
+              </p>
+            </div>
+            <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2 pl-7">
+              {ENGINE_ORDER.map((engine) => {
+                const pct = Math.round(v.coverage[engine] ?? 0);
+                return (
+                  <div key={engine} className="space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className="text-[var(--color-fg-muted)]"
+                        style={{ fontSize: 10 }}
+                      >
+                        {ENGINE_LABELS[engine]}
+                      </span>
+                      <span
+                        className="font-medium"
+                        style={{ fontSize: 11, color: coverageColor(pct) }}
+                      >
+                        {pct}%
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-[var(--color-surface-alt)] overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${Math.min(100, Math.max(0, pct))}%`,
+                          backgroundColor: coverageColor(pct),
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

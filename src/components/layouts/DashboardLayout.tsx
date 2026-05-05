@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Settings, LogOut, FileSearch } from "lucide-react";
@@ -11,6 +11,7 @@ import { BusinessSwitcher } from "@/components/organisms/BusinessSwitcher";
 import { Sidebar } from "@/components/organisms/Sidebar";
 import { SurvenLogo } from "@/components/atoms/SurvenLogo";
 import { useSidebarContext } from "@/features/sidebar/context/SidebarContext";
+import { PostPurchaseIntegrationsModal } from "@/features/onboarding/PostPurchaseIntegrationsModal";
 import { cn } from "@/utils/cn";
 
 const navItems = [
@@ -83,6 +84,10 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           <PageTransition key={pathname}>{children}</PageTransition>
         </main>
       </div>
+
+      <Suspense fallback={null}>
+        <PostPurchaseIntegrationsModal />
+      </Suspense>
     </div>
   );
 }

@@ -125,7 +125,7 @@ function StatsBlock({ stats }: { stats: VisibilityStats }) {
           </div>
         </HoverHint>
         <a
-          href="/upgrade"
+          href="/pricing"
           className="inline-flex items-center gap-1 font-semibold hover:gap-1.5 hover:underline transition-all mt-2"
           style={{ fontSize: 11, color: ACCENTS.orange }}
         >
@@ -146,7 +146,7 @@ function StatsBlock({ stats }: { stats: VisibilityStats }) {
           color={ACCENTS.orange}
           icon={TargetIcon}
           label={`#${stats.avgRank.toFixed(1)} rank`}
-          hint="Your average rank among tracked brands."
+          hint="Your average rank among tracked brands when AI mentions someone. Lower is better — rank 1 means you're cited first."
         />
         <Chip
           color={ACCENTS.sage}
@@ -206,15 +206,23 @@ export function VisibilityScoreGauge({
   descriptionOverride,
   stats,
 }: {
-  score?: number;
+  score?: number | null;
   label?: string;
   width?: number;
   descriptionOverride?: React.ReactNode;
   stats?: VisibilityStats;
 }) {
-  const t = tierFor(score);
+  const hasScore = score !== null && score !== undefined;
+  const safeScore = hasScore ? (score as number) : 0;
+  const t = hasScore
+    ? tierFor(safeScore)
+    : {
+        label: "No data yet",
+        color: "#A09890",
+        description: "Run your first scan to see how often AI tools mention your business.",
+      };
   const cx = 130, cy = 120, r = 88, stroke = 20;
-  const angle = Math.max(2, Math.min(180, (score / 100) * 180));
+  const angle = Math.max(2, Math.min(180, (safeScore / 100) * 180));
   const tip = polar(cx, cy, r, angle);
 
   return (
@@ -242,34 +250,40 @@ export function VisibilityScoreGauge({
             </linearGradient>
           </defs>
           <path d={arc(cx, cy, r, 0, 180)} stroke="url(#vsgTrack)" strokeWidth={stroke} fill="none" strokeLinecap="round" />
-          <path d={arc(cx, cy, r, 0, angle)} stroke={t.color} strokeWidth={stroke} fill="none" strokeLinecap="round" />
-          <polygon
-            points={`${tip.x},${tip.y - 14} ${tip.x - 6},${tip.y - 4} ${tip.x + 6},${tip.y - 4}`}
-            fill={t.color}
-            transform={`rotate(${angle - 90} ${tip.x} ${tip.y - 4})`}
-          />
+          {hasScore && (
+            <>
+              <path d={arc(cx, cy, r, 0, angle)} stroke={t.color} strokeWidth={stroke} fill="none" strokeLinecap="round" />
+              <polygon
+                points={`${tip.x},${tip.y - 14} ${tip.x - 6},${tip.y - 4} ${tip.x + 6},${tip.y - 4}`}
+                fill={t.color}
+                transform={`rotate(${angle - 90} ${tip.x} ${tip.y - 4})`}
+              />
+            </>
+          )}
           <text
             x={cx}
             y={cy - 16}
             textAnchor="middle"
             style={{
               fontFamily: "var(--font-display)",
-              fontSize: 52,
+              fontSize: hasScore ? 52 : 44,
               fontWeight: 600,
               fill: t.color,
               letterSpacing: "-0.02em",
             }}
           >
-            {Math.round(score)}%
+            {hasScore ? `${Math.round(safeScore)}%` : "—"}
           </text>
-          <text x={cx} y={cy + 4} textAnchor="middle" fill="var(--color-fg-muted)" fontSize="13">
-            /100%
-          </text>
+          {hasScore && (
+            <text x={cx} y={cy + 4} textAnchor="middle" fill="var(--color-fg-muted)" fontSize="13">
+              /100%
+            </text>
+          )}
           <text
             x={cx}
             y={cy + 26}
             textAnchor="middle"
-            style={{ fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 500, fill: "var(--color-fg)" }}
+            style={{ fontFamily: "var(--font-display)", fontSize: hasScore ? 28 : 20, fontWeight: 500, fill: "var(--color-fg)" }}
           >
             {t.label}
           </text>

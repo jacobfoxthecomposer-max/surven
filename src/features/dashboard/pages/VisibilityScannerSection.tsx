@@ -166,12 +166,12 @@ const TOK = {
 
 // ─── MOCK DATA ──────────────────────────────────────────────────────────────
 
-interface MockBrand extends VisibilityBrand {
+export interface MockBrand extends VisibilityBrand {
   domain: string;
   mentions: number;
 }
 
-function genLine(base: number, trend: number, noise: number, n: number, seedMul = 1) {
+export function genLine(base: number, trend: number, noise: number, n: number, seedMul = 1) {
   const pts: number[] = [];
   let v = base;
   let seed = Math.round(base * 1000 * seedMul);
@@ -186,7 +186,7 @@ function genLine(base: number, trend: number, noise: number, n: number, seedMul 
   return pts;
 }
 
-const MOCK_N = 90;
+export const MOCK_N = 90;
 
 // Full-color competitor palette, all visually distinct from each other AND
 // from the sage primary (You). c4 is a teal that reads separate from sage.
@@ -199,7 +199,7 @@ export const MOCK_BRANDS: MockBrand[] = [
   { id: "c5",  name: "RapidFlow",          domain: "rapidflow.com",         color: "#B54631",          isYou: false, mentions: 1188, data: genLine(22, 0.05, 2.4, MOCK_N, 6) },
 ];
 
-function buildDates(n: number): Date[] {
+export function buildDates(n: number): Date[] {
   const dates: Date[] = [];
   const now = new Date();
   for (let i = n - 1; i >= 0; i--) {

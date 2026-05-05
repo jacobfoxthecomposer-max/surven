@@ -6,6 +6,7 @@ import { ArrowRight, CircleCheck } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/utils/cn";
+import { useIsFirstTimeUser } from "@/features/auth/hooks/useIsFirstTimeUser";
 
 const plans = [
   {
@@ -65,6 +66,7 @@ const plans = [
 
 export function PricingSection() {
   const [isYearly, setIsYearly] = useState(false);
+  const { isFirstTime } = useIsFirstTimeUser();
 
   return (
     <section className="py-24 px-6">
@@ -202,7 +204,7 @@ export function PricingSection() {
                     </a>
                   ) : (
                     <Link
-                      href={plan.button.href}
+                      href={isFirstTime ? plan.button.href : "/pricing"}
                       className={cn(
                         "flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg text-sm font-semibold transition-all",
                         plan.highlight
@@ -210,7 +212,7 @@ export function PricingSection() {
                           : "border border-[var(--color-border)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
                       )}
                     >
-                      {plan.button.text}
+                      {isFirstTime ? "Try Free Trial" : `Upgrade to ${plan.name}`}
                       <ArrowRight size={15} />
                     </Link>
                   )}

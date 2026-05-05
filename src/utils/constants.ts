@@ -73,6 +73,24 @@ export const COMPETITOR_PALETTE = [
   "#6BA3F5", // blue
 ] as const;
 
+export const OTHER_INDUSTRY_OPTION = "Other (specify)";
+
+export const PROMPTS_PER_PLAN = {
+  free: 50,
+  plus: 150,
+  premium: 300,
+  managed: 300,
+  admin: 300,
+} as const;
+
+export function getPromptCountForPlan(plan?: string | null): number {
+  if (!plan) return PROMPTS_PER_PLAN.plus;
+  if (plan in PROMPTS_PER_PLAN) {
+    return PROMPTS_PER_PLAN[plan as keyof typeof PROMPTS_PER_PLAN];
+  }
+  return PROMPTS_PER_PLAN.plus;
+}
+
 export const INDUSTRIES = [
   "Dentist",
   "Restaurant",
@@ -94,6 +112,8 @@ export const INDUSTRIES = [
   "Landscaper",
   "Personal Trainer",
   "Therapist",
+  "Ecommerce",
+  OTHER_INDUSTRY_OPTION,
 ] as const;
 
 export const US_STATES = [
@@ -104,16 +124,3 @@ export const US_STATES = [
   "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
 ] as const;
 
-export function getScoreColor(score: number): string {
-  if (score < 25) return COLORS.scoreRed;
-  if (score < 50) return COLORS.scoreOrange;
-  if (score < 75) return COLORS.scoreYellow;
-  return COLORS.scoreGreen;
-}
-
-export function getScoreLabel(score: number): string {
-  if (score < 25) return "Not Visible";
-  if (score < 50) return "Low Visibility";
-  if (score < 75) return "Moderately Visible";
-  return "Highly Visible";
-}

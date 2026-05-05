@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { Radar, Info } from "lucide-react";
-import { VisibilityGauge } from "@/components/organisms/VisibilityGauge";
+import { VisibilityScoreGauge } from "@/components/atoms/VisibilityScoreGauge";
 import { Button } from "@/components/atoms/Button";
 import { Badge } from "@/components/atoms/Badge";
 import { Skeleton } from "@/components/atoms/Skeleton";
@@ -77,7 +77,7 @@ export function GaugeSection({
             />
           )}
         </AnimatePresence>
-        <VisibilityGauge score={score} />
+        <VisibilityScoreGauge score={lastScanDate ? score : null} width={260} />
       </div>
 
       <div className="flex-1 text-center sm:text-left space-y-3 min-w-0">

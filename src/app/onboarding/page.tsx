@@ -15,7 +15,7 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useActiveBusiness } from "@/features/business/hooks/useActiveBusiness";
 import { createBusiness, addCompetitors } from "@/features/business/services/businessService";
 import { onboardingSchema, type OnboardingInput } from "@/types/auth";
-import { INDUSTRIES, US_STATES } from "@/utils/constants";
+import { INDUSTRIES, OTHER_INDUSTRY_OPTION, US_STATES } from "@/utils/constants";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -36,6 +36,7 @@ export default function OnboardingPage() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<OnboardingInput>({
     resolver: zodResolver(onboardingSchema),
@@ -44,6 +45,9 @@ export default function OnboardingPage() {
       competitors: [],
     },
   });
+
+  const selectedIndustry = watch("industry");
+  const isOtherIndustry = selectedIndustry === OTHER_INDUSTRY_OPTION;
 
   function addCompetitor() {
     const name = competitorInput.trim();
@@ -66,9 +70,14 @@ export default function OnboardingPage() {
 
     setLoading(true);
     try {
+      const industryValue =
+        data.industry === OTHER_INDUSTRY_OPTION && data.customIndustry
+          ? data.customIndustry.trim()
+          : data.industry;
+
       const business = await createBusiness(user.id, {
         name: data.businessName,
-        industry: data.industry,
+        industry: industryValue,
         city: data.city,
         state: data.state,
       });
@@ -80,7 +89,7 @@ export default function OnboardingPage() {
       await refetchBusinesses();
       setActiveBusinessId(business.id);
       toast("Business added! Running your first scan...", "success");
-      router.push("/dashboard");
+      router.push("/dashboard?firstScan=1");
     } catch (err: unknown) {
       const message =
         (err as { message?: string })?.message ?? "Failed to save. Please try again.";
@@ -114,6 +123,25 @@ export default function OnboardingPage() {
           error={errors.industry?.message}
           {...register("industry")}
         />
+
+        <AnimatePresence initial={false}>
+          {isOtherIndustry && (
+            <motion.div
+              key="custom-industry"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Input
+                label="What kind of business?"
+                placeholder="e.g. Pet grooming, art studio, food truck"
+                error={errors.customIndustry?.message}
+                {...register("customIndustry")}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="grid grid-cols-2 gap-3">
           <Input

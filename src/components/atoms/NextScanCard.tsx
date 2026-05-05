@@ -1,15 +1,14 @@
 "use client";
 
 import { HoverHint } from "@/components/atoms/HoverHint";
-import { COLORS } from "@/utils/constants";
-
-const DEFAULT_PROMPT_COUNT = 248;
+import { COLORS, getPromptCountForPlan } from "@/utils/constants";
+import { useUserProfile } from "@/features/auth/hooks/useUserProfile";
 
 function getNextMondayScan() {
   const now = new Date();
   const dayOfWeek = now.getDay();
-  let daysUntilMonday = (1 - dayOfWeek + 7) % 7;
-  if (daysUntilMonday === 0) daysUntilMonday = 7;
+  // Monday = 1. If today is Monday, daysUntilMonday = 0 (scan runs today).
+  const daysUntilMonday = (1 - dayOfWeek + 7) % 7;
   const next = new Date(now);
   next.setDate(now.getDate() + daysUntilMonday);
   next.setHours(9, 0, 0, 0);
@@ -26,10 +25,17 @@ interface NextScanCardProps {
   promptCount?: number;
 }
 
-export function NextScanCard({ days, date, promptCount = DEFAULT_PROMPT_COUNT }: NextScanCardProps = {}) {
+export function NextScanCard({ days, date, promptCount }: NextScanCardProps = {}) {
   const fallback = getNextMondayScan();
   const d = days ?? fallback.days;
   const dt = date ?? fallback.date;
+
+  const { plan } = useUserProfile();
+  const resolvedPromptCount = promptCount ?? getPromptCountForPlan(plan);
+
+  const isToday = d === 0;
+  const valueText = isToday ? "Today" : String(d);
+  const unitText = isToday ? "" : d === 1 ? "day" : "days";
 
   return (
     <div
@@ -47,7 +53,11 @@ export function NextScanCard({ days, date, promptCount = DEFAULT_PROMPT_COUNT }:
         Next scan
       </p>
       <HoverHint
-        hint="Days until your next automatic scan across every AI tool."
+        hint={
+          isToday
+            ? "Your weekly automatic scan runs today across every AI tool."
+            : "Days until your next automatic scan across every AI tool."
+        }
         display="inline-block"
         placement="left"
       >
@@ -55,30 +65,32 @@ export function NextScanCard({ days, date, promptCount = DEFAULT_PROMPT_COUNT }:
           <span
             style={{
               fontFamily: "var(--font-display)",
-              fontSize: 36,
+              fontSize: isToday ? 28 : 36,
               fontWeight: 600,
               color: "var(--color-fg)",
               letterSpacing: "-0.02em",
               lineHeight: 1,
             }}
           >
-            {d}
+            {valueText}
           </span>
-          <span
-            className="text-[var(--color-fg-secondary)]"
-            style={{ fontSize: 13, fontWeight: 500 }}
-          >
-            {d === 1 ? "day" : "days"}
-          </span>
+          {unitText && (
+            <span
+              className="text-[var(--color-fg-secondary)]"
+              style={{ fontSize: 13, fontWeight: 500 }}
+            >
+              {unitText}
+            </span>
+          )}
         </div>
       </HoverHint>
       <HoverHint
-        hint={`Next scan date and the ${promptCount} prompts we'll run.`}
+        hint={`Next scan date and the ${resolvedPromptCount} prompts we'll run on your ${plan || "current"} plan.`}
         display="block"
         placement="left"
       >
         <p className="text-[var(--color-fg-muted)]" style={{ fontSize: 12 }}>
-          {fmtScanDate(dt)} · {promptCount} prompts
+          {fmtScanDate(dt)} · {resolvedPromptCount} prompts
         </p>
       </HoverHint>
     </div>

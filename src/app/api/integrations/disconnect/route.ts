@@ -6,7 +6,7 @@ import { z } from "zod";
 
 const DisconnectSchema = z.object({
   businessId: z.string().uuid(),
-  platform: z.enum(["github", "vercel", "wordpress", "webflow"]),
+  platform: z.enum(["github", "vercel", "wordpress", "webflow", "wix", "shopify"]),
 });
 
 export async function DELETE(request: NextRequest) {

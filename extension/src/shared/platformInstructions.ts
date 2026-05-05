@@ -164,7 +164,7 @@ const META_DESC_INSTRUCTIONS: Record<CmsPlatform, PlatformInstructions> = {
       "Find your root layout file (usually src/app/layout.tsx or app/layout.tsx)",
       "Find the metadata export — it looks like: export const metadata = { ... }",
       "Replace the description field with the new version",
-      "Commit and push (or let Sprint 1.5 auto-commit do it for you)",
+      "Commit and push (Surven can auto-commit this for you when GitHub is connected — check Settings → Integrations)",
     ],
   },
   static: {
@@ -369,7 +369,7 @@ const SCHEMA_INSTRUCTIONS: Record<CmsPlatform, PlatformInstructions> = {
       "Use dangerouslySetInnerHTML={{ __html: JSON.stringify({...}) }}",
       "Commit and push",
     ],
-    note: "Sprint 1.5 will auto-commit this for you.",
+    note: "Surven can auto-commit this for you when your repo is connected — check Settings → Integrations.",
   },
   static: {
     platformName: "your site",

@@ -8,6 +8,15 @@ import { StatsSection } from "@/features/landing/sections/StatsSection";
 import { CtaSection } from "@/features/landing/sections/CtaSection";
 import { Footer } from "@/features/landing/sections/Footer";
 
+
+import type { Metadata } from "next";
+export const metadata: Metadata = {
+  alternates: {
+    canonical: "https://surven.vercel.app/",
+  },
+
+  openGraph: { url: "https://surven.vercel.app/", type: "website" },
+};
 export default function LandingPage() {
   return (
     <>

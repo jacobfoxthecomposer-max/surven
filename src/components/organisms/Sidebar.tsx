@@ -12,7 +12,6 @@ import {
   Eye,
   GitCompare,
   BookOpen,
-  AlertCircle,
   Settings,
   ChevronRight,
   Upload,
@@ -68,7 +67,6 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
     items: [
       { label: "Website Audit", href: "/audit", icon: BarChart3 },
       { label: "Crawlability Audit", href: "/crawlability-audit", icon: Zap },
-      { label: "Alerts", href: "/dashboard", icon: AlertCircle },
     ],
   },
   {

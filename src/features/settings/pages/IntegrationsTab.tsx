@@ -6,11 +6,12 @@ import { Badge } from "@/components/atoms/Badge";
 import { Spinner } from "@/components/atoms/Spinner";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
 import { useUserProfile } from "@/features/auth/hooks/useUserProfile";
+import { useIsFirstTimeUser } from "@/features/auth/hooks/useIsFirstTimeUser";
 import { useSiteConnections } from "@/features/crawlability/hooks/useSiteConnections";
 import { SiteConnectionCard } from "@/features/crawlability/components/SiteConnectionCard";
 import type { Platform } from "@/features/crawlability/hooks/useSiteConnections";
 
-const PLATFORMS: Platform[] = ["github", "vercel", "wordpress", "webflow"];
+const PLATFORMS: Platform[] = ["github", "vercel", "wordpress", "shopify", "wix", "webflow"];
 
 const futureIntegrations = [
   {
@@ -26,6 +27,7 @@ const futureIntegrations = [
 export function IntegrationsTab() {
   const { business, isLoading: bizLoading } = useBusiness();
   const { plan, isLoading: profileLoading } = useUserProfile();
+  const { isFirstTime } = useIsFirstTimeUser();
   const { connections, loading, connect, disconnect } = useSiteConnections(business?.id);
 
   const isPremium = plan === "premium" || plan === "admin";
@@ -65,7 +67,7 @@ export function IntegrationsTab() {
                   Site Connections is a Premium feature
                 </p>
                 <p className="text-xs text-[var(--color-fg-secondary)] leading-relaxed">
-                  Connect GitHub, Vercel, WordPress, or Webflow to apply crawlability fixes
+                  Connect GitHub, Vercel, WordPress, Wix, or Webflow to apply crawlability fixes
                   automatically — no copy-pasting required.
                 </p>
               </div>
@@ -74,7 +76,7 @@ export function IntegrationsTab() {
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium text-sm shadow-md transition-colors"
               >
                 <Crown className="h-4 w-4" />
-                Upgrade to Premium
+                {isFirstTime ? "Try Free Trial" : "Upgrade to Premium"}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>

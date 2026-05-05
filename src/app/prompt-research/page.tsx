@@ -14,11 +14,13 @@ import { AIOverview } from "@/components/atoms/AIOverview";
 import { NextScanCard } from "@/components/atoms/NextScanCard";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
+import { useScan } from "@/features/dashboard/hooks/useScan";
 import { generatePromptResearchData } from "@/features/prompt-research/mockData";
 import { EntityGrid } from "@/features/prompt-research/EntityGrid";
 import { TaxonomyCoverage } from "@/features/prompt-research/TaxonomyCoverage";
 import { IntentDistribution } from "@/features/prompt-research/IntentDistribution";
 import { IntentsTable } from "@/features/prompt-research/IntentsTable";
+import { CustomPromptsSection } from "@/features/prompt-research/CustomPromptsSection";
 import { HowToRank } from "@/features/prompt-research/HowToRank";
 import { PromptResearchDiagnosticBand } from "@/features/prompt-research/PromptResearchDiagnosticBand";
 import { PromptResearchFixActions } from "@/features/prompt-research/PromptResearchFixActions";
@@ -47,6 +49,7 @@ export default function PromptResearchPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { business, competitors, isLoading: bizLoading } = useBusiness();
+  const { latestScan } = useScan(business, competitors);
 
   const [timeRange, setTimeRange] = useState<TimeRange>("all");
   const [selectedModels, setSelectedModels] = useState<Set<string>>(
@@ -69,14 +72,15 @@ export default function PromptResearchPage() {
 
   const data = useMemo(() => {
     if (!business) return null;
+    const seedKey = `${business.id}-${latestScan?.id ?? "noscan"}`;
     return generatePromptResearchData(
-      business.id,
+      seedKey,
       business.name,
       business.industry,
       business.city,
       competitors
     );
-  }, [business, competitors]);
+  }, [business, competitors, latestScan?.id]);
 
   const insights = useMemo(() => {
     if (!data) return null;
@@ -299,7 +303,7 @@ export default function PromptResearchPage() {
                     icon={<ListChecks className="h-5 w-5 text-[var(--color-primary)]" />}
                     iconBg="bg-[var(--color-primary)]/10"
                     label="Intents"
-                    hint="How many distinct prompt intents we've researched for you. Each intent rolls up multiple paraphrasings of the same question. The more we research, the more options you have for what to track in Tracker."
+                    hint="How many distinct prompt intents we've researched for you. Each intent rolls up multiple phrasings. More researched = more options to send to Tracker."
                     value={insights.totalIntents.toString()}
                     subtitle="Researched"
                     detail={`${insights.trackedCount} already in Tracker · ${untrackedCount} to add`}
@@ -311,7 +315,7 @@ export default function PromptResearchPage() {
                     icon={<Layers className="h-5 w-5 text-[#3D7BC4]" />}
                     iconBg="bg-[#6BA3F5]/10"
                     label="Variants"
-                    hint="People phrase the same question 15 different ways, and AI gives different answers depending on the phrasing. We test multiple paraphrasings per intent so you get a real signal instead of one shaky data point. 5+ variants per intent is healthy."
+                    hint="How many ways we phrase each question. AI returns different answers per phrasing, so testing variants gives you a real signal instead of a shaky one. 5+ variants per intent is healthy."
                     value={insights.totalVariants.toString()}
                     subtitle="Paraphrasings"
                     detail={`~${Math.round(insights.totalVariants / Math.max(insights.totalIntents, 1))} avg per intent`}
@@ -341,7 +345,7 @@ export default function PromptResearchPage() {
                         : "bg-[var(--color-primary)]/10"
                     }
                     label="Coverage"
-                    hint="How often AI engines mention your brand across every prompt variant we test. Above 60% is strong AI presence. 30–60% is mid-pack — most phrasings surface you, but you have gaps. Below 30% means most paraphrasings don't pick you up."
+                    hint="How often AI engines mention you across every prompt variant. Above 60% is strong; 30–60% means gaps in some phrasings; under 30% means most don't pick you up."
                     value={`${insights.avgCoverage}%`}
                     subtitle="Avg mention rate"
                     detail={`Across ${AI_MODELS.length} engines`}
@@ -395,6 +399,11 @@ export default function PromptResearchPage() {
                 intents={data.intents}
                 onSendToTracker={handleSendToTracker}
               />
+            </motion.div>
+
+            {/* Custom prompts (Premium-gated) */}
+            <motion.div {...reveal}>
+              <CustomPromptsSection businessId={business.id} />
             </motion.div>
 
             {/* How to rank — playbook bottom section */}
