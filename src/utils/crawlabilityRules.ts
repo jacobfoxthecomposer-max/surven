@@ -525,6 +525,9 @@ const checkDuplicateMetaDescriptions: RuleCheck = ({ pages }) => {
       "When pages share descriptions, AI has no way to distinguish their value. Each page should describe its unique content so AI can match it to the right user query.",
     howToFix:
       "Write a unique 100-160 character description for each page that summarizes what's unique about that specific page.",
+    fixType: "rewrite_duplicates",
+    fixCode: "(Surven will rewrite each page's meta description with a distinct, AI-generated value.)",
+    fixLabel: "Each duplicate page will get a unique description generated from its content:",
   });
 };
 
