@@ -249,6 +249,11 @@ const checkSitemapCoverage: RuleCheck = ({ sitemap, siteUrl }) => {
         "When pages aren't in your sitemap, crawlers either find them by accident (via internal links) or not at all. This creates inconsistent AI visibility — some pages get cited, others never do.",
       howToFix:
         "Regenerate your sitemap so it includes every page on your site. If you use a CMS, check your sitemap plugin settings. For custom sites, add the missing URLs to /sitemap.xml.",
+      // Auto-fix: same generator the sitemap_missing path uses — regenerate /sitemap.xml
+      // from the crawl results and commit. Both paths now reach the same GitHub handler.
+      fixCode: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url>\n    <loc>${new URL(siteUrl).origin}/</loc>\n    <lastmod>${new Date().toISOString().slice(0, 10)}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>1.0</priority>\n  </url>\n  <!-- Surven regenerates this with every crawled page -->\n</urlset>`,
+      fixType: "sitemap",
+      fixLabel: "Regenerated /sitemap.xml will include every page Surven found:",
     });
   }
 
@@ -480,6 +485,13 @@ const checkDuplicateTitles: RuleCheck = ({ pages }) => {
       "Duplicate titles confuse AI ranking. AI may pick a less-relevant page to cite, or split mentions across all the duplicates instead of concentrating authority on the right one.",
     howToFix:
       "Give each page a unique, descriptive title. Format: '[Page topic] | [Business name]'. The title should clearly distinguish each page from your other pages.",
+    // Auto-fix: Surven LLM-batches all N duplicate pages and rewrites each with a distinct
+    // title. Routed by the extension to /api/audit/rewrite-duplicates instead of the
+    // single-snippet apply path. fixCode is a placeholder — the actual values come from
+    // the LLM call.
+    fixType: "rewrite_duplicates",
+    fixCode: "(Surven will rewrite each page's title with a distinct, AI-generated value.)",
+    fixLabel: "Each duplicate page will get a unique title generated from its content:",
   });
 };
 
