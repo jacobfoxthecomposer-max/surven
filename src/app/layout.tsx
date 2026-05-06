@@ -163,6 +163,11 @@ export default function RootLayout({
       <body className="min-h-screen bg-[var(--color-bg)] text-[var(--color-fg)] font-sans antialiased">
         <script
           type="application/ld+json"
+          data-surven-schema-type="LocalBusiness"
+          dangerouslySetInnerHTML={{ __html: `{"@context":"https://schema.org","@type":"LocalBusiness","name":"Surven","url":"https://surven.ai","image":"https://surven.ai/_next/image?url=%2Fsurven-logo-transparent.png\u0026w=96\u0026q=75\u0026dpl=dpl_3QUdqQxbsdkF3zWJm676Uan84RBf","description":"Track your AI visibility across multiple platforms with Surven's generative engine optimization tools. Sign up for free today."}` }}
+        />
+        <script
+          type="application/ld+json"
           data-surven-schema-type="Organization"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(ORGANIZATION_SCHEMA) }}
         />
