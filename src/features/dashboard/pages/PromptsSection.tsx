@@ -29,6 +29,7 @@ import {
   X,
   HelpCircle,
   Plus,
+  FilterX,
 } from "lucide-react";
 import { Card } from "@/components/atoms/Card";
 import { BadgeDelta } from "@/components/atoms/BadgeDelta";
@@ -2751,6 +2752,11 @@ function PromptsTable({
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
   const [pageSize, setPageSize] = useState<number | "all">(20);
+
+  // Deep-link target row from `?focus=<text>`. When set, the row is
+  // briefly tinted to draw the eye after the scroll completes; then the
+  // tint fades. Cleared after ~2.4s so a re-visit re-triggers the flash.
+  const [focusedRowId, setFocusedRowId] = useState<string | null>(null);
   // Two-mode view: the existing data-dense table, OR the
   // industry-specific themes view (PromptsByCluster). Hash-aware so that
   // deep-links from the cluster card on /competitor-comparison
@@ -2790,6 +2796,51 @@ function PromptsTable({
     if (!hash) {
       window.scrollTo({ top: 0, behavior: "auto" });
     }
+  }, []);
+
+  // Deep-link from `/sentiment` (Prompts by sentiment cards) and other
+  // pages: `?focus=<encoded prompt text>` finds the matching row by
+  // normalized text, expands it, scrolls it into view, and flashes the
+  // background sage for 2.4s so the user sees exactly where they landed.
+  // Falls back silently if no row matches (e.g., the source list and the
+  // /prompts mock pool diverge for an unmapped industry).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const focusParam = new URLSearchParams(window.location.search).get("focus");
+    if (!focusParam) return;
+    const normalize = (s: string) =>
+      s.toLowerCase().replace(/[^a-z0-9 ]+/g, "").replace(/\s+/g, " ").trim();
+    const target = normalize(focusParam);
+    if (!target) return;
+    const matchIdx = prompts.findIndex((p) => normalize(p.text) === target);
+    if (matchIdx === -1) return;
+    const match = prompts[matchIdx];
+    // Page-expand if the match falls beyond the current page so the row
+    // is actually rendered before we try to scroll to it.
+    if (pageSize !== "all" && matchIdx >= pageSize) {
+      setPageSize("all");
+    }
+    // Auto-expand the row's detail drawer so the user immediately sees
+    // the rich excerpt + per-engine breakdown for the prompt they came
+    // here for, instead of having to click a second time.
+    setExpanded((prev) => ({ ...prev, [match.id]: true }));
+    setFocusedRowId(match.id);
+    // Wait one tick (and an additional ~80ms when paging out) so the
+    // newly-rendered row exists in the DOM before we scroll to it.
+    const scrollDelay = pageSize !== "all" && matchIdx >= pageSize ? 220 : 140;
+    const scrollTimer = setTimeout(() => {
+      document
+        .getElementById(`prompt-row-${match.id}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, scrollDelay);
+    const fadeTimer = setTimeout(() => setFocusedRowId(null), 2400);
+    return () => {
+      clearTimeout(scrollTimer);
+      clearTimeout(fadeTimer);
+    };
+    // Intentionally only runs on mount — we don't want the flash to
+    // re-trigger every time `prompts` re-references after a filter tweak.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Canonical intent list — fixed order matching the product taxonomy.
@@ -2888,6 +2939,19 @@ function PromptsTable({
   const isDefaultSort =
     sort.column === DEFAULT_SORT.column &&
     sort.direction === DEFAULT_SORT.direction;
+
+  // Reset-all-filters affordance: "active" means the user has narrowed the
+  // table from its default view via either the type/status pill cluster
+  // (Branded / Unbranded / Cited / Not cited) or the Intent dropdown
+  // (anything other than "all intents selected"). Sort has its own
+  // dedicated reset button next to it, so we leave it untouched here.
+  const hasActiveFilters =
+    selectedFilters.size > 0 || selectedIntents.size !== allIntents.length;
+
+  function handleResetFilters() {
+    onClearFilters();
+    setSelectedIntents(new Set(allIntents));
+  }
 
   const visible = pageSize === "all" ? filtered : filtered.slice(0, pageSize);
   const truncated = pageSize !== "all" && filtered.length > visible.length;
@@ -3097,6 +3161,39 @@ function PromptsTable({
               Reset sort
             </motion.button>
           )}
+          {/* Reset-all-filters affordance — bordered, font-display button
+              that reads as a primary action when filters are active.
+              Always rendered for muscle memory; dims + disables when the
+              table is at default state so the user knows it's there but
+              not currently doing anything. */}
+          <HoverHint hint="Reset all filters — clears the All / Branded / Cited pills and re-selects every intent.">
+            <motion.button
+              type="button"
+              onClick={handleResetFilters}
+              disabled={!hasActiveFilters}
+              animate={{
+                opacity: hasActiveFilters ? 1 : 0.5,
+              }}
+              transition={{ duration: 0.2, ease: EASE }}
+              whileTap={hasActiveFilters ? { scale: 0.95 } : undefined}
+              className={
+                "inline-flex items-center gap-2 px-4 py-2 rounded-[var(--radius-md)] border whitespace-nowrap transition-all " +
+                (hasActiveFilters
+                  ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white hover:brightness-110 hover:shadow-md cursor-pointer"
+                  : "border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-fg-muted)] cursor-default")
+              }
+              style={{
+                fontSize: 14,
+                fontFamily: "var(--font-display)",
+                fontWeight: 600,
+                letterSpacing: "0.01em",
+              }}
+              aria-label="Reset all filters"
+            >
+              <FilterX className="h-4 w-4" />
+              Reset filters
+            </motion.button>
+          </HoverHint>
         </div>
       </div>
 
@@ -3221,9 +3318,11 @@ function PromptsTable({
               const SentIcon = sent.Icon;
               const isOpen = !!expanded[p.id];
 
+              const isFocused = focusedRowId === p.id;
               return (
                 <Fragment key={p.id}>
                   <motion.tr
+                    id={`prompt-row-${p.id}`}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{
@@ -3232,12 +3331,16 @@ function PromptsTable({
                       delay: Math.min(idx * 0.02, 0.25),
                     }}
                     onClick={() => toggleRow(p.id)}
-                    className="cursor-pointer hover:bg-[var(--color-surface-alt)]/40 transition-colors"
+                    className={
+                      "cursor-pointer hover:bg-[var(--color-surface-alt)]/40 transition-colors scroll-mt-24 " +
+                      (isFocused ? "prompt-row-flash" : "")
+                    }
                     style={{
                       borderBottom: rowBorder,
                       // Branded distinction now lives in the dedicated
                       // Brand column; rows render with no special tint.
-                      background: "transparent",
+                      background: isFocused ? "rgba(150,162,131,0.18)" : "transparent",
+                      transition: "background-color 0.6s ease-out",
                     }}
                     aria-expanded={isOpen}
                   >
@@ -3915,6 +4018,11 @@ function CoverageDonut({ items }: { items: IntentCoverage[] }) {
                   key={s.intent}
                   d={describeArc(cx, cy, innerR, outerR, s.startAngle, s.endAngle)}
                   fill={s.color}
+                  // Surface-colored stroke creates the white gap between
+                  // segments — matches the Share of voice donut on
+                  // /competitor-comparison so the two charts visually rhyme.
+                  stroke="var(--color-surface)"
+                  strokeWidth={1.5}
                   onMouseEnter={() => setHovered(s.intent)}
                   onMouseLeave={() => setHovered(null)}
                   style={{
@@ -3924,6 +4032,38 @@ function CoverageDonut({ items }: { items: IntentCoverage[] }) {
                     transition: "opacity 180ms ease, transform 180ms ease",
                   }}
                 />
+              );
+            })}
+            {/* Inline slice % labels — same threshold (≥5%) and ink-on-tint
+                treatment as the Share of voice donut. Sits at the radial
+                midpoint of the donut ring so it never collides with the
+                center text or the slice edges. */}
+            {slices.map((s) => {
+              const fraction = s.promptCount / total;
+              if (fraction < 0.05) return null;
+              const isDimmed = hovered !== null && hovered !== s.intent;
+              const offset = polarToCartesian(0, 0, hovered === s.intent ? 8 : 0, s.midAngle);
+              const labelR = (innerR + outerR) / 2;
+              const labelPt = polarToCartesian(cx, cy, labelR, s.midAngle);
+              return (
+                <text
+                  key={`${s.intent}-pct`}
+                  x={labelPt.x}
+                  y={labelPt.y}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize={13}
+                  fontWeight={700}
+                  fill="#1A1C1A"
+                  style={{
+                    pointerEvents: "none",
+                    opacity: isDimmed ? 0.5 : 1,
+                    transform: `translate(${offset.x}px, ${offset.y}px)`,
+                    transition: "opacity 180ms ease, transform 180ms ease",
+                  }}
+                >
+                  {`${Math.round(fraction * 100)}%`}
+                </text>
               );
             })}
             {hoveredSlice ? (

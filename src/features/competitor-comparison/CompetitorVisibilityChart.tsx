@@ -40,6 +40,14 @@ export function CompetitorVisibilityChart() {
     [],
   );
 
+  // Byte-for-byte identical to the AI Visibility Tracker's "Your AI
+  // visibility over time" chart card — same chartHeight (260), same
+  // ModeToggle, same delta pill, and (via the default `showOptimization
+  // Markers={true}`) the same colored optimization-event markers on the
+  // YOU line that document the strategies shipped during the period.
+  // The ONLY differences from the source are the title/titleInfo copy
+  // and `defaultMode="full"` (so the chart lands showing every brand
+  // line out of the gate, since this is the competitor-vs-you view).
   return (
     <ChartCard
       data={data}
@@ -47,15 +55,10 @@ export function CompetitorVisibilityChart() {
       enabledBrandIds={enabledBrandIds}
       title="Competitors' visibility over time vs you"
       titleInfo="Daily mention rate for you and every tracked competitor across all AI tools. Higher = more visibility."
+      chartHeight={260}
+      showModeToggle
       defaultMode="full"
-      // Medium-size variant — chart canvas trimmed from the source 460px so
-      // the card pairs height-wise with the leaderboard underneath. Insight
-      // callout + Focus/Full toggle stay on since this is the primary
-      // top-of-page chart for the comparison view. Optimization markers
-      // (the colored dots on the YOU line) are off — those are scoped to
-      // the AI Visibility Tracker page only.
-      chartHeight={320}
-      showOptimizationMarkers={false}
+      delta={data.youDelta}
     />
   );
 }
