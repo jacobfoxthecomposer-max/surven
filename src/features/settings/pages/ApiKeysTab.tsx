@@ -183,7 +183,7 @@ export function ApiKeysTab() {
             <ol className="text-sm text-[var(--color-fg-secondary)] space-y-2 list-decimal list-inside">
               <li>Open the Surven Auditor extension settings</li>
               <li>Paste this API key into the "API Key" field</li>
-              <li>Set API URL to: <code className="bg-[var(--color-surface)] px-2 py-1 rounded text-xs">https://surven.vercel.app/api/audit/run</code></li>
+              <li>Set API URL to: <code className="bg-[var(--color-surface)] px-2 py-1 rounded text-xs">https://surven.ai/api/audit/run</code></li>
               <li>Save settings and start auditing</li>
             </ol>
           </div>

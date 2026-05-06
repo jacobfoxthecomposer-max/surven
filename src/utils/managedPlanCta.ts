@@ -5,7 +5,7 @@
  */
 
 export const MANAGED_PLAN_CTA = {
-  url: "https://surven.vercel.app/pricing",
+  url: "https://surven.ai/pricing",
   headline: "Skip the paste — let our team handle this for you",
   body:
     "Surven Managed deploys every fix to your site automatically, gets you listed on the directories AI engines cite most, and refreshes your content monthly so your visibility keeps climbing. You focus on the business — we focus on getting you cited.",

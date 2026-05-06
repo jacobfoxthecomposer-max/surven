@@ -1,73 +1,73 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://surven.vercel.app/</loc>
+    <loc>https://surven.ai/</loc>
     <lastmod>2026-05-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://surven.vercel.app/audit</loc>
+    <loc>https://surven.ai/audit</loc>
     <lastmod>2026-05-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://surven.vercel.app/dashboard</loc>
+    <loc>https://surven.ai/dashboard</loc>
     <lastmod>2026-05-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://surven.vercel.app/favicon.ico</loc>
+    <loc>https://surven.ai/favicon.ico</loc>
     <lastmod>2026-05-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://surven.vercel.app/login</loc>
+    <loc>https://surven.ai/login</loc>
     <lastmod>2026-05-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://surven.vercel.app/pricing</loc>
+    <loc>https://surven.ai/pricing</loc>
     <lastmod>2026-05-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://surven.vercel.app/signup</loc>
+    <loc>https://surven.ai/signup</loc>
     <lastmod>2026-05-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://surven.vercel.app/_next/static/chunks/0-hrh_uw98wb_.js</loc>
+    <loc>https://surven.ai/_next/static/chunks/0-hrh_uw98wb_.js</loc>
     <lastmod>2026-05-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://surven.vercel.app/_next/static/chunks/0cs1x2h~iz7-a.css</loc>
+    <loc>https://surven.ai/_next/static/chunks/0cs1x2h~iz7-a.css</loc>
     <lastmod>2026-05-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://surven.vercel.app/_next/static/media/01e4147cff8141ee-s.p.10ked.7w885.g.woff2</loc>
+    <loc>https://surven.ai/_next/static/media/01e4147cff8141ee-s.p.10ked.7w885.g.woff2</loc>
     <lastmod>2026-05-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://surven.vercel.app/_next/static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2</loc>
+    <loc>https://surven.ai/_next/static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2</loc>
     <lastmod>2026-05-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://surven.vercel.app/_next/static/media/8bd76523131fa0fc-s.p.0jox806dnq5~c.woff2</loc>
+    <loc>https://surven.ai/_next/static/media/8bd76523131fa0fc-s.p.0jox806dnq5~c.woff2</loc>
     <lastmod>2026-05-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>

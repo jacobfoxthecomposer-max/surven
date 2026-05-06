@@ -7,10 +7,10 @@ import { PlanCTA } from "@/features/landing/PlanCTA";
 import type { Metadata } from "next";
 export const metadata: Metadata = {
   alternates: {
-    canonical: "https://surven.vercel.app/pricing",
+    canonical: "https://surven.ai/pricing",
   },
 
-  openGraph: { url: "https://surven.vercel.app/pricing", type: "website" },
+  openGraph: { url: "https://surven.ai/pricing", type: "website" },
 
   title: "Transparent Pricing Plans for AI Tracking | Surven",
 

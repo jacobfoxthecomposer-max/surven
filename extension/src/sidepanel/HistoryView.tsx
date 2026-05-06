@@ -15,7 +15,7 @@ import { ArrowLeft, Loader2, RotateCcw, AlertCircle, CheckCircle2, ExternalLink 
  */
 
 export interface HistoryViewProps {
-  apiUrl: string; // e.g. "https://surven.vercel.app/api/audit/run"
+  apiUrl: string; // e.g. "https://surven.ai/api/audit/run"
   apiKey: string;
   onBack: () => void;
 }

@@ -511,7 +511,7 @@ function deriveBrandFromHtml(html: string): string | undefined {
 
 /**
  * Derive a brand name from the site URL when on-page signals are absent.
- * surven.vercel.app  → "Surven"
+ * surven.ai  → "Surven"
  * the-hidden-still.com → "The Hidden Still"
  * api.example.co.uk → "Example"
  * Strips well-known platform subdomains (vercel.app, netlify.app, etc.) and TLDs.

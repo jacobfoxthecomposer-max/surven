@@ -36,8 +36,8 @@ const ORGANIZATION_SCHEMA = {
   "@type": "Organization",
   name: "Surven",
   alternateName: "Surven GEO",
-  url: "https://surven.vercel.app",
-  logo: "https://surven.vercel.app/surven-logo.png",
+  url: "https://surven.ai",
+  logo: "https://surven.ai/surven-logo.png",
   description:
     "Surven is a generative engine optimization (GEO) agency and platform that tracks how often ChatGPT, Claude, Gemini, and Google AI recommend your business — and helps you improve your AI visibility.",
   slogan: "Track your visibility across every major AI engine.",
@@ -55,7 +55,7 @@ const ORGANIZATION_SCHEMA = {
   contactPoint: {
     "@type": "ContactPoint",
     contactType: "customer support",
-    url: "https://surven.vercel.app/contact",
+    url: "https://surven.ai/contact",
     availableLanguage: ["English"],
   },
 };
@@ -64,13 +64,13 @@ const WEBSITE_SCHEMA = {
   "@context": "https://schema.org",
   "@type": "WebSite",
   name: "Surven",
-  url: "https://surven.vercel.app",
+  url: "https://surven.ai",
   description:
     "Track your AI visibility across ChatGPT, Claude, Gemini, and Google AI.",
   publisher: {
     "@type": "Organization",
     name: "Surven",
-    url: "https://surven.vercel.app",
+    url: "https://surven.ai",
   },
 };
 

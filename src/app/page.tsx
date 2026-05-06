@@ -13,10 +13,10 @@ import { Footer } from "@/features/landing/sections/Footer";
 import type { Metadata } from "next";
 export const metadata: Metadata = {
   alternates: {
-    canonical: "https://surven.vercel.app/",
+    canonical: "https://surven.ai/",
   },
 
-  openGraph: { url: "https://surven.vercel.app/", type: "website" },
+  openGraph: { url: "https://surven.ai/", type: "website" },
 
   title: "AI Visibility Tracking Features | Surven",
 

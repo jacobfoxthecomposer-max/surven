@@ -181,7 +181,7 @@ export default function GithubConnectPage() {
               className="w-full px-3 py-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] focus:outline-none focus:border-[var(--color-primary)] font-mono text-sm"
             />
             <p className="text-xs text-[var(--color-fg-secondary)] mt-1.5">
-              The deployed URL Surven should match against during audits. Example: <code className="font-mono">https://surven.vercel.app</code>
+              The deployed URL Surven should match against during audits. Example: <code className="font-mono">https://surven.ai</code>
             </p>
           </div>
 

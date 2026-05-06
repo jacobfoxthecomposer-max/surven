@@ -1310,7 +1310,7 @@ export default function App() {
               type="url"
               value={draftSettings.apiUrl}
               onChange={(e) => setDraftSettings((s) => ({ ...s, apiUrl: e.target.value }))}
-              placeholder="https://surven.vercel.app/api/audit/run"
+              placeholder="https://surven.ai/api/audit/run"
               style={{
                 width: "100%",
                 padding: "8px 10px",

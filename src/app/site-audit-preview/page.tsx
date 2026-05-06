@@ -9,7 +9,7 @@
  * order) is visible alongside the page.
  *
  * Always runs a real scan automatically. Default target is
- * `https://surven.vercel.app` — override with ?url=<https://...>
+ * `https://surven.ai` — override with ?url=<https://...>
  * to scan any URL.
  */
 import { useSearchParams } from "next/navigation";
@@ -17,7 +17,7 @@ import { Suspense } from "react";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { AeoAuditSection } from "@/features/aeo-audit/AeoAuditSection";
 
-const DEFAULT_PREVIEW_URL = "https://surven.vercel.app";
+const DEFAULT_PREVIEW_URL = "https://surven.ai";
 
 function Inner() {
   const sp = useSearchParams();
