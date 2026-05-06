@@ -11,7 +11,7 @@
  */
 import { useMemo } from "react";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, AlertTriangle } from "lucide-react";
+import { ArrowRight, ArrowUpRight, CheckCircle2, AlertTriangle } from "lucide-react";
 import { SectionHeading } from "@/components/atoms/SectionHeading";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { SURVEN_SEMANTIC } from "@/utils/brandColors";
@@ -194,54 +194,73 @@ function PromptGroup({
         </div>
       ) : (
         <ul className="flex-1 space-y-1.5 overflow-hidden">
-          {prompts.map((p, i) => (
-            <li
-              key={i}
-              className="rounded-[var(--radius-md)] border px-3 py-2 flex items-start gap-3"
-              style={{
-                background: "var(--color-surface)",
-                borderColor: `${accent}33`,
-              }}
-            >
-              <div
-                className="h-7 w-7 rounded-md flex items-center justify-center shrink-0"
-                style={{ backgroundColor: accentBg }}
+          {prompts.map((p, i) => {
+            // Deep-link to the matching row on the Tracked Prompts table.
+            // The /prompts page reads ?focus=<text>, normalizes it, finds
+            // the matching prompt, expands + scrolls + flashes it. Hash
+            // ensures the page jumps to the table on landing.
+            const focusHref =
+              `/prompts?focus=${encodeURIComponent(p.prompt)}#prompts-table`;
+            return (
+              <li
+                key={i}
+                className="rounded-[var(--radius-md)] border px-3 py-2 flex items-start gap-3 group transition-colors hover:bg-[var(--color-surface-alt)]/40"
+                style={{
+                  background: "var(--color-surface)",
+                  borderColor: `${accent}33`,
+                }}
               >
-                <Icon className="h-3.5 w-3.5" style={{ color: accent }} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p
-                  className="text-[var(--color-fg)] truncate"
-                  style={{ fontSize: 12.5, lineHeight: 1.3, fontWeight: 600 }}
-                  title={p.prompt}
+                <div
+                  className="h-7 w-7 rounded-md flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: accentBg }}
                 >
-                  &ldquo;{p.prompt}&rdquo;
-                </p>
-                <div className="flex items-center gap-1 mt-1">
-                  {Array.from(p.engines)
-                    .slice(0, 4)
-                    .map((e) => (
-                      <EngineIcon key={e} id={e} size={11} />
-                    ))}
-                  <span
-                    className="text-[var(--color-fg-muted)] ml-1 tabular-nums"
-                    style={{ fontSize: 10.5 }}
-                  >
-                    {variant === "strong" ? `${p.positive} pos` : `${p.negative} neg`}{" "}
-                    · {p.total} total
-                  </span>
+                  <Icon className="h-3.5 w-3.5" style={{ color: accent }} />
                 </div>
-              </div>
-              <span
-                className="shrink-0 inline-flex items-center text-[11px] font-semibold rounded-md px-2 py-0.5 whitespace-nowrap"
-                style={{ color: accent, backgroundColor: accentBg }}
-              >
-                {variant === "strong"
-                  ? `+${p.netScore}`
-                  : `${p.netScore}`}
-              </span>
-            </li>
-          ))}
+                <div className="flex-1 min-w-0">
+                  <p
+                    className="text-[var(--color-fg)] truncate"
+                    style={{ fontSize: 12.5, lineHeight: 1.3, fontWeight: 600 }}
+                    title={p.prompt}
+                  >
+                    &ldquo;{p.prompt}&rdquo;
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-1 min-w-0">
+                      {Array.from(p.engines)
+                        .slice(0, 4)
+                        .map((e) => (
+                          <EngineIcon key={e} id={e} size={11} />
+                        ))}
+                      <span
+                        className="text-[var(--color-fg-muted)] ml-1 tabular-nums whitespace-nowrap"
+                        style={{ fontSize: 10.5 }}
+                      >
+                        {variant === "strong" ? `${p.positive} pos` : `${p.negative} neg`}{" "}
+                        · {p.total} total
+                      </span>
+                    </div>
+                    <Link
+                      href={focusHref}
+                      className="ml-auto inline-flex items-center gap-0.5 font-semibold whitespace-nowrap hover:underline transition-opacity opacity-80 group-hover:opacity-100"
+                      style={{ fontSize: 10.5, color: accent }}
+                      aria-label={`View this prompt on the Tracked Prompts page: ${p.prompt}`}
+                    >
+                      View prompt
+                      <ArrowUpRight className="h-2.5 w-2.5" />
+                    </Link>
+                  </div>
+                </div>
+                <span
+                  className="shrink-0 inline-flex items-center text-[11px] font-semibold rounded-md px-2 py-0.5 whitespace-nowrap"
+                  style={{ color: accent, backgroundColor: accentBg }}
+                >
+                  {variant === "strong"
+                    ? `+${p.netScore}`
+                    : `${p.netScore}`}
+                </span>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

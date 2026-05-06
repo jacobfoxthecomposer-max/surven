@@ -87,6 +87,18 @@ function padCompetitors(
   return picks.slice(0, cap);
 }
 
+// Reverse-lookup from intent label → its canonical brand color, so the
+// General-view cluster headers (Comparison, Transactional, Use-case,
+// Informational, Local) render as a colored pill instead of plain bold
+// text. Built once at module-load. Personalized industry clusters
+// don't appear here and gracefully fall back to the plain title style.
+const INTENT_LABEL_COLORS: Record<string, string> = Object.values(
+  PROMPT_CATEGORIES,
+).reduce<Record<string, string>>((acc, cat) => {
+  acc[cat.label] = cat.color;
+  return acc;
+}, {});
+
 function gapTier(gap: number): { bg: string; text: string; label: string } {
   if (gap <= 0)
     return { bg: "rgba(125,142,108,0.22)", text: "#5E7250", label: "You lead" };
@@ -514,23 +526,50 @@ export function PromptClusterDominance({
               }}
             >
               {/* Cluster header — label on top, gap pill under it so the
-                  cell stays narrow-friendly. */}
+                  cell stays narrow-friendly. General-view intent labels
+                  render as a colored pill matching the dot color used
+                  elsewhere on the page (Comparison/Transactional/etc).
+                  Personalized cluster labels fall back to the plain bold
+                  title since they don't have a canonical intent color. */}
               <div className="mb-2 flex items-start justify-between gap-2">
                 <div className="min-w-0 flex items-center gap-1.5">
                   {isTopGap && (
                     <Trophy className="h-3.5 w-3.5 text-[#B54631] shrink-0" />
                   )}
-                  <span
-                    className="truncate"
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 700,
-                      color: "var(--color-fg)",
-                    }}
-                    title={c.label}
-                  >
-                    {c.label}
-                  </span>
+                  {INTENT_LABEL_COLORS[c.label] ? (
+                    <span
+                      className="inline-flex items-center gap-1.5 truncate rounded-full px-2 py-0.5"
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: INTENT_LABEL_COLORS[c.label],
+                        backgroundColor: `${INTENT_LABEL_COLORS[c.label]}22`,
+                        border: `1px solid ${INTENT_LABEL_COLORS[c.label]}55`,
+                      }}
+                      title={c.label}
+                    >
+                      <span
+                        className="h-1.5 w-1.5 rounded-full shrink-0"
+                        style={{
+                          backgroundColor: INTENT_LABEL_COLORS[c.label],
+                        }}
+                        aria-hidden
+                      />
+                      {c.label}
+                    </span>
+                  ) : (
+                    <span
+                      className="truncate"
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: "var(--color-fg)",
+                      }}
+                      title={c.label}
+                    >
+                      {c.label}
+                    </span>
+                  )}
                 </div>
                 <span
                   className="shrink-0 inline-flex items-center rounded-full px-2 py-0.5 tabular-nums"

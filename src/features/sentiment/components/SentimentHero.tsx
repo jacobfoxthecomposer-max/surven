@@ -24,10 +24,22 @@ function formatDate(iso: string) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function statusFromPct(pct: number): { word: string; color: string } {
-  if (pct >= 70) return { word: "strong", color: SURVEN_SEMANTIC.good };
-  if (pct >= 40) return { word: "mixed", color: SURVEN_SEMANTIC.mid };
-  return { word: "concerning", color: SURVEN_SEMANTIC.bad };
+// Verdict thresholds — sensitivity rule (Joey 2026-05-05): "Concerning"
+// requires a meaningful negative presence. A pos/neutral mix with zero
+// negatives can never be Concerning, no matter how low the positive %
+// is — that's just Mixed. Negative ≥ 20% (or negative > positive when
+// positive is also low) tips the verdict into Concerning.
+function statusFromBreakdown(
+  positivePct: number,
+  negativePct: number,
+): { word: string; color: string } {
+  if (negativePct >= 20 || (negativePct > positivePct && negativePct > 0)) {
+    return { word: "concerning", color: SURVEN_SEMANTIC.bad };
+  }
+  if (positivePct >= 70 && negativePct <= 10) {
+    return { word: "strong", color: SURVEN_SEMANTIC.good };
+  }
+  return { word: "mixed", color: SURVEN_SEMANTIC.mid };
 }
 
 export function SentimentHero({ results, history, businessName }: Props) {
@@ -39,6 +51,8 @@ export function SentimentHero({ results, history, businessName }: Props) {
       if (r.sentiment) counts[r.sentiment as keyof typeof counts]++;
     }
     const positivePct = total > 0 ? Math.round((counts.positive / total) * 100) : 0;
+    const negativePctRaw =
+      total > 0 ? Math.round((counts.negative / total) * 100) : 0;
 
     // Trend delta from history
     const delta = history.length >= 2
@@ -59,12 +73,12 @@ export function SentimentHero({ results, history, businessName }: Props) {
       .sort((a, b) => b.engines.size - a.engines.size)
       .slice(0, 3);
 
-    return { total, counts, positivePct, delta, issues };
+    return { total, counts, positivePct, negativePct: negativePctRaw, delta, issues };
   }, [results, history]);
 
   if (data.total === 0) return null;
 
-  const status = statusFromPct(data.positivePct);
+  const status = statusFromBreakdown(data.positivePct, data.negativePct);
   const ringRadius = 56;
   const ringStroke = 14;
   const circumference = 2 * Math.PI * ringRadius;

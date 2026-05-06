@@ -20,6 +20,7 @@ import {
   Calendar,
   ArrowRight,
   Trophy,
+  TrendingUp,
   Layers,
   MessageSquare,
   Crown,
@@ -2531,7 +2532,7 @@ export function ShareOfVoiceCard({
 // shows a +X value, a red ↓ pill shows a −X value) so the three cues
 // never disagree.
 
-function RankDeltaPill({
+export function RankDeltaPill({
   stats,
   mode,
 }: {
@@ -2672,6 +2673,105 @@ function CompetitorsBlock({
 
       {/* Row 3 — Share of voice split into stats card (40%) + chart card
           (60%). Same delta pill in each top-right. */}
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 items-stretch">
+        <div className="xl:col-span-1 min-w-0 flex">
+          <ShareOfVoiceCard
+            data={data}
+            stats={sovStats}
+            insight={sovInsight}
+            pieMode="donut-center"
+            aiOverviewVariant={aiOverviewVariant}
+            variant="stats-only"
+            title="Share of voice"
+            headerRight={<RankDeltaPill stats={sovStats} mode="share-of-voice" />}
+            hoveredBrandId={sovHover}
+            onHoverBrand={setSovHover}
+          />
+        </div>
+        <div className="xl:col-span-3 min-w-0 flex">
+          <ShareOfVoiceCard
+            data={data}
+            stats={sovStats}
+            insight={sovInsight}
+            pieMode="donut-center"
+            aiOverviewVariant={aiOverviewVariant}
+            variant="chart-only"
+            title="Share of voice over time"
+            headerRight={<RankDeltaPill stats={sovStats} mode="share-of-voice" />}
+            hoveredBrandId={sovHover}
+            onHoverBrand={setSovHover}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── COMPETITOR RANK + SoV BLOCK ────────────────────────────────────────────
+// The bottom two rows of `CompetitorsBlock` extracted as a reusable block:
+// (Row A) Average rank when mentioned + Average rank over time
+// (Row B) Share of voice + Share of voice over time
+// Hover state is shared between each row's two halves so highlighting in
+// the list dims the matching line in the chart and vice versa — same
+// behavior as the AI Visibility Tracker version.
+
+export function CompetitorRankAndSoVBlock({
+  data,
+  aiOverviewVariant,
+}: {
+  data: ScannerData;
+  aiOverviewVariant?: AIOverviewVariant;
+}) {
+  const positionStats = useMemo(() => buildPositionStats(data), [data]);
+  const sovStats = useMemo(() => buildSOVStats(data), [data]);
+  const positionInsight = useMemo(
+    () => buildPositionInsight(positionStats),
+    [positionStats],
+  );
+  const sovInsight = useMemo(() => buildSOVInsight(sovStats), [sovStats]);
+  const [rankHover, setRankHover] = useState<string | null>(null);
+  const [sovHover, setSovHover] = useState<string | null>(null);
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 items-stretch">
+        <div className="xl:col-span-1 min-w-0 flex">
+          <RankSeriesCard
+            title="Average rank when mentioned"
+            titleInfo="Your typical position when AI tools mention you. Lower is better."
+            data={data}
+            stats={positionStats}
+            insight={positionInsight}
+            mode="position"
+            layout="list-left"
+            density="mini"
+            aiOverviewVariant={aiOverviewVariant}
+            variant="list-only"
+            headerRight={<RankDeltaPill stats={positionStats} mode="position" />}
+            hoveredBrandId={rankHover}
+            onHoverBrand={setRankHover}
+          />
+        </div>
+        <div className="xl:col-span-3 min-w-0 flex">
+          <RankSeriesCard
+            title="Average rank over time"
+            titleInfo="How your average rank has trended over the period. Lower is better."
+            data={data}
+            stats={positionStats}
+            insight={positionInsight}
+            mode="position"
+            layout="list-left"
+            density="mini"
+            chartHeightPx={160}
+            aiOverviewVariant={aiOverviewVariant}
+            variant="chart-only"
+            headerRight={<RankDeltaPill stats={positionStats} mode="position" />}
+            hoveredBrandId={rankHover}
+            onHoverBrand={setRankHover}
+          />
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 items-stretch">
         <div className="xl:col-span-1 min-w-0 flex">
           <ShareOfVoiceCard
@@ -3230,7 +3330,7 @@ const HIT_RATE_ACCENTS = {
 // dimensions as PromptHitRateCard so swapping it doesn't disturb the
 // 3-zone hero grid.
 
-function GapsToFillCard({ data }: { data: ScannerData }) {
+export function GapsToFillCard({ data }: { data: ScannerData }) {
   type Gap = {
     title: string;
     body: string;
@@ -3416,6 +3516,213 @@ function GapsToFillCard({ data }: { data: ScannerData }) {
                 <ArrowRight
                   className="h-3.5 w-3.5 mt-1 shrink-0"
                   style={{ color: RUST }}
+                />
+              </button>
+            );
+          })
+        )}
+      </div>
+      <GapPlaybookModal
+        open={activePlaybook != null}
+        onClose={() => setActivePlaybook(null)}
+        playbook={activePlaybook}
+      />
+    </div>
+  );
+}
+
+// ─── WINS TO WIDEN CARD ───────────────────────────────────────────────────
+// Sage-themed mirror of GapsToFillCard. Same outer chrome, same row
+// layout, same playbook-modal click-through — only the palette and the
+// content swap (positive wins vs. competitors instead of fixable gaps).
+// Used on Competitor Comparison underneath the Gaps-to-fill card so the
+// page reads as "what's broken" + "what's working" stacked.
+
+export function WinsToWidenCard({ data }: { data: ScannerData }) {
+  type Win = {
+    title: string;
+    body: string;
+    icon: typeof Trophy;
+    playbook: GapPlaybook;
+  };
+  const sorted = [...data.engineCoverage].sort((a, b) => b.today - a.today);
+  const strongest = sorted[0];
+  const strong = sorted.filter((e) => e.today >= 70);
+  const leader = data.ranked[0];
+  const leaderScore = leader?.data[leader.data.length - 1] ?? 0;
+  const youAreLeader = leader?.isYou ?? false;
+  const runnerUp = data.ranked.find((b) => !b.isYou);
+  const runnerUpScore = runnerUp?.data[runnerUp.data.length - 1] ?? 0;
+  const lead = youAreLeader ? data.youLatest - runnerUpScore : 0;
+
+  const candidates: Win[] = [];
+
+  // 1. Strongest engine — your best citation channel.
+  if (strongest && strongest.today >= 60) {
+    candidates.push({
+      title: `${strongest.label} citing you ${strongest.today.toFixed(0)}%`,
+      body: `Your strongest channel — keep momentum with fresh content on the prompts already winning.`,
+      icon: Trophy,
+      playbook: {
+        title: `${strongest.label} is your strongest engine at ${strongest.today.toFixed(1)}%`,
+        body: `${strongest.label} cites you in roughly ${Math.round(strongest.today)}% of its answers — the highest of any engine in this scan. The way to widen that lead:\n\n• Audit which pages are doing the heavy lifting. Match their structure (schema density, FAQ blocks, opening sentence framing) on your weaker pages.\n\n• Publish one new piece a month on the same template — answer-shaped, schema-rich, freshness signals on the date metadata.\n\n• Watch for any drop on this engine — leadership erodes faster than it builds.`,
+        actionCta: null,
+        managedPlansCopy: `replicate the winning page template across your weaker pages so this lead compounds.`,
+      },
+    });
+  }
+
+  // 2. You're leading the field overall.
+  if (youAreLeader && lead >= 3) {
+    candidates.push({
+      title: `You're ${lead.toFixed(1)}% ahead of ${runnerUp?.name ?? "the runner-up"}`,
+      body: `You hold the top spot across this scan. Defend it on the prompts they're closest on.`,
+      icon: Trophy,
+      playbook: {
+        title: `You're leading by ${lead.toFixed(1)}% over ${runnerUp?.name ?? "the runner-up"}`,
+        body: `You sit at ${data.youLatest.toFixed(1)}% vs. ${runnerUp?.name ?? "the runner-up"} at ${runnerUpScore.toFixed(1)}%. To widen the lead and stay defensive:\n\n• Identify the 3-5 prompts where the gap is narrowest (Competitor Comparison view) — those are where they could overtake you fastest.\n\n• Refresh your top-cited pages every 30-60 days so freshness signals stay current.\n\n• Watch any prompt where you slip even 5%; visibility gaps compound when left unaddressed.`,
+        actionCta: null,
+        managedPlansCopy: `monitor for narrowing gaps and refresh your highest-traffic pages on a fixed cadence.`,
+      },
+    });
+  }
+
+  // 3. Coverage trending up over the period.
+  if (data.youDelta >= 1) {
+    candidates.push({
+      title: `Coverage climbed ${data.youDelta.toFixed(1)}% this period`,
+      body: `Visibility is trending up — whatever you shipped is working. Double down on it.`,
+      icon: TrendingUp,
+      playbook: {
+        title: `Coverage climbed ${data.youDelta.toFixed(1)}% — keep the momentum`,
+        body: `Visibility moved from ${data.youFirst.toFixed(1)}% to ${data.youLatest.toFixed(1)}% over the last ${data.rangeN} days. Climbs this size usually trace to one of three things you did right:\n\n• A content push or schema rollout that landed in the indexes.\n\n• A new citation source (directory, editorial, Reddit) started appearing in answers.\n\n• A page rewrite improved how AI quotes you.\n\nLook at the optimization markers on the chart above — the inflection point tells you which lever moved the needle. Repeat that lever on the next batch of weak pages.`,
+        actionCta: null,
+        managedPlansCopy: `replicate the winning lever across the rest of your pages so the climb continues into next period.`,
+      },
+    });
+  }
+
+  // 4. Multiple engines above 70% — strong cross-engine coverage.
+  if (strong.length >= 2) {
+    candidates.push({
+      title: `${strong.length} engines above 70%`,
+      body: `${strong.map((e) => e.label).join(", ")} all cite you frequently — strong cross-engine coverage.`,
+      icon: CheckCircle2,
+      playbook: {
+        title: `${strong.length} engines above 70% — your visibility is broad-based`,
+        body: `${strong.map((e) => e.label).join(", ")} all cite you in 70%+ of their answers. Cross-engine wins are durable because they reflect structural fundamentals (schema, freshness, citation density) — not engine-specific tricks.\n\nTo widen the gap further:\n\n• Bring the laggard engines up to the same level — they share the same underlying signals.\n\n• Publish on the topics where competitors are weakest across multiple engines simultaneously.\n\n• Document what's working in your content templates so new pages launch already-optimized.`,
+        actionCta: null,
+        managedPlansCopy: `audit which structural signals are driving the cross-engine wins and bring laggards up to the same standard.`,
+      },
+    });
+  }
+
+  // Cap at 3 — if nothing fires, the empty state below shows a friendly
+  // "no clear wins yet" prompt instead of padding the card with filler.
+  const wins = candidates.slice(0, 3);
+  const [activePlaybook, setActivePlaybook] = useState<GapPlaybook | null>(
+    null,
+  );
+
+  // Sage palette throughout — mirrors the rust treatment of GapsToFillCard.
+  const SAGE = "#5E7250";
+  const SAGE_BG = "rgba(150,162,131,0.18)";
+  return (
+    <div
+      className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col h-full w-full min-w-0"
+      style={{ borderTop: `4px solid ${SAGE}` }}
+    >
+      <div
+        className="px-5 py-3 border-b border-[var(--color-border)] flex items-center justify-between gap-2"
+        style={{
+          background: `linear-gradient(135deg, rgba(150,162,131,0.22) 0%, rgba(150,162,131,0.04) 100%)`,
+          borderTopLeftRadius: "calc(var(--radius-lg) - 4px)",
+          borderTopRightRadius: "calc(var(--radius-lg) - 4px)",
+        }}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <Trophy
+            className="h-4 w-4 shrink-0"
+            style={{ color: SAGE }}
+          />
+          <SectionHeading
+            text="Where you're leading"
+            info="Wins from this scan to defend or widen — the engines, prompts, and trends working in your favor against the tracked competitors."
+          />
+        </div>
+        <div className="shrink-0">
+          <span
+            className="inline-flex items-center text-xs font-semibold rounded-md px-2 py-0.5 whitespace-nowrap"
+            style={{ color: SAGE, backgroundColor: SAGE_BG }}
+          >
+            {wins.length} {wins.length === 1 ? "win" : "wins"}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex-1 flex flex-col gap-2.5 p-5">
+        {wins.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center text-center px-4 py-6">
+            <div className="flex flex-col items-center gap-3 max-w-[240px]">
+              <div
+                className="h-10 w-10 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: SAGE_BG }}
+              >
+                <Sparkles className="h-5 w-5" style={{ color: SAGE }} />
+              </div>
+              <p
+                className="font-semibold"
+                style={{
+                  fontSize: 13.5,
+                  lineHeight: 1.3,
+                  color: "var(--color-fg)",
+                }}
+              >
+                No clear wins yet
+              </p>
+              <p
+                className="text-[var(--color-fg-muted)]"
+                style={{ fontSize: 12, lineHeight: 1.5 }}
+              >
+                You're middle-of-the-pack across this scan. Pick one weak engine
+                in the panel above and ship a single fix — wins compound from there.
+              </p>
+            </div>
+          </div>
+        ) : (
+          wins.map((w, i) => {
+            const Icon = w.icon;
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setActivePlaybook(w.playbook)}
+                className="text-left rounded-[var(--radius-md)] border border-[var(--color-border)] p-2.5 flex items-start gap-2.5 cursor-pointer transition-colors hover:border-[rgba(150,162,131,0.55)]"
+                style={{ background: "var(--color-surface-alt)" }}
+              >
+                <div
+                  className="h-7 w-7 rounded-md flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: SAGE_BG }}
+                >
+                  <Icon className="h-3.5 w-3.5" style={{ color: SAGE }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p
+                    className="text-[var(--color-fg)] font-semibold"
+                    style={{ fontSize: 12.5, lineHeight: 1.25 }}
+                  >
+                    {w.title}
+                  </p>
+                  <p
+                    className="text-[var(--color-fg-secondary)] mt-0.5"
+                    style={{ fontSize: 11.5, lineHeight: 1.4 }}
+                  >
+                    {w.body}
+                  </p>
+                </div>
+                <ArrowRight
+                  className="h-3.5 w-3.5 mt-1 shrink-0"
+                  style={{ color: SAGE }}
                 />
               </button>
             );
