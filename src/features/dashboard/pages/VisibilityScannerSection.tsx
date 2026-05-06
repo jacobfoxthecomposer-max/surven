@@ -1625,9 +1625,14 @@ function PositionBrandRow({
   showDelta?: boolean;
   showRankValue?: boolean;
 }) {
-  // For position: positive delta = improved (lower number), so increase
-  // For SOV: positive delta = gained share, so increase
-  // Both align: positive delta = good for that brand
+  // Polarity is mode-dependent — mirrors RankDeltaPill so the per-row
+  // pill agrees with the header pill on what counts as "good".
+  //   • position mode: rank delta < 0 = rank number went down = improved → green ↑
+  //   • share-of-voice mode: delta > 0 = gained share = improved → green ↑
+  const improved =
+    mode === "position" ? stat.delta < 0 : stat.delta > 0;
+  // `grew` describes which way the underlying number actually moved
+  // (used for the "Up X positions" / "Down X%" hint copy).
   const grew = stat.delta > 0;
   return (
     <div
@@ -1689,7 +1694,7 @@ function PositionBrandRow({
             <HoverHint hint={hint}>
               <BadgeDelta
                 variant="solid"
-                deltaType={flat ? "neutral" : grew ? "increase" : "decrease"}
+                deltaType={flat ? "neutral" : improved ? "increase" : "decrease"}
                 value={valueStr}
               />
             </HoverHint>
