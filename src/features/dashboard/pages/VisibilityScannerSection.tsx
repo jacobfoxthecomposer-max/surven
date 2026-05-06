@@ -3,9 +3,11 @@
 import { useMemo, useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AISummaryGenerator } from "@/components/atoms/AISummaryGenerator";
+import { TimeRangeDropdown, type TimeRangeKey } from "@/components/atoms/TimeRangeDropdown";
+import { GapPlaybookModal, type GapPlaybook } from "@/components/molecules/GapPlaybookModal";
 import { Card } from "@/components/atoms/Card";
 import { BadgeDelta } from "@/components/atoms/BadgeDelta";
-import { VisibilityScoreGauge } from "@/components/atoms/VisibilityScoreGauge";
+import { VisibilityScoreGauge, type VisibilityStats } from "@/components/atoms/VisibilityScoreGauge";
 import { SectionHeading } from "@/components/atoms/SectionHeading";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import {
@@ -13,13 +15,19 @@ import {
   ArrowUp,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Target,
   Calendar,
   ArrowRight,
+  Trophy,
+  Layers,
+  MessageSquare,
+  Crown,
 } from "lucide-react";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { NextScanCard } from "@/components/atoms/NextScanCard";
 import { COLORS, ANIMATION } from "@/utils/constants";
+import { SURVEN_SEMANTIC } from "@/utils/brandColors";
 import { ScrollReveal } from "@/components/molecules/ScrollReveal";
 import {
   VisibilityScannerChart,
@@ -742,7 +750,10 @@ function EngineCoverageBar({
   const dims = {
     tight: { padY: "10px 0 6px", barH: 9, labelSize: 12 + treatment.bodyBumpPx, floatSize: 10 + treatment.bodyBumpPx, mb: "mb-1.5", floatTop: "-top-4" },
     mini: { padY: "14px 0 4px", barH: 7, labelSize: 11 + treatment.bodyBumpPx, floatSize: 9 + treatment.bodyBumpPx, mb: "mb-1", floatTop: "-top-5" },
-    dense: { padY: "13px 0 3px", barH: 7, labelSize: 12, floatSize: 9, mb: "", floatTop: "-top-3" },
+    // Dense (used by the AI Visibility Tracker "Visibility by AI tool"
+    // card): squared-off bar ends, slightly thicker bar, larger floating
+    // delta text with more headroom above the bar so it doesn't crowd.
+    dense: { padY: "20px 0 4px", barH: 11, labelSize: 12, floatSize: 11, mb: "", floatTop: "-top-5" },
   }[density];
 
   const showStats = variant !== "minimal";
@@ -760,7 +771,7 @@ function EngineCoverageBar({
         </span>
         <div
           className="flex-1 relative"
-          style={{ height: dims.barH, backgroundColor: TOK.trackBg, borderRadius: 999 }}
+          style={{ height: dims.barH, backgroundColor: TOK.trackBg, borderRadius: 0 }}
         >
           {showFloating && Math.abs(delta) > 0.05 && (
             <span
@@ -778,7 +789,7 @@ function EngineCoverageBar({
             </span>
           )}
           <div
-            className="absolute top-0 left-0 rounded-l-full"
+            className="absolute top-0 left-0"
             style={{
               height: dims.barH,
               width: `${baseWPct}%`,
@@ -787,7 +798,7 @@ function EngineCoverageBar({
           />
           {grew ? (
             <div
-              className="absolute top-0 rounded-r-full"
+              className="absolute top-0"
               style={{
                 height: dims.barH,
                 left: `${diffStartPct}%`,
@@ -798,7 +809,7 @@ function EngineCoverageBar({
             />
           ) : (
             <div
-              className="absolute top-0 rounded-r-full"
+              className="absolute top-0"
               style={{
                 height: dims.barH,
                 left: `${diffStartPct}%`,
@@ -989,13 +1000,33 @@ function DistributionByLLMCard({
   aiOverviewVariant?: AIOverviewVariant;
 }) {
   const cardPad = density === "dense" ? "p-4" : density === "mini" ? "p-4" : "p-5";
+  // One-word health pill for the whole card. Average visibility across all
+  // tracked engines + average per-engine delta drives the wording.
+  const avgVisibility =
+    data.engineCoverage.length > 0
+      ? data.engineCoverage.reduce((s, e) => s + e.today, 0) /
+        data.engineCoverage.length
+      : 0;
+  const avgEngineDelta =
+    data.engineCoverage.length > 0
+      ? data.engineCoverage.reduce((s, e) => s + e.delta, 0) /
+        data.engineCoverage.length
+      : 0;
+  const visibilityVerdict = verdictForVisibility(avgVisibility, avgEngineDelta);
   return (
-    <div className={`rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] ${cardPad}`}>
-      <div className="mb-2 pb-2 border-b border-[var(--color-border)]">
+    <div className={`rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] w-full min-w-0 flex flex-col ${cardPad}`}>
+      <div className="mb-2 pb-2 border-b border-[var(--color-border)] flex items-center justify-between gap-2">
         <SectionHeading
           text="Visibility by AI tool"
           info="How often each AI tool mentions your business in answers."
         />
+        <div className="shrink-0">
+          <VerdictPill
+            word={visibilityVerdict.word}
+            tone={visibilityVerdict.tone}
+            hint={visibilityVerdict.hint}
+          />
+        </div>
       </div>
       {aiOverviewVariant && (
         <div className="mb-3">
@@ -1039,23 +1070,39 @@ export function buildPositionStats(data: ScannerData): PositionStat[] {
   const seriesById: Record<string, number[]> = {};
   for (const b of data.ranked) seriesById[b.id] = [];
 
+  // Smooth-rank scale (in visibility-percentage points). Two brands within
+  // ±SCALE of each other contribute fractional weight to each other's rank
+  // instead of a hard 0/1 step — that's what keeps the chart line smooth
+  // through near-tie crossover periods. Larger SCALE = smoother lines.
+  const SCALE = 4.5;
+  const sigmoid = (x: number) => 1 / (1 + Math.exp(-x));
+
   for (let t = 0; t < T; t++) {
-    const sorted = [...data.ranked].sort(
-      (a, b) => (b.data[t] ?? 0) - (a.data[t] ?? 0),
-    );
-    sorted.forEach((b, i) => {
-      seriesById[b.id].push(i + 1);
-    });
+    for (const b of data.ranked) {
+      const vB = b.data[t] ?? 0;
+      // rank = 1 + Σ over other brands of soft-step(v_C > v_B). When two
+      // brands are far apart the soft step ≈ 1 or 0 (matches integer
+      // rank); when they're close it ≈ 0.5, producing a continuous rank
+      // somewhere between the two integer positions.
+      let rank = 1;
+      for (const c of data.ranked) {
+        if (c.id === b.id) continue;
+        const vC = c.data[t] ?? 0;
+        rank += sigmoid((vC - vB) / SCALE);
+      }
+      seriesById[b.id].push(rank);
+    }
   }
 
-  const window = Math.min(7, T);
+  // Delta = first vs last point of the SLICED series so the pill matches
+  // the chart's visual start-to-end change for the selected time range.
+  // For rank, a positive delta means the rank number went UP (worse).
   return data.ranked.map((b) => {
     const series = seriesById[b.id];
-    const recent = series.slice(-window);
-    const earlier = series.slice(0, window);
-    const avg = (arr: number[]) => arr.reduce((s, v) => s + v, 0) / arr.length;
-    const current = avg(recent);
-    const delta = avg(earlier) - current; // positive = improved (lower number)
+    const first = series[0] ?? 0;
+    const last = series[series.length - 1] ?? 0;
+    const current = last;
+    const delta = last - first;
     return { brand: b, current, delta, series };
   });
 }
@@ -1073,15 +1120,14 @@ export function buildSOVStats(data: ScannerData): PositionStat[] {
     }
   }
 
-  const window = Math.min(7, T);
+  // Delta = last point − first point of the SLICED series, mirroring the
+  // chart's visible change for the active time range.
   return data.ranked.map((b) => {
     const series = seriesById[b.id];
-    const recent = series.slice(-window);
-    const earlier = series.slice(0, window);
-    const avg = (arr: number[]) =>
-      arr.reduce((s, v) => s + v, 0) / arr.length;
-    const current = avg(recent);
-    const delta = current - avg(earlier); // positive = gained share
+    const first = series[0] ?? 0;
+    const last = series[series.length - 1] ?? 0;
+    const current = last;
+    const delta = last - first;
     return { brand: b, current, delta, series };
   });
 }
@@ -1249,7 +1295,10 @@ interface PositionTooltipPayloadItem {
 }
 
 function formatRankValue(v: number, mode: RankSeriesMode): string {
-  if (mode === "position") return `#${v.toFixed(0)}`;
+  // Show 2-decimal precision in the chart tooltip so the per-day rank
+  // (which is a continuous fractional value) reads accurately. Whole-number
+  // formatting was hiding the actual ranking gradient between brands.
+  if (mode === "position") return `#${v.toFixed(2)}`;
   return `${v.toFixed(1)}%`;
 }
 
@@ -1465,8 +1514,14 @@ function PositionChart({
     mode === "position"
       ? {
           reversed: true,
-          domain: [1, stats.length] as [number, number],
-          ticks: Array.from({ length: stats.length }, (_, i) => i + 1),
+          // Always show the full 1–5 rank window so the line doesn't visually
+          // re-zoom when only the top 2-3 brands are populated. With ≥5
+          // brands the domain extends to fit all of them.
+          domain: [1, Math.max(5, stats.length)] as [number, number],
+          ticks: Array.from(
+            { length: Math.max(5, stats.length) },
+            (_, i) => i + 1,
+          ),
           allowDecimals: false,
           tickFormatter: (v: number) => `#${v}`,
           width: 36,
@@ -1740,6 +1795,9 @@ export function RankSeriesCard({
   headerRight,
   youLabelOverride,
   hideEndLabelDelta = false,
+  variant = "full",
+  hoveredBrandId: hoveredBrandIdProp,
+  onHoverBrand,
 }: {
   title: string;
   titleInfo?: string;
@@ -1760,6 +1818,15 @@ export function RankSeriesCard({
   youLabelOverride?: string;
   /** Hide the dual-pill delta floating next to the YOU end label. */
   hideEndLabelDelta?: boolean;
+  /** "full" (default) renders list + chart; "list-only" hides the chart;
+   *  "chart-only" hides the list. Used to split this card across two
+   *  side-by-side boxes in the AI Visibility Tracker hero. */
+  variant?: "full" | "list-only" | "chart-only";
+  /** Externally controlled hover state. When provided, hover-dim updates
+   *  bubble up through `onHoverBrand` so a sibling card (e.g. the chart
+   *  half of a split RankSeriesCard) can mirror the highlight. */
+  hoveredBrandId?: string | null;
+  onHoverBrand?: (id: string | null) => void;
 }) {
   const sorted = useMemo(
     () =>
@@ -1769,7 +1836,15 @@ export function RankSeriesCard({
     [stats, mode],
   );
 
-  const [hoveredBrandId, setHoveredBrandId] = useState<string | null>(null);
+  const [internalHover, setInternalHover] = useState<string | null>(null);
+  // Use the controlled prop when provided so a sibling card (e.g. the
+  // chart half of a split RankSeriesCard) can mirror this hover state.
+  const hoveredBrandId =
+    hoveredBrandIdProp !== undefined ? hoveredBrandIdProp : internalHover;
+  const setHoveredBrandId = (id: string | null) => {
+    if (onHoverBrand) onHoverBrand(id);
+    else setInternalHover(id);
+  };
 
   const dims = {
     comfortable: { chartH: layout === "list-top" ? 200 : 240, pad: "p-5", spacing: "space-y-4", showInsight: true, showList: true, listSpacing: "space-y-1" },
@@ -1820,7 +1895,7 @@ export function RankSeriesCard({
   );
 
   return (
-    <div className={`rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] ${dims.pad} ${dims.spacing} min-w-0`}>
+    <div className={`rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] w-full min-w-0 flex flex-col ${dims.pad} ${dims.spacing}`}>
       <div className="mb-1 pb-2 border-b border-[var(--color-border)] flex items-center justify-between gap-2">
         <SectionHeading text={title} info={titleInfo} />
         {headerRight && <div className="shrink-0">{headerRight}</div>}
@@ -1828,7 +1903,11 @@ export function RankSeriesCard({
       {dims.showInsight && aiOverviewVariant && (
         <AIOverview text={insight} variant={aiOverviewVariant} size="sm" />
       )}
-      {!dims.showList ? (
+      {variant === "list-only" ? (
+        list
+      ) : variant === "chart-only" ? (
+        chart
+      ) : !dims.showList ? (
         chart
       ) : layout === "list-left" ? (
         <div className={`grid grid-cols-1 ${gridColsClass} gap-4 items-center`}>
@@ -1843,6 +1922,136 @@ export function RankSeriesCard({
       )}
     </div>
   );
+}
+
+// ─── ONE-WORD VERDICT PILL + HEALTH HEURISTICS ─────────────────────────────
+// Lightweight summary chip used in the top-right header of the Visibility
+// by AI tool + Average rank per AI model cards. Each takes a single tone
+// + word + hover hint computed from the card's underlying metric mix.
+
+type VerdictTone = "good" | "fair" | "warn" | "bad";
+
+const VERDICT_TONE_STYLE: Record<
+  VerdictTone,
+  { color: string; bg: string }
+> = {
+  good: { color: "#5E7250", bg: "rgba(150,162,131,0.22)" },
+  fair: { color: "#7E6B17", bg: "rgba(184,160,48,0.20)" },
+  warn: { color: "#A35F32", bg: "rgba(201,123,69,0.22)" },
+  bad: { color: "#B54631", bg: "rgba(181,70,49,0.18)" },
+};
+
+function VerdictPill({
+  word,
+  tone,
+  hint,
+}: {
+  word: string;
+  tone: VerdictTone;
+  hint: string;
+}) {
+  const style = VERDICT_TONE_STYLE[tone];
+  return (
+    <HoverHint hint={hint}>
+      <span
+        className="inline-flex items-center text-xs font-semibold rounded-md px-2 py-0.5 whitespace-nowrap cursor-help"
+        style={{ color: style.color, backgroundColor: style.bg }}
+      >
+        {word}
+      </span>
+    </HoverHint>
+  );
+}
+
+// Visibility verdict: averages the per-engine % across all engines plus
+// the average period-over-period engine delta. Wording leans toward the
+// trend when the snapshot itself is mid-band.
+function verdictForVisibility(
+  avgPct: number,
+  avgDelta: number,
+): { word: string; tone: VerdictTone; hint: string } {
+  const trend =
+    avgDelta > 5
+      ? "Trending up sharply"
+      : avgDelta > 1
+        ? "Trending up"
+        : avgDelta < -5
+          ? "Trending down sharply"
+          : avgDelta < -1
+            ? "Trending down"
+            : "Holding flat";
+  if (avgPct >= 70)
+    return {
+      word: "Excellent",
+      tone: "good",
+      hint: `${avgPct.toFixed(1)}% average visibility across tracked engines. ${trend} vs. the start of the range.`,
+    };
+  if (avgPct >= 55)
+    return {
+      word: "Strong",
+      tone: "good",
+      hint: `${avgPct.toFixed(1)}% average visibility across tracked engines. ${trend} vs. the start of the range.`,
+    };
+  if (avgPct >= 35)
+    return {
+      word: avgDelta > 1 ? "Improving" : "Mixed",
+      tone: avgDelta > 1 ? "good" : "fair",
+      hint: `${avgPct.toFixed(1)}% average visibility across tracked engines. ${trend} vs. the start of the range.`,
+    };
+  if (avgPct >= 20)
+    return {
+      word: "Weak",
+      tone: "warn",
+      hint: `${avgPct.toFixed(1)}% average visibility across tracked engines — below the strong threshold. ${trend} vs. the start of the range.`,
+    };
+  return {
+    word: "Critical",
+    tone: "bad",
+    hint: `${avgPct.toFixed(1)}% average visibility across tracked engines. ${trend} vs. the start of the range.`,
+  };
+}
+
+// Rank verdict: lower is better. Uses the average per-engine rank plus
+// the average rank delta (negative = improved = rank dropped numerically).
+function verdictForRank(
+  avgRank: number,
+  avgRankDelta: number,
+): { word: string; tone: VerdictTone; hint: string } {
+  const trend =
+    avgRankDelta < -0.3
+      ? "Improving"
+      : avgRankDelta > 0.3
+        ? "Slipping"
+        : "Holding steady";
+  if (avgRank <= 1.5)
+    return {
+      word: "Dominant",
+      tone: "good",
+      hint: `Average rank of #${avgRank.toFixed(2)} across tracked engines — you're typically named first. ${trend} vs. the start of the range.`,
+    };
+  if (avgRank <= 2.5)
+    return {
+      word: "Strong",
+      tone: "good",
+      hint: `Average rank of #${avgRank.toFixed(2)} across tracked engines. ${trend} vs. the start of the range.`,
+    };
+  if (avgRank <= 3.5)
+    return {
+      word: avgRankDelta < 0 ? "Climbing" : "Mid-pack",
+      tone: avgRankDelta < 0 ? "good" : "fair",
+      hint: `Average rank of #${avgRank.toFixed(2)} across tracked engines. ${trend} vs. the start of the range.`,
+    };
+  if (avgRank <= 4.5)
+    return {
+      word: "Trailing",
+      tone: "warn",
+      hint: `Average rank of #${avgRank.toFixed(2)} across tracked engines — competitors are named ahead of you. ${trend} vs. the start of the range.`,
+    };
+  return {
+    word: "Far behind",
+    tone: "bad",
+    hint: `Average rank of #${avgRank.toFixed(2)} across tracked engines. ${trend} vs. the start of the range.`,
+  };
 }
 
 // ─── ENGINE RANK CARD (per-AI-model rank breakdown) ────────────────────────
@@ -1876,13 +2085,27 @@ function EngineRankCard({
     [data.engineCoverage]
   );
 
+  const avgRank =
+    rows.length > 0 ? rows.reduce((s, r) => s + r.rank, 0) / rows.length : 0;
+  const avgRankDelta =
+    rows.length > 0
+      ? rows.reduce((s, r) => s + (r.rank - r.prevRank), 0) / rows.length
+      : 0;
+  const rankVerdict = verdictForRank(avgRank, avgRankDelta);
   return (
-    <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-      <div className="mb-2 pb-2 border-b border-[var(--color-border)]">
+    <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 w-full min-w-0 flex flex-col">
+      <div className="mb-2 pb-2 border-b border-[var(--color-border)] flex items-center justify-between gap-2">
         <SectionHeading
-          text="Average rank per AI model"
+          text="Average rank when mentioned per AI model"
           info="Your typical position when each AI tool mentions you. Lower is better."
         />
+        <div className="shrink-0">
+          <VerdictPill
+            word={rankVerdict.word}
+            tone={rankVerdict.tone}
+            hint={rankVerdict.hint}
+          />
+        </div>
       </div>
       {aiOverviewVariant && (
         <div className="mb-3">
@@ -2044,22 +2267,47 @@ export function ShareOfVoiceCard({
   pieMode,
   aiOverviewVariant,
   showChart = true,
+  variant = "full",
+  title = "Share of voice over time",
+  headerRight,
+  hoveredBrandId: hoveredBrandIdProp,
+  onHoverBrand,
 }: {
   data: ScannerData;
   stats: PositionStat[];
   insight: string;
   pieMode: SOVPieMode;
   aiOverviewVariant?: AIOverviewVariant;
+  /** Externally controlled hover state — shared between split SoV cards
+   *  so hovering a brand in the stats half dims its line in the chart
+   *  half (and vice versa). */
+  hoveredBrandId?: string | null;
+  onHoverBrand?: (id: string | null) => void;
   /** Hide the right-side line chart and let the donut + list fill width.
    *  Used on /competitor-comparison where SOV sits in a narrow slot. */
   showChart?: boolean;
+  /** "full" (default) renders donut + list + chart. "stats-only" hides
+   *  the chart so just the donut + list show. "chart-only" hides the
+   *  donut + list. Used by the AI Visibility Tracker hero to split SoV
+   *  across two side-by-side cards. */
+  variant?: "full" | "stats-only" | "chart-only";
+  /** Override the section title. */
+  title?: string;
+  /** Top-right slot in the card header (e.g. a delta pill). */
+  headerRight?: React.ReactNode;
 }) {
   const sorted = useMemo(
     () => [...stats].sort((a, b) => b.current - a.current),
     [stats],
   );
 
-  const [hoveredBrandId, setHoveredBrandId] = useState<string | null>(null);
+  const [internalSovHover, setInternalSovHover] = useState<string | null>(null);
+  const hoveredBrandId =
+    hoveredBrandIdProp !== undefined ? hoveredBrandIdProp : internalSovHover;
+  const setHoveredBrandId = (id: string | null) => {
+    if (onHoverBrand) onHoverBrand(id);
+    else setInternalSovHover(id);
+  };
 
   // Layout split: when the chart is shown, use the original 3-col template.
   // When the chart is hidden (cluster-comparison page slot), restructure to
@@ -2203,49 +2451,137 @@ export function ShareOfVoiceCard({
     );
   }
 
-  // Original 3-col layout, unchanged for the AI Visibility Tracker page.
+  // Default 3-zone layout (donut + list + chart). Used by the AI Visibility
+  // Tracker page. The `variant` prop lets the AI Visibility Tracker hero
+  // split this card across two side-by-side boxes if it wants.
+  const donut = (
+    <div className="flex justify-center">
+      <SOVPie
+        stats={sorted}
+        size={120}
+        mode={pieMode}
+        hoveredBrandId={hoveredBrandId}
+        onHover={setHoveredBrandId}
+      />
+    </div>
+  );
+  const list = (
+    <div className="space-y-0">
+      {sorted.map((s) => (
+        <PositionBrandRow
+          key={s.brand.id}
+          stat={s}
+          mode="share-of-voice"
+          onHover={setHoveredBrandId}
+          isDimmed={hoveredBrandId != null && hoveredBrandId !== s.brand.id}
+        />
+      ))}
+    </div>
+  );
+  const chart = (
+    <PositionChart
+      data={data}
+      stats={stats}
+      mode="share-of-voice"
+      height={170}
+      rightMargin={140}
+      hoveredBrandId={hoveredBrandId}
+    />
+  );
+
   return (
-    <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 space-y-4 min-w-0">
-      <div className="mb-1 pb-2 border-b border-[var(--color-border)]">
+    <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 space-y-3 w-full min-w-0 flex flex-col">
+      <div className="mb-1 pb-2 border-b border-[var(--color-border)] flex items-center justify-between gap-2">
         <SectionHeading
-          text="Share of voice over time"
+          text={title}
           info="Your share of all brand mentions in AI answers over time."
         />
+        {headerRight && <div className="shrink-0">{headerRight}</div>}
       </div>
       {aiOverviewVariant && (
         <AIOverview text={insight} variant={aiOverviewVariant} size="sm" />
       )}
-      <div className="grid grid-cols-1 xl:grid-cols-[170px_220px_minmax(0,1fr)] gap-5 items-center">
-        <div className="flex justify-center">
-          <SOVPie
-            stats={sorted}
-            size={150}
-            mode={pieMode}
-            hoveredBrandId={hoveredBrandId}
-            onHover={setHoveredBrandId}
-          />
+      {variant === "stats-only" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-[140px_minmax(0,1fr)] gap-5 items-center flex-1">
+          {donut}
+          {list}
         </div>
-        <div className="space-y-0">
-          {sorted.map((s) => (
-            <PositionBrandRow
-              key={s.brand.id}
-              stat={s}
-              mode="share-of-voice"
-              onHover={setHoveredBrandId}
-              isDimmed={hoveredBrandId != null && hoveredBrandId !== s.brand.id}
-            />
-          ))}
+      ) : variant === "chart-only" ? (
+        <div className="flex-1">{chart}</div>
+      ) : (
+        <div className="grid grid-cols-1 xl:grid-cols-[140px_220px_minmax(0,1fr)] gap-5 items-center">
+          {donut}
+          {list}
+          {chart}
         </div>
-        <PositionChart
-          data={data}
-          stats={stats}
-          mode="share-of-voice"
-          height={220}
-          rightMargin={140}
-          hoveredBrandId={hoveredBrandId}
-        />
-      </div>
+      )}
     </div>
+  );
+}
+
+// ─── Per-card top-right delta pill for the rank + SoV split cards ──────────
+// Renders a single BadgeDelta whose ARROW + COLOR + SIGN all line up with
+// the SEMANTIC outcome ("did this get better or worse?"), not the raw
+// numerical direction.
+//   • Share of voice — higher = better, so positive raw delta → green ↑.
+//   • Rank — LOWER = better, so positive raw delta (rank number went UP)
+//     reads as a decline → red ↓; negative raw delta (rank improved) →
+//     green ↑.
+// Sign of the displayed value follows the arrow direction (a green ↑ pill
+// shows a +X value, a red ↓ pill shows a −X value) so the three cues
+// never disagree.
+
+function RankDeltaPill({
+  stats,
+  mode,
+}: {
+  stats: PositionStat[];
+  mode: "position" | "share-of-voice";
+}) {
+  const you = stats.find((s) => s.brand.isYou);
+  if (!you) return null;
+  const raw = you.delta;
+  const flat = Math.abs(raw) <= 0.04;
+
+  // "Improved" = the change is good for the user.
+  const improved =
+    mode === "position"
+      ? raw < 0 // rank went down numerically (better)
+      : raw > 0; // share went up (better)
+
+  const deltaType: "increase" | "decrease" | "neutral" = flat
+    ? "neutral"
+    : improved
+      ? "increase"
+      : "decrease";
+
+  const magnitude = Math.abs(raw);
+  const unit = mode === "share-of-voice" ? "%" : "";
+  // Value sign follows the arrow direction so green ↑ shows +X and
+  // red ↓ shows −X consistently.
+  const valueStr = flat
+    ? `0${unit}`
+    : `${improved ? "+" : "−"}${magnitude.toFixed(2)}${unit}`;
+  const directionWord = mode === "position"
+    ? improved
+      ? "Improved"
+      : "Declined"
+    : improved
+      ? "Up"
+      : "Down";
+  const title = flat
+    ? "No change over the selected range."
+    : mode === "position"
+      ? `${directionWord} ${magnitude.toFixed(2)} positions over the selected range (lower rank = better).`
+      : `${directionWord} ${magnitude.toFixed(2)}% over the selected range.`;
+
+  return (
+    <BadgeDelta
+      variant="solid"
+      deltaType={deltaType}
+      value={valueStr}
+      title={title}
+    />
   );
 }
 
@@ -2268,186 +2604,407 @@ function CompetitorsBlock({
   );
   const sovInsight = useMemo(() => buildSOVInsight(sovStats), [sovStats]);
 
+  // Shared hover state for the rank + SoV split cards. Lifting it here
+  // means hovering a brand in the list half dims the matching line in the
+  // chart half (and vice versa) — the highlight stays correlated even
+  // though the two halves now live in separate cards.
+  const [rankHover, setRankHover] = useState<string | null>(null);
+  const [sovHover, setSovHover] = useState<string | null>(null);
+
   return (
     <div className="space-y-4">
-      <DistributionByLLMCard
-        data={data}
-        treatment={treatment}
-        barVariant="with-stats"
-        density="dense"
-        aiOverviewVariant={aiOverviewVariant}
-      />
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-stretch">
-        <RankSeriesCard
-          title="Average rank when mentioned"
-          titleInfo="Your typical position when AI tools mention you. Lower is better."
-          data={data}
-          stats={positionStats}
-          insight={positionInsight}
-          mode="position"
-          layout="list-left"
-          density="mini"
-          listWidthPx={220}
-          chartHeightPx={200}
-          aiOverviewVariant={aiOverviewVariant}
-        />
-        <EngineRankCard data={data} aiOverviewVariant={aiOverviewVariant} />
+      {/* Row 1 — Visibility by AI tool (60%) + Average rank per AI model
+          (40%), side-by-side. items-stretch keeps both card heights locked. */}
+      <div className="grid grid-cols-1 xl:grid-cols-5 gap-4 items-stretch">
+        <div className="xl:col-span-3 min-w-0 flex">
+          <DistributionByLLMCard
+            data={data}
+            treatment={treatment}
+            barVariant="with-stats"
+            density="dense"
+            aiOverviewVariant={aiOverviewVariant}
+          />
+        </div>
+        <div className="xl:col-span-2 min-w-0 flex">
+          <EngineRankCard data={data} aiOverviewVariant={aiOverviewVariant} />
+        </div>
       </div>
-      <ShareOfVoiceCard
-        data={data}
-        stats={sovStats}
-        insight={sovInsight}
-        pieMode="donut-center"
-        aiOverviewVariant={aiOverviewVariant}
-      />
+
+      {/* Row 2 — Average rank when mentioned, split into list (40%) and
+          chart (60%) cards. Each gets its own delta pill. */}
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 items-stretch">
+        <div className="xl:col-span-1 min-w-0 flex">
+          <RankSeriesCard
+            title="Average rank when mentioned"
+            titleInfo="Your typical position when AI tools mention you. Lower is better."
+            data={data}
+            stats={positionStats}
+            insight={positionInsight}
+            mode="position"
+            layout="list-left"
+            density="mini"
+            aiOverviewVariant={aiOverviewVariant}
+            variant="list-only"
+            headerRight={<RankDeltaPill stats={positionStats} mode="position" />}
+            hoveredBrandId={rankHover}
+            onHoverBrand={setRankHover}
+          />
+        </div>
+        <div className="xl:col-span-3 min-w-0 flex">
+          <RankSeriesCard
+            title="Average rank over time"
+            titleInfo="How your average rank has trended over the period. Lower is better."
+            data={data}
+            stats={positionStats}
+            insight={positionInsight}
+            mode="position"
+            layout="list-left"
+            density="mini"
+            chartHeightPx={160}
+            aiOverviewVariant={aiOverviewVariant}
+            variant="chart-only"
+            headerRight={<RankDeltaPill stats={positionStats} mode="position" />}
+            hoveredBrandId={rankHover}
+            onHoverBrand={setRankHover}
+          />
+        </div>
+      </div>
+
+      {/* Row 3 — Share of voice split into stats card (40%) + chart card
+          (60%). Same delta pill in each top-right. */}
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 items-stretch">
+        <div className="xl:col-span-1 min-w-0 flex">
+          <ShareOfVoiceCard
+            data={data}
+            stats={sovStats}
+            insight={sovInsight}
+            pieMode="donut-center"
+            aiOverviewVariant={aiOverviewVariant}
+            variant="stats-only"
+            title="Share of voice"
+            headerRight={<RankDeltaPill stats={sovStats} mode="share-of-voice" />}
+            hoveredBrandId={sovHover}
+            onHoverBrand={setSovHover}
+          />
+        </div>
+        <div className="xl:col-span-3 min-w-0 flex">
+          <ShareOfVoiceCard
+            data={data}
+            stats={sovStats}
+            insight={sovInsight}
+            pieMode="donut-center"
+            aiOverviewVariant={aiOverviewVariant}
+            variant="chart-only"
+            title="Share of voice over time"
+            headerRight={<RankDeltaPill stats={sovStats} mode="share-of-voice" />}
+            hoveredBrandId={sovHover}
+            onHoverBrand={setSovHover}
+          />
+        </div>
+      </div>
     </div>
   );
 }
 
 // ─── NARRATIVE FEED ─────────────────────────────────────────────────────────
 
-function NarrativeFeed({ data, treatment }: { data: ScannerData; treatment: Treatment }) {
+function NarrativeFeed({ data }: { data: ScannerData; treatment: Treatment }) {
   const topEngine = data.engineCoverage[0];
   const weakEngine = data.engineCoverage[data.engineCoverage.length - 1];
 
-  type Item = { text: string; cta: string; href: string };
+  // Items now follow the SentimentDiagnostic pattern: title (the action /
+  // headline) + body (the supporting context / metric). All values are
+  // derived from the same ScannerData feeding the rest of the page so the
+  // box stays in sync with the active time-range / engine filter; all
+  // links point at real, mounted dashboard routes (no 404s).
+  type Item = { title: string; body: string; cta: string; href: string };
 
-  const worked: Item[] = [
-    {
-      text: `FAQ schema added to your 3 top service pages — ${topEngine.label} mentions up ${(data.youDelta * 0.42).toFixed(1)}% since.`,
-      cta: "View FAQ schema impact",
-      href: "/tools/faq-schema/impact",
-    },
-    {
-      text: `Reddit & BBB listings published — citations from those sources doubled in the last 30 days.`,
-      cta: "View citation report",
-      href: "/tools/citations",
-    },
-    {
-      text: `Rewrote intros on your 5 weakest pages — ChatGPT now quotes you directly in 4 of them.`,
-      cta: "View page audit results",
-      href: "/tools/page-audit/results",
-    },
-    {
-      text: `Pillar page on "${topEngine.label}-optimized content" deployed — outranking 2 competitors on those prompts.`,
-      cta: "View content planner",
-      href: "/tools/content-planner",
-    },
-    {
-      text: `Meta descriptions fixed on 8 pages — AI tools now lift cleaner answer snippets.`,
-      cta: "View metadata report",
-      href: "/tools/metadata-audit/results",
-    },
-  ];
-  const watch: Item[] = [
-    {
-      text: `${weakEngine.label} is your weakest spot — you only show up in ${weakEngine.today.toFixed(0)}% of its answers.`,
-      cta: "Open engine optimizer",
-      href: "/tools/engine-fix",
-    },
-    data.youRank > 1
-      ? {
-          text: `${data.ranked[0].name} leads at ${Math.round(data.ranked[0].data[data.ranked[0].data.length - 1] ?? 0)}% — they have a ${(((data.ranked[0].data[data.ranked[0].data.length - 1] ?? 0) - data.youLatest)).toFixed(0)}% lead on you.`,
-          cta: "View competitor playbook",
-          href: "/tools/competitor-strategy",
-        }
-      : {
-          text: "You're #1 — protect the lead by keeping content fresh.",
-          cta: "View content planner",
-          href: "/tools/content-planner",
-        },
-    {
-      text: `Your coverage moved ${Math.abs(data.youDelta).toFixed(1)}% over the last ${data.rangeN} days.`,
-      cta: "View coverage trend",
-      href: "/tools/coverage",
-    },
-    {
-      text: `12 trending customer prompts you don't yet show up in.`,
-      cta: "View prompt explorer",
-      href: "/tools/prompt-gaps",
-    },
-    {
-      text: `Two pages return 5xx for ChatGPT's crawler — easy to fix.`,
-      cta: "Run crawl health check",
-      href: "/tools/crawl-health",
-    },
-  ];
-  const cols = [
-    { title: "What worked", items: worked.slice(0, 3), Icon: CheckCircle2, color: TOK.growText },
-    { title: "What to watch", items: watch.slice(0, 3), Icon: AlertCircle, color: COLORS.warning },
-  ];
+  // Items now follow the SentimentDiagnostic pattern. Each candidate is
+  // gated by a real condition — only genuine wins / genuine concerns get
+  // pushed, so the boxes can show 0-3 items. Capped at 3 so the card
+  // height stays bounded.
+  const leader = data.ranked[0];
+  const leaderScore = leader?.data[leader.data.length - 1] ?? 0;
+  const sortedEngines = [...data.engineCoverage].sort(
+    (a, b) => b.today - a.today,
+  );
+  const youAreLeader = leader?.isYou ?? false;
+  const gap = leaderScore - data.youLatest;
+  const weakest = sortedEngines[sortedEngines.length - 1];
 
-  // Hex strings for gradient stops, matching the per-column accent.
-  const gradientFor = (hex: string) =>
-    `linear-gradient(135deg, ${hex}33 0%, ${hex}14 60%, ${hex}08 100%)`;
+  // ── WINS — only push genuine wins ──
+  const worked: Item[] = [];
+  // Strong top engine (≥ 50% mention rate qualifies as a real win).
+  if (topEngine.today >= 50) {
+    worked.push({
+      title: `${topEngine.label} is naming you ${topEngine.today.toFixed(1)}% of the time`,
+      body: `Strongest tracked engine — every customer asking it about your category is hearing your name in the answer. Keep feeding the content patterns it's already rewarding.`,
+      cta: "See engine breakdown",
+      href: "/competitor-comparison",
+    });
+  }
+  // Period-over-period visibility growth (≥ 1% counts).
+  if (data.youDelta >= 1) {
+    worked.push({
+      title: `Visibility climbed +${data.youDelta.toFixed(1)}% over the period`,
+      body: `Across the last ${data.rangeN} days you moved from ${data.youFirst.toFixed(1)}% to ${data.youLatest.toFixed(1)}% mention rate — momentum is on your side, double down on the optimizations driving it.`,
+      cta: "Review citation sources",
+      href: "/citation-insights",
+    });
+  }
+  // Weakest engine actually improved this period.
+  if (weakest.delta > 1) {
+    worked.push({
+      title: `Closing ground on ${weakest.label}`,
+      body: `Your weakest engine ticked up ${weakest.delta.toFixed(1)}% this period — the schema and citation work is starting to register where you needed it most.`,
+      cta: "Run a follow-up audit",
+      href: "/site-audit",
+    });
+  }
+  // You hold the #1 leaderboard slot.
+  if (youAreLeader) {
+    worked.push({
+      title: `Leading the field at ${data.youLatest.toFixed(1)}%`,
+      body: `You're the top-named brand across tracked engines — defend the lead by keeping fresh content flowing on the prompts your closest rival is starting to creep up on.`,
+      cta: "Open competitor comparison",
+      href: "/competitor-comparison",
+    });
+  }
+  // Cap at 3.
+  worked.splice(3);
+
+  // ── WATCH — only push genuine concerns ──
+  const watch: Item[] = [];
+  // Weak engine below the "weak" threshold of 50%.
+  if (weakEngine.today < 50) {
+    watch.push({
+      title: `${weakEngine.label} is your weakest engine at ${weakEngine.today.toFixed(1)}%`,
+      body: `You're only named in roughly ${Math.round(weakEngine.today)}% of its answers — every customer routed to ${weakEngine.label} is a missed shot at recommendation. Crawlability + schema fixes here move the needle fastest.`,
+      cta: "Run a site audit",
+      href: "/site-audit",
+    });
+  }
+  // Competitor lead of 3% or more.
+  if (!youAreLeader && leader && gap >= 3) {
+    watch.push({
+      title: `${leader.name} is leading at ${leaderScore.toFixed(1)}%`,
+      body: `Your top competitor sits ${gap.toFixed(1)}% ahead of you — a gap that compounds every week without targeted publishing on the prompts they're winning.`,
+      cta: "Open competitor comparison",
+      href: "/competitor-comparison",
+    });
+  }
+  // Period-over-period decline.
+  if (data.youDelta <= -1) {
+    watch.push({
+      title: `Coverage slipped ${Math.abs(data.youDelta).toFixed(1)}% this period`,
+      body: `Visibility moved from ${data.youFirst.toFixed(1)}% to ${data.youLatest.toFixed(1)}% over the last ${data.rangeN} days — watch the slope, not the snapshot. A crawlability check often catches the silent regressions first.`,
+      cta: "Run crawlability audit",
+      href: "/crawlability-audit",
+    });
+  }
+  // Multiple engines below the 50% bar.
+  const failingEngines = sortedEngines.filter((e) => e.today < 50);
+  if (failingEngines.length >= 2) {
+    watch.push({
+      title: `${failingEngines.length} engines below 50% mention rate`,
+      body: `${failingEngines.map((e) => e.label).join(", ")} are all citing you in fewer than half of their answers — a structural readability issue often hits multiple engines at once.`,
+      cta: "Run a site audit",
+      href: "/site-audit",
+    });
+  }
+  watch.splice(3);
+
+  const winsTitle =
+    worked.length === 0
+      ? "No new wins this period"
+      : `${worked.length} win${worked.length === 1 ? "" : "s"} this period`;
+  const watchTitle =
+    watch.length === 0
+      ? "Nothing flagged — you're clean"
+      : `${watch.length} thing${watch.length === 1 ? "" : "s"} to watch`;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
-      {cols.map((col) => {
-        const Icon = col.Icon;
-        return (
-          <div
-            key={col.title}
-            className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col"
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+      <NarrativeInsightCard
+        variant="wins"
+        tag="What worked"
+        title={winsTitle}
+        summary={
+          worked.length === 0
+            ? "No wins crossed our threshold this period — keep publishing and watch the next scan for momentum."
+            : "Optimizations that moved the needle — keep the pressure on the patterns AI is already rewarding."
+        }
+        items={worked}
+        emptyMessage="Nothing here yet — your next scan will surface the patterns that started compounding."
+      />
+      <NarrativeInsightCard
+        variant="concerns"
+        tag="What to watch"
+        title={watchTitle}
+        summary={
+          watch.length === 0
+            ? "No engines under-citing you, no competitor pulling away, no period-over-period slip — visibility is healthy across the board."
+            : "Highest-leverage gaps — these are where AI is naming competitors instead of you."
+        }
+        items={watch}
+        emptyMessage="All clear — defend this position by keeping content fresh on the prompts where rivals could creep up."
+      />
+    </div>
+  );
+}
+
+// Mirrors the InsightCard pattern used on the Tracked Prompts page
+// (gradient header strip + colored borderLeft + sub-cards with icon
+// tile). Wins variant uses the sage palette; concerns uses the warm
+// orange/amber. Visually identical to PromptsSection's InsightCard.
+function NarrativeInsightCard({
+  variant,
+  tag,
+  title,
+  summary,
+  items,
+  emptyMessage,
+}: {
+  variant: "wins" | "concerns";
+  tag: string;
+  title: string;
+  summary: string;
+  items: { title: string; body: string; cta: string; href: string }[];
+  /** Shown inside the body when `items` is empty. */
+  emptyMessage?: string;
+}) {
+  const palette =
+    variant === "wins"
+      ? {
+          accent: "#96A283",
+          accentText: "#5E7250",
+          gradient:
+            "linear-gradient(135deg, rgba(150,162,131,0.22) 0%, rgba(150,162,131,0.04) 100%)",
+          tileBg: "rgba(150,162,131,0.20)",
+          HeaderIcon: Sparkles,
+        }
+      : {
+          accent: "#C97B45",
+          accentText: "#A35F32",
+          gradient:
+            "linear-gradient(135deg, rgba(199,123,69,0.20) 0%, rgba(199,123,69,0.03) 100%)",
+          tileBg: "rgba(199,123,69,0.18)",
+          HeaderIcon: AlertTriangle,
+        };
+  const HeaderIcon = palette.HeaderIcon;
+  const ItemIcon = variant === "wins" ? CheckCircle2 : AlertCircle;
+
+  return (
+    <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col h-full overflow-hidden">
+      <div
+        className="p-5"
+        style={{
+          background: palette.gradient,
+          borderLeft: `4px solid ${palette.accent}`,
+        }}
+      >
+        <div className="flex items-center gap-2 mb-1.5">
+          <HeaderIcon
+            className="h-4 w-4 shrink-0"
+            style={{ color: palette.accent }}
+          />
+          <p
+            className="uppercase font-semibold"
+            style={{
+              fontSize: 11,
+              letterSpacing: "0.12em",
+              color: palette.accentText,
+            }}
           >
-            <div
-              className="px-4 py-2 border-b border-[var(--color-border)] rounded-t-[var(--radius-lg)]"
-              style={{ background: gradientFor(col.color) }}
-            >
-              <div className="flex items-center gap-2">
-                <Icon className="h-4 w-4" style={{ color: col.color }} />
-                <h3
-                  className="text-[var(--color-fg)]"
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: 16 + treatment.bodyBumpPx,
-                  }}
-                >
-                  {col.title}
-                </h3>
+            {tag}
+          </p>
+        </div>
+        <h3
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: 28,
+            fontWeight: 500,
+            color: "var(--color-fg)",
+            letterSpacing: "-0.01em",
+            lineHeight: 1.1,
+          }}
+        >
+          {title}
+        </h3>
+        <p
+          className="mt-1.5 text-[var(--color-fg-secondary)]"
+          style={{ fontSize: 13, lineHeight: 1.5 }}
+        >
+          {summary}
+        </p>
+      </div>
+
+      <div className="flex-1 flex flex-col p-4 gap-3">
+        {items.length === 0 && emptyMessage && (
+          <div
+            className="flex-1 flex items-center justify-center text-center px-4 py-6"
+            style={{ color: "var(--color-fg-muted)" }}
+          >
+            <div className="flex flex-col items-center gap-3 max-w-[320px]">
+              <div
+                className="h-10 w-10 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: palette.tileBg }}
+              >
+                <HeaderIcon
+                  className="h-5 w-5"
+                  style={{ color: palette.accent }}
+                />
               </div>
-            </div>
-            <div className="p-3 space-y-2 flex-1">
-              {col.items.map((item, i) => (
-                <div
-                  key={i}
-                  className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2.5 transition-colors hover:border-[var(--color-border-hover)]"
-                >
-                  <div className="flex items-start gap-2.5">
-                    <div
-                      className="rounded p-1 shrink-0"
-                      style={{ backgroundColor: `${col.color}22` }}
-                    >
-                      <Icon className="h-3 w-3" style={{ color: col.color }} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className="text-[var(--color-fg)] mb-1"
-                        style={{
-                          fontSize: 12 + treatment.bodyBumpPx,
-                          lineHeight: 1.4,
-                          fontWeight: 500,
-                        }}
-                      >
-                        {item.text}
-                      </p>
-                      <a
-                        href={item.href}
-                        className="inline-flex items-center gap-1 font-medium hover:gap-1.5 hover:underline transition-all"
-                        style={{ fontSize: 11, color: col.color }}
-                      >
-                        {item.cta}
-                        <ArrowRight className="h-3 w-3" />
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              ))}
+              <p style={{ fontSize: 13, lineHeight: 1.55 }}>{emptyMessage}</p>
             </div>
           </div>
-        );
-      })}
-    </div>
+        )}
+        {items.map((item, i) => (
+          <div
+            key={i}
+            className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 flex items-start gap-3 hover:bg-[var(--color-surface-alt)]/40 transition-colors"
+          >
+            <div
+              className="h-9 w-9 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
+              style={{ backgroundColor: palette.tileBg }}
+            >
+              <ItemIcon
+                className="h-4 w-4"
+                style={{ color: palette.accent }}
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontSize: 17,
+                  fontWeight: 500,
+                  color: "var(--color-fg)",
+                  letterSpacing: "-0.01em",
+                  lineHeight: 1.2,
+                }}
+              >
+                {item.title}
+              </p>
+              <p
+                className="text-[var(--color-fg-muted)] mt-1"
+                style={{ fontSize: 12.5, lineHeight: 1.5 }}
+              >
+                {item.body}
+              </p>
+              <a
+                href={item.href}
+                className="group inline-flex items-center gap-1 mt-2 font-semibold transition-opacity hover:opacity-80"
+                style={{ fontSize: 12.5, color: palette.accentText }}
+              >
+                {item.cta}
+                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+              </a>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -2465,6 +3022,7 @@ export function ChartCard({
   showInsight = true,
   showModeToggle = true,
   showOptimizationMarkers = true,
+  delta,
 }: {
   data: ScannerData;
   treatment: Treatment;
@@ -2478,14 +3036,38 @@ export function ChartCard({
   showModeToggle?: boolean;
   /** When false, drops the inline optimization-event dots on the YOU line. */
   showOptimizationMarkers?: boolean;
+  /** Period-over-period delta pill in the top-right header. */
+  delta?: number;
 }) {
   const [mode, setMode] = useState<"focus" | "full">(defaultMode);
   const focusMode: FocusMode = mode === "full" ? "full" : "tight";
 
   return (
-    <Card className="p-4 min-w-0">
+    <Card className="p-4 min-w-0 w-full flex flex-col">
       <div className="mb-3 pb-2 border-b border-[var(--color-border)]">
-        <SectionHeading text={title} info={titleInfo} />
+        <div className="flex items-center justify-between gap-2">
+          <SectionHeading text={title} info={titleInfo} />
+          {delta != null && (
+            <div className="shrink-0">
+              <BadgeDelta
+                variant="solid"
+                deltaType={
+                  Math.abs(delta) <= 0.04
+                    ? "neutral"
+                    : delta > 0
+                      ? "increase"
+                      : "decrease"
+                }
+                value={`${delta > 0 ? "+" : ""}${delta.toFixed(1)}%`}
+                title={
+                  Math.abs(delta) <= 0.04
+                    ? "No change over the selected range."
+                    : `${delta > 0 ? "Up" : "Down"} ${Math.abs(delta).toFixed(1)}% over the selected range.`
+                }
+              />
+            </div>
+          )}
+        </div>
         {showInsight && aiOverviewVariant && (
           <div className="mt-2 mb-2">
             <AIOverview
@@ -2496,7 +3078,7 @@ export function ChartCard({
           </div>
         )}
         {showModeToggle && (
-          <div className="inline-flex rounded-lg border border-[var(--color-border)] overflow-hidden">
+          <div className="mt-2 inline-flex rounded-lg border border-[var(--color-border)] overflow-hidden">
             <button
               onClick={() => setMode("focus")}
               className={
@@ -2522,11 +3104,16 @@ export function ChartCard({
           </div>
         )}
       </div>
+      {/* Re-mount on range or focus change so the clip-path reveal replays.
+          The clip-path inset goes from "everything to the right hidden" to
+          "fully visible", producing a left-to-right wipe on every range
+          switch (14d / 30d / 90d / YTD / All / Custom). */}
       <motion.div
-        key={focusMode}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ ...ANIMATION.normal, ease: ANIMATION.easeOut }}
+        key={`${focusMode}-${data.rangeN}`}
+        initial={{ clipPath: "inset(0 100% 0 0)", opacity: 0.6 }}
+        animate={{ clipPath: "inset(0 0% 0 0)", opacity: 1 }}
+        transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
+        style={{ willChange: "clip-path" }}
       >
         <VisibilityScannerChart
           brands={data.scaledBrands}
@@ -2623,6 +3210,374 @@ function buildAISummaryCTA(data: ScannerData): { label: string; href: string } {
 }
 
 
+// ─── PROMPT HIT RATE CARD ──────────────────────────────────────────────────
+// Right column of the hero. Mirrors the "What needs attention" slot in the
+// Brand Sentiment hero — same Card chrome, same sizing, single headline
+// stat at the top, supporting chips below.
+
+const HIT_RATE_ACCENTS = {
+  sage: "#96A283",
+  yellow: "#B8A030",
+  orange: "#C97B45",
+  rust: "#B54631",
+  deep: "#7D8E6C",
+};
+
+// ─── GAPS TO FILL CARD ────────────────────────────────────────────────────
+// Right column of the AI Visibility Tracker hero. Surfaces up to 3 of the
+// most important fixable gaps from the live ScannerData, each with a
+// short body + CTA link to the page that addresses it. Same outer
+// dimensions as PromptHitRateCard so swapping it doesn't disturb the
+// 3-zone hero grid.
+
+function GapsToFillCard({ data }: { data: ScannerData }) {
+  type Gap = {
+    title: string;
+    body: string;
+    cta: string;
+    icon: typeof Target;
+    playbook: GapPlaybook;
+  };
+  const sorted = [...data.engineCoverage].sort((a, b) => b.today - a.today);
+  const weakest = sorted[sorted.length - 1];
+  const failing = sorted.filter((e) => e.today < 50);
+  const leader = data.ranked[0];
+  const leaderScore = leader?.data[leader.data.length - 1] ?? 0;
+  const youAreLeader = leader?.isYou ?? false;
+  const gap = leaderScore - data.youLatest;
+
+  const candidates: Gap[] = [];
+  if (weakest && weakest.today < 60) {
+    candidates.push({
+      title: `${weakest.label} citing you ${weakest.today.toFixed(0)}%`,
+      body: `Your weakest engine. Schema + crawlability fixes here move the needle fastest.`,
+      cta: "Run a site audit",
+      icon: Target,
+      playbook: {
+        title: `Fix ${weakest.label} — your weakest engine at ${weakest.today.toFixed(1)}%`,
+        body: `${weakest.label} only names you in ~${Math.round(weakest.today)}% of its answers. The gap usually comes down to two structural fixes:\n\n• Schema — ${weakest.label} parses Schema.org markup strictly. Add FAQ, Article, and LocalBusiness JSON-LD on every service page and validate at validator.schema.org.\n\n• Crawlability — ${weakest.label}'s crawler is conservative about JavaScript. Confirm your top pages serve the headline + primary content in HTML and that robots.txt allows its user agent.\n\nRun the Site Audit for the exact failing checks ranked by recoverable points.`,
+        managedPlansCopy: `handle the schema deployments, crawlability fixes, and revalidation cycles for you.`,
+      },
+    });
+  }
+  if (!youAreLeader && leader && gap >= 3) {
+    candidates.push({
+      title: `${leader.name} ${gap.toFixed(1)}% ahead of you`,
+      body: `Top competitor is widening their lead. Close it on the prompts they're winning.`,
+      cta: "Open competitor view",
+      icon: Trophy,
+      playbook: {
+        title: `${leader.name} is leading by ${gap.toFixed(1)}% — close the gap`,
+        body: `${leader.name} sits at ${leaderScore.toFixed(1)}% vs. your ${data.youLatest.toFixed(1)}%. The gap usually concentrates in a small cluster of high-volume prompts they've covered deeper.\n\nFix path:\n\n• Identify the 3-5 prompts where ${leader.name} owns the answer (Competitor Comparison view).\n\n• Ship a longer, more authoritative piece on each — direct quotes the AI can lift verbatim, original data, explicit comparisons.`,
+        managedPlansCopy: `research the prompts they're winning, draft the comparison content, and ship it on your site.`,
+      },
+    });
+  }
+  if (data.youDelta <= -1) {
+    candidates.push({
+      title: `Coverage slipped ${Math.abs(data.youDelta).toFixed(1)}% this period`,
+      body: `Visibility regression — a crawlability check usually catches the silent culprits first.`,
+      cta: "Run crawlability audit",
+      icon: AlertCircle,
+      playbook: {
+        title: `Coverage slipped ${Math.abs(data.youDelta).toFixed(1)}% — find the culprit`,
+        body: `Visibility moved from ${data.youFirst.toFixed(1)}% to ${data.youLatest.toFixed(1)}% over the last ${data.rangeN} days. Drops this size usually trace to one of three causes:\n\n• A recent code/content change broke schema, sitemap, or canonical URLs on a high-traffic page.\n\n• A robots.txt or meta-robots directive is now blocking AI crawlers.\n\n• A third-party citation source dropped you (directory delisting, Wikipedia edit, etc.).\n\nCrawlability Audit catches the first two in one scan. Citation Insights shows referrer drops for the third.`,
+        managedPlansCopy: `monitor for these regressions automatically and patch them within 24 hours.`,
+      },
+    });
+  }
+  if (failing.length >= 2) {
+    candidates.push({
+      title: `${failing.length} engines under 50%`,
+      body: `${failing.map((e) => e.label).join(", ")} all under-cite you. Often a single readability fix.`,
+      cta: "Run a site audit",
+      icon: Layers,
+      playbook: {
+        title: `${failing.length} engines under 50% — likely a structural issue`,
+        body: `${failing.map((e) => e.label).join(", ")} all under-cite you. When multiple engines fail at once it's almost always a structural readability issue on your site, not engine-specific behavior. Top culprits:\n\n• Long jargon-heavy paragraphs — AI lifts standalone 15-25 word sentences. Tighten your key claims.\n\n• Missing or incomplete FAQ schema. Engines lean heavily on Q&A markup.\n\n• No author / byline signals. Claude and Google AI weight named-author content more heavily.\n\nRun the Site Audit — ranks all 25 checks by recoverable points.`,
+        managedPlansCopy: `rewrite the cited pages, deploy the missing schema, and add author signals across your site.`,
+      },
+    });
+  }
+  // Cap at 3 — only genuine data-driven gaps. If nothing fires, the
+  // empty-state below shows a friendly "all clear" message instead of
+  // padding the card with filler suggestions.
+  const gaps = candidates.slice(0, 3);
+  const [activePlaybook, setActivePlaybook] = useState<GapPlaybook | null>(
+    null,
+  );
+
+  // Rust-red accent for the whole card so the user reads it as urgent.
+  const RUST = HIT_RATE_ACCENTS.rust; // "#B54631"
+  const RUST_BG = "rgba(181,70,49,0.12)";
+  return (
+    <div
+      className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col h-full w-full min-w-0"
+      style={{ borderTop: `4px solid ${RUST}` }}
+    >
+      {/* Red banner strip — gradient fade so it reads as a highlight, not
+          a hard bar. Anchored to the top of the card. Top corners
+          rounded inline so we don't need overflow:hidden on the parent
+          (which was clipping the SectionHeading info popover). */}
+      <div
+        className="px-5 py-3 border-b border-[var(--color-border)] flex items-center justify-between gap-2"
+        style={{
+          background: `linear-gradient(135deg, rgba(181,70,49,0.18) 0%, rgba(181,70,49,0.04) 100%)`,
+          borderTopLeftRadius: "calc(var(--radius-lg) - 4px)",
+          borderTopRightRadius: "calc(var(--radius-lg) - 4px)",
+        }}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <AlertTriangle
+            className="h-4 w-4 shrink-0"
+            style={{ color: RUST }}
+          />
+          <SectionHeading
+            text="Gaps to fill"
+            info="The highest-leverage fixes pulled from this scan — each links to the tool that addresses it."
+          />
+        </div>
+        <div className="shrink-0">
+          <span
+            className="inline-flex items-center text-xs font-semibold rounded-md px-2 py-0.5 whitespace-nowrap"
+            style={{ color: RUST, backgroundColor: RUST_BG }}
+          >
+            {gaps.length} {gaps.length === 1 ? "gap" : "gaps"}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex-1 flex flex-col gap-2.5 p-5">
+        {gaps.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center text-center px-4 py-6">
+            <div className="flex flex-col items-center gap-3 max-w-[240px]">
+              <div
+                className="h-10 w-10 rounded-full flex items-center justify-center"
+                style={{
+                  backgroundColor: "rgba(150,162,131,0.20)",
+                }}
+              >
+                <CheckCircle2
+                  className="h-5 w-5"
+                  style={{ color: "#5E7250" }}
+                />
+              </div>
+              <p
+                className="font-semibold"
+                style={{
+                  fontSize: 13.5,
+                  lineHeight: 1.3,
+                  color: "var(--color-fg)",
+                }}
+              >
+                No gaps to fill — you're clean
+              </p>
+              <p
+                className="text-[var(--color-fg-muted)]"
+                style={{ fontSize: 12, lineHeight: 1.5 }}
+              >
+                No engines under-citing you, no competitor pulling away, no
+                period-over-period slip. Defend this position by keeping
+                content fresh on the prompts where rivals could creep up.
+              </p>
+            </div>
+          </div>
+        ) : (
+          gaps.map((g, i) => {
+            const Icon = g.icon;
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setActivePlaybook(g.playbook)}
+                className="text-left rounded-[var(--radius-md)] border border-[var(--color-border)] p-2.5 flex items-start gap-2.5 cursor-pointer transition-colors hover:border-[rgba(181,70,49,0.45)]"
+                style={{ background: "var(--color-surface-alt)" }}
+              >
+                <div
+                  className="h-7 w-7 rounded-md flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: RUST_BG }}
+                >
+                  <Icon className="h-3.5 w-3.5" style={{ color: RUST }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p
+                    className="text-[var(--color-fg)] font-semibold"
+                    style={{ fontSize: 12.5, lineHeight: 1.25 }}
+                  >
+                    {g.title}
+                  </p>
+                  <p
+                    className="text-[var(--color-fg-secondary)] mt-0.5"
+                    style={{ fontSize: 11.5, lineHeight: 1.4 }}
+                  >
+                    {g.body}
+                  </p>
+                </div>
+                <ArrowRight
+                  className="h-3.5 w-3.5 mt-1 shrink-0"
+                  style={{ color: RUST }}
+                />
+              </button>
+            );
+          })
+        )}
+      </div>
+      <GapPlaybookModal
+        open={activePlaybook != null}
+        onClose={() => setActivePlaybook(null)}
+        playbook={activePlaybook}
+      />
+    </div>
+  );
+}
+
+function PromptHitRateCard({ stats }: { stats: VisibilityStats }) {
+  const grew = stats.delta >= 0;
+  const flat = Math.abs(stats.delta) <= 0.04;
+  const pct = Math.round(
+    (stats.promptsHit / Math.max(1, stats.promptsTotal)) * 100,
+  );
+  return (
+    <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 flex flex-col h-full w-full min-w-0">
+      <div className="mb-3 pb-2 border-b border-[var(--color-border)] flex items-center justify-between gap-2">
+        <SectionHeading
+          text="Prompt hit rate"
+          info="Customer-style prompts where AI tools named your business in the most recent scan."
+        />
+        <div className="shrink-0">
+          <BadgeDelta
+            variant="solid"
+            deltaType={flat ? "neutral" : grew ? "increase" : "decrease"}
+            value={`${grew ? "+" : ""}${stats.delta.toFixed(1)}%`}
+            title={
+              flat
+                ? "No change in your prompt hit rate over the selected range."
+                : `${grew ? "Up" : "Down"} ${Math.abs(stats.delta).toFixed(1)}% over the selected range.`
+            }
+          />
+        </div>
+      </div>
+
+      {/* Centered stat block — flex-1 absorbs all extra vertical space so
+          the stat sits in the visual middle of the card, exactly like the
+          donut in Brand Sentiment's left "Sentiment" card. */}
+      <div className="flex-1 flex flex-col justify-center">
+        <div
+          className="rounded-[var(--radius-md)] p-4 border-l-4"
+          style={{
+            borderLeftColor: HIT_RATE_ACCENTS.sage,
+            background: `linear-gradient(135deg, ${HIT_RATE_ACCENTS.sage}1F 0%, ${HIT_RATE_ACCENTS.yellow}10 100%)`,
+          }}
+        >
+          <div className="flex items-baseline justify-between gap-2 mb-1">
+            <span
+              className="uppercase tracking-wider text-[var(--color-fg-muted)] font-semibold"
+              style={{ fontSize: 10, letterSpacing: "0.1em" }}
+            >
+              This scan
+            </span>
+            <span
+              className="tabular-nums font-bold rounded-full px-1.5 py-0.5 inline-flex items-center gap-0.5"
+              style={{
+                fontSize: 10,
+                color: "#fff",
+                backgroundColor: grew ? HIT_RATE_ACCENTS.sage : HIT_RATE_ACCENTS.rust,
+              }}
+            >
+              {grew ? "↑" : "↓"} {Math.abs(stats.delta).toFixed(1)}%
+            </span>
+          </div>
+          <div className="flex items-baseline gap-1">
+            <span
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 40,
+                fontWeight: 700,
+                color: "var(--color-fg)",
+                letterSpacing: "-0.02em",
+                lineHeight: 1,
+              }}
+            >
+              {stats.promptsHit}
+            </span>
+            <span style={{ fontSize: 18, color: "var(--color-fg-muted)", fontWeight: 500 }}>
+              /{stats.promptsTotal}
+            </span>
+            <span
+              className="ml-auto tabular-nums"
+              style={{ fontSize: 13, color: "var(--color-fg-muted)" }}
+            >
+              {pct}%
+            </span>
+          </div>
+          <a
+            href="/pricing"
+            className="inline-flex items-center gap-1 font-semibold hover:gap-1.5 hover:underline transition-all mt-2"
+            style={{ fontSize: 11, color: HIT_RATE_ACCENTS.orange }}
+          >
+            <Crown className="h-3 w-3" />
+            Upgrade to track more prompts
+            <ArrowRight className="h-3 w-3" />
+          </a>
+        </div>
+      </div>
+
+      {/* Chips footer — pinned to bottom by the centered flex-1 above */}
+      <div className="grid grid-cols-2 gap-2 pt-3">
+        <PromptHitChip
+          color={HIT_RATE_ACCENTS.yellow}
+          icon={Trophy}
+          label={`${stats.bestEngine.label} ${stats.bestEngine.pct.toFixed(0)}%`}
+        />
+        <PromptHitChip
+          color={HIT_RATE_ACCENTS.orange}
+          icon={Target}
+          label={`#${stats.avgRank.toFixed(1)} rank`}
+        />
+        <PromptHitChip
+          color={HIT_RATE_ACCENTS.sage}
+          icon={Layers}
+          label={`${stats.coverageEngines}/${stats.totalEngines} engines`}
+        />
+        <PromptHitChip
+          color={HIT_RATE_ACCENTS.deep}
+          icon={MessageSquare}
+          label={`${stats.mentions.toLocaleString()} mentions`}
+        />
+      </div>
+    </div>
+  );
+}
+
+function PromptHitChip({
+  color,
+  icon: Icon,
+  label,
+}: {
+  color: string;
+  icon: typeof Trophy;
+  label: string;
+}) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full px-2 py-1 w-full justify-center"
+      style={{
+        fontSize: 11,
+        fontWeight: 600,
+        color,
+        backgroundColor: `${color}1A`,
+        border: `1px solid ${color}33`,
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+      }}
+    >
+      <Icon className="h-3 w-3 shrink-0" />
+      <span className="truncate">{label}</span>
+    </span>
+  );
+}
+
 // ─── VARIANT BODY ───────────────────────────────────────────────────────────
 
 interface VariantBodyProps {
@@ -2673,59 +3628,50 @@ function VariantBody({
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <RangePills
-          value={range}
-          onChange={onRangeChange}
-          onCustomApply={onCustomApply}
-          customStart={customStart}
-          customEnd={customEnd}
-          treatment={treatment}
-          minDate={minDate}
-          maxDate={maxDate}
+        <TimeRangeDropdown
+          value={range as TimeRangeKey}
+          customFrom={customStart.toISOString().slice(0, 10)}
+          customTo={customEnd.toISOString().slice(0, 10)}
+          onChange={(key, fromISO, toISO) => {
+            if (key === "custom" && fromISO && toISO) {
+              onCustomApply(
+                new Date(fromISO + "T00:00:00"),
+                new Date(toISO + "T00:00:00"),
+              );
+            } else {
+              onRangeChange(key as RangeKey);
+            }
+          }}
         />
         <EngineChips enabledIds={enabledEngineIds} onToggle={toggleEngine} treatment={treatment} chipSize="lg" />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[260px_minmax(0,1fr)] gap-4 items-stretch">
-        <ScrollReveal className="flex h-full" delay={0}>
+      {/* 3-zone hero grid (3/6/3 cols) — mirrors the Brand Sentiment hero
+          structure exactly: col-span lives on the immediate grid child so
+          the framework can compute column tracks correctly. */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div className="lg:col-span-2 min-w-0 flex">
           <VisibilityScoreGauge
             score={data.youToday}
-            width={260}
-            descriptionOverride={
-              aiOverviewVariant ? (
-                <AIOverview
-                  text={buildGaugeInsight(data)}
-                  variant={aiOverviewVariant}
-                  size="sm"
-                />
-              ) : undefined
-            }
-            stats={{
-              promptsHit: Math.round(
-                (data.youToday / 100) * NEXT_SCAN_PROMPT_COUNT
-              ),
-              promptsTotal: NEXT_SCAN_PROMPT_COUNT,
-              delta: data.youDelta,
-              bestEngine: {
-                label: data.engineCoverage[0].label,
-                pct: data.engineCoverage[0].today,
-              },
-              weakEngine: {
-                label: data.engineCoverage[data.engineCoverage.length - 1].label,
-                pct: data.engineCoverage[data.engineCoverage.length - 1].today,
-              },
-              coverageEngines: data.engineCoverage.filter((e) => e.today > 0)
-                .length,
-              totalEngines: data.engineCoverage.length,
-              avgRank: data.youRank,
-              rankedTotal: data.ranked.length,
-              mentions: data.youMentions,
-            }}
+            hideDescription
+            delta={data.youDelta}
           />
-        </ScrollReveal>
-        <ScrollReveal delay={0.05}>
-          <ChartCard data={data} treatment={treatment} aiOverviewVariant={aiOverviewVariant} enabledBrandIds={enabledBrandIds} />
-        </ScrollReveal>
+        </div>
+        <div className="lg:col-span-7 min-w-0 flex">
+          <ChartCard
+            data={data}
+            treatment={treatment}
+            aiOverviewVariant={aiOverviewVariant}
+            enabledBrandIds={enabledBrandIds}
+            chartHeight={260}
+            showModeToggle
+            defaultMode="focus"
+            delta={data.youDelta}
+          />
+        </div>
+        <div className="lg:col-span-3 min-w-0 flex">
+          <GapsToFillCard data={data} />
+        </div>
       </div>
 
       <ScrollReveal>
@@ -2734,10 +3680,6 @@ function VariantBody({
           treatment={treatment}
           aiOverviewVariant={aiOverviewVariant}
         />
-      </ScrollReveal>
-
-      <ScrollReveal>
-        <NarrativeFeed data={data} treatment={treatment} />
       </ScrollReveal>
 
       <p
@@ -2778,7 +3720,7 @@ export function VisibilityScannerSection({
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const [range, setRange] = useState<RangeKey>("all");
+  const [range, setRange] = useState<RangeKey>("90d");
   const [customStart, setCustomStart] = useState<Date>(() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);

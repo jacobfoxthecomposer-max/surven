@@ -359,8 +359,33 @@ export function generatePromptsData(
     promptSpecs.push({ intent: "Transactional", type: "unbranded", text });
   }
 
-  // Shuffle a deterministic subset of 10 prompts for the table
-  const shuffled = [...promptSpecs].sort(() => rng() - 0.5).slice(0, 10);
+  // Stratified sample of 10 prompts: take ≥1 from every canonical intent so
+  // no intent gets silently dropped from the donut / sentiment-by-type
+  // breakdown, then top up the rest with a deterministic shuffle of the
+  // remainder.
+  const SAMPLE_SIZE = 10;
+  const byIntent = new Map<IntentLabel, typeof promptSpecs>();
+  for (const intent of INTENTS) byIntent.set(intent, []);
+  for (const spec of promptSpecs) {
+    byIntent.get(spec.intent)?.push(spec);
+  }
+  const picked = new Set<typeof promptSpecs[number]>();
+  // Round-robin pick: keep cycling intents so each gets fair representation
+  // until we reach SAMPLE_SIZE or exhaust the pool.
+  let madeProgress = true;
+  while (picked.size < SAMPLE_SIZE && madeProgress) {
+    madeProgress = false;
+    for (const intent of INTENTS) {
+      if (picked.size >= SAMPLE_SIZE) break;
+      const bucket = byIntent.get(intent) ?? [];
+      const next = bucket.find((s) => !picked.has(s));
+      if (next) {
+        picked.add(next);
+        madeProgress = true;
+      }
+    }
+  }
+  const shuffled = [...picked].sort(() => rng() - 0.5);
 
   const prompts: PromptRow[] = shuffled.map((spec, idx) => {
     // Volume pattern: branded smaller (500-3000), local highest (3000-12000), info mid, transactional mid

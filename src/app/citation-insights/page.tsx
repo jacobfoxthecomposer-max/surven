@@ -21,6 +21,8 @@ import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { NextScanCard } from "@/components/atoms/NextScanCard";
 import { AISummaryGenerator } from "@/components/atoms/AISummaryGenerator";
+import { TimeRangeDropdown, type TimeRangeKey } from "@/components/atoms/TimeRangeDropdown";
+import { BetaFeedbackFooter } from "@/components/organisms/BetaFeedbackFooter";
 import { CustomDatePopover } from "@/components/atoms/CustomDatePopover";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
@@ -249,52 +251,18 @@ export default function CitationInsightsPage() {
                 transition={{ duration: 0.4, delay: 0.1, ease }}
                 className="flex flex-wrap items-center gap-2"
               >
-                <div className="inline-flex rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-1 gap-1">
-                  {TIME_RANGES.map(({ key, label }) => (
-                    <button
-                      key={key}
-                      onClick={() => setTimeRange(key)}
-                      className={
-                        "px-3.5 py-2 font-medium rounded-[var(--radius-sm)] transition-colors " +
-                        (timeRange === key
-                          ? "bg-[var(--color-primary)] text-white"
-                          : "text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-alt)]")
-                      }
-                      style={{ fontSize: 14 }}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="relative">
-                  <button
-                    onClick={() => setCustomOpen((o) => !o)}
-                    className={
-                      "inline-flex items-center gap-1.5 px-3.5 py-2 font-medium rounded-[var(--radius-md)] border transition-colors " +
-                      (timeRange === "custom"
-                        ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
-                        : "bg-[var(--color-surface)] text-[var(--color-fg-secondary)] border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]")
+                <TimeRangeDropdown
+                  value={timeRange as TimeRangeKey}
+                  customFrom={customStart ? customStart.toISOString().slice(0, 10) : undefined}
+                  customTo={customEnd ? customEnd.toISOString().slice(0, 10) : undefined}
+                  onChange={(key, fromISO, toISO) => {
+                    setTimeRange(key as typeof timeRange);
+                    if (key === "custom" && fromISO && toISO) {
+                      setCustomStart(new Date(fromISO + "T00:00:00"));
+                      setCustomEnd(new Date(toISO + "T00:00:00"));
                     }
-                    style={{ fontSize: 14 }}
-                  >
-                    <Calendar className="h-4 w-4" />
-                    {timeRange === "custom" && customStart && customEnd
-                      ? `${customStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${customEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
-                      : "Custom"}
-                  </button>
-                  <CustomDatePopover
-                    open={customOpen}
-                    onClose={() => setCustomOpen(false)}
-                    initialStart={customStart ?? new Date(Date.now() - 30 * 86400000)}
-                    initialEnd={customEnd ?? new Date()}
-                    onApply={(s, e) => {
-                      setCustomStart(s);
-                      setCustomEnd(e);
-                      setTimeRange("custom");
-                    }}
-                  />
-                </div>
+                  }}
+                />
 
                 <div className="h-4 w-px bg-[var(--color-border)]" />
 
@@ -601,6 +569,8 @@ export default function CitationInsightsPage() {
             />
           </>
         )}
+
+        <BetaFeedbackFooter />
       </div>
     </DashboardLayout>
   );

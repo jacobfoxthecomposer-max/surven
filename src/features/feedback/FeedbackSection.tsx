@@ -54,7 +54,7 @@ export function FeedbackSection() {
       });
       const json = (await res.json()) as { ok?: boolean; error?: string };
       if (!res.ok || !json.ok) {
-        setError(json.error || "Couldn't send. Please try again or email hello@surven.ai.");
+        setError(json.error || "Couldn't send. Please try again in a moment.");
         return;
       }
       setSubmitted(true);
@@ -317,23 +317,6 @@ export function FeedbackSection() {
         </motion.div>
       )}
 
-      {/* Other ways to reach us */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.2, ease: EASE }}
-        className="text-center text-[var(--color-fg-muted)] pt-4 border-t border-[var(--color-border)]"
-        style={{ fontSize: 12.5 }}
-      >
-        Prefer email?{" "}
-        <a
-          href="mailto:hello@surven.ai"
-          className="font-medium hover:underline"
-          style={{ color: COLORS.primaryHover }}
-        >
-          hello@surven.ai
-        </a>
-      </motion.div>
     </div>
   );
 }

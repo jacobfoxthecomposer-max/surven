@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { SectionHeading } from "@/components/atoms/SectionHeading";
 import { HoverHint } from "@/components/atoms/HoverHint";
+import { BadgeDelta } from "@/components/atoms/BadgeDelta";
 
 type Tier = { label: string; color: string; description: string };
 
@@ -202,15 +203,25 @@ function Chip({
 export function VisibilityScoreGauge({
   score = 50,
   label = "AI Visibility",
-  width = 280,
+  width,
   descriptionOverride,
   stats,
+  hideDescription = false,
+  delta,
 }: {
   score?: number | null;
   label?: string;
   width?: number;
   descriptionOverride?: React.ReactNode;
   stats?: VisibilityStats;
+  /** When true, suppresses the bottom tier-description callout. Used by
+   *  the AI Visibility Tracker hero where the gauge card needs to be
+   *  short enough to match the other two cards in the 3-zone grid. */
+  hideDescription?: boolean;
+  /** Period-over-period delta (in % points). Shown as a top-right pill,
+   *  matching the convention used by other dashboard cards (Brand
+   *  Sentiment, leaderboard, etc.). */
+  delta?: number;
 }) {
   const hasScore = score !== null && score !== undefined;
   const safeScore = hasScore ? (score as number) : 0;
@@ -227,14 +238,34 @@ export function VisibilityScoreGauge({
 
   return (
     <div
-      className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 flex flex-col h-full"
-      style={{ width }}
+      className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 flex flex-col h-full w-full"
+      style={width != null ? { width } : undefined}
     >
-      <div className="mb-4 pb-2 border-b border-[var(--color-border)]">
+      <div className="mb-4 pb-2 border-b border-[var(--color-border)] flex items-center justify-between gap-2">
         <SectionHeading
           text={label}
           info="How often AI tools mention your business across customer questions."
         />
+        {delta != null && (
+          <div className="shrink-0">
+            <BadgeDelta
+              variant="solid"
+              deltaType={
+                Math.abs(delta) <= 0.04
+                  ? "neutral"
+                  : delta > 0
+                    ? "increase"
+                    : "decrease"
+              }
+              value={`${delta > 0 ? "+" : ""}${delta.toFixed(1)}%`}
+              title={
+                Math.abs(delta) <= 0.04
+                  ? "No change in your visibility over the selected range."
+                  : `${delta > 0 ? "Up" : "Down"} ${Math.abs(delta).toFixed(1)}% over the selected range.`
+              }
+            />
+          </div>
+        )}
       </div>
       {descriptionOverride && <div className="mb-4">{descriptionOverride}</div>}
       <div className="flex-1 flex items-center justify-center">
@@ -334,7 +365,7 @@ export function VisibilityScoreGauge({
         </div>
       )}
 
-      {!descriptionOverride && !stats && (
+      {!descriptionOverride && !stats && !hideDescription && (
         <div
           className="mt-3 rounded-md p-3"
           style={{ borderLeft: `3px solid ${t.color}`, backgroundColor: "rgba(150,162,131,0.08)" }}
