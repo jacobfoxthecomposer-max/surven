@@ -11,8 +11,6 @@ import {
   Database,
   ShieldCheck,
   ArrowRight,
-  Search,
-  RefreshCw,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Spinner } from "@/components/atoms/Spinner";
@@ -297,23 +295,11 @@ export default function CitationInsightsPage() {
             )}
           </div>
 
-          {/* Right col — action panel */}
-          <div className="flex flex-col gap-2">
+          {/* Right col — action panel. items-end pushes the fixed-width
+              NextScanCard (320px) to the right edge of its column so it
+              hugs the page's right margin. */}
+          <div className="flex flex-col gap-2 items-end">
             <NextScanCard />
-            <Link
-              href="/audit"
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] border border-[var(--color-border)] text-sm font-medium text-[var(--color-fg-secondary)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)] transition-colors"
-            >
-              <Search className="h-4 w-4" />
-              Run GEO audit
-            </Link>
-            <Link
-              href="/competitor-comparison"
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] border border-[var(--color-border)] text-sm font-medium text-[var(--color-fg-secondary)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)] transition-colors"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              Compare competitors
-            </Link>
           </div>
         </div>
 

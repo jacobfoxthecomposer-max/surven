@@ -21,7 +21,9 @@ import {
   Puzzle,
   Info,
 } from "lucide-react";
+import Link from "next/link";
 import { HoverHint } from "@/components/atoms/HoverHint";
+import { GapPlaybookModal, type GapPlaybook } from "@/components/molecules/GapPlaybookModal";
 
 // Was the Chrome Web Store URL; now points to the in-app Website Audit
 // page until the extension's surface goes live.
@@ -31,17 +33,15 @@ const CHROME_EXT_URL = "/audit";
 // helper text, loading state tip).
 function ChromeExtLink({ children }: { children?: React.ReactNode }) {
   return (
-    <a
+    <Link
       href={CHROME_EXT_URL}
-      target="_blank"
-      rel="noopener noreferrer"
       className="inline-flex items-center gap-1 font-medium hover:underline transition-colors"
       style={{ color: "var(--color-primary-hover)" }}
     >
       <Puzzle className="h-3.5 w-3.5" />
       {children ?? "Get the Chrome extension"}
       <ArrowRight className="h-3 w-3" />
-    </a>
+    </Link>
   );
 }
 
@@ -89,17 +89,15 @@ function ChromeExtCallout() {
             </p>
           </div>
         </div>
-        <a
+        <Link
           href={CHROME_EXT_URL}
-          target="_blank"
-          rel="noopener noreferrer"
           className="self-start inline-flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium shadow-md transition-colors shrink-0"
           style={{ fontSize: 14 }}
         >
           <ListChecks className="h-4 w-4" />
           Open Website Audit
           <ArrowRight className="h-4 w-4" />
-        </a>
+        </Link>
       </div>
     </div>
   );
@@ -530,7 +528,7 @@ export function AeoAuditSection({
             </>
           )}
         </h1>
-        <p className="text-[var(--color-fg-muted)] mt-2" style={{ fontSize: 15.5, lineHeight: 1.55 }}>
+        <p className="text-[var(--color-fg-muted)] mt-2 max-w-[50%]" style={{ fontSize: 15.5, lineHeight: 1.55 }}>
           <strong className="text-[var(--color-fg)] font-semibold">Why is this important?</strong>{" "}
           AI engines like ChatGPT, Claude, and Gemini can only cite what they
           can read. We run 25 checks on {businessName} across findability,
@@ -1025,6 +1023,7 @@ function PriorityFixCards({ checks }: { checks: CheckResult[] }) {
 
   const PAGE_SIZE = 3;
   const [startIndex, setStartIndex] = useState(0);
+  const [activePlaybook, setActivePlaybook] = useState<GapPlaybook | null>(null);
 
   if (fixable.length === 0) return null;
   const totalGain = fixable.reduce((s, x) => s + x.gain, 0);
@@ -1035,110 +1034,171 @@ function PriorityFixCards({ checks }: { checks: CheckResult[] }) {
   const goDown = () => setStartIndex((s) => Math.min(maxStart, s + PAGE_SIZE));
   const visible = fixable.slice(startIndex, startIndex + PAGE_SIZE);
 
+  // Reformatted to mirror the "What needs attention" card on the Brand
+  // Sentiment hero (which itself mirrors GapsToFillCard on the AI
+  // Visibility Tracker): 4px rust border-top, gradient red banner header,
+  // AlertTriangle next to the title, count pill on the right, compact
+  // rust-tile sub-cards each clickable to a GapPlaybookModal that holds
+  // the full per-check detail (label + CRITICAL/PARTIAL pill + impact +
+  // recommendation + effort + Chrome extension CTA). All the original
+  // information stays accessible — it just lives one tap deeper so the
+  // top-of-page card stays scannable.
+  const RUST = "#B54631";
+  const RUST_BG = "rgba(181,70,49,0.12)";
+
+  function buildFixPlaybook(check: CheckResult, gain: number): GapPlaybook {
+    const tok = STATUS_TOK[check.status];
+    const eff = effortBadge(check.effortMin);
+    return {
+      title: check.label,
+      body: (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className="rounded-full px-2 py-0.5 font-semibold uppercase"
+              style={{
+                fontSize: 10.5,
+                letterSpacing: "0.12em",
+                backgroundColor: tok.bg,
+                color: tok.color,
+              }}
+            >
+              {tok.label}
+            </span>
+            <span
+              className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-semibold tabular-nums"
+              style={{
+                fontSize: 12,
+                backgroundColor: `${COLORS.primary}1f`,
+                color: COLORS.primaryHover,
+              }}
+            >
+              +{Math.round(gain)} pts
+            </span>
+            <span
+              className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-semibold tabular-nums"
+              style={{
+                fontSize: 12,
+                backgroundColor: "rgba(60,62,60,0.06)",
+                color: "var(--color-fg-secondary)",
+              }}
+            >
+              {formatEffort(check.effortMin)}
+            </span>
+            <span
+              className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-semibold uppercase"
+              style={{
+                fontSize: 11,
+                letterSpacing: "0.10em",
+                backgroundColor: eff.bg,
+                color: eff.color,
+              }}
+            >
+              {eff.label}
+            </span>
+          </div>
+          <p>
+            <strong className="text-[var(--color-fg)] font-semibold">
+              Why it matters:{" "}
+            </strong>
+            {check.readabilityImpact}
+          </p>
+          {check.recommendation && (
+            <p>
+              <strong className="text-[var(--color-fg)] font-semibold">
+                How to fix:{" "}
+              </strong>
+              {check.recommendation}
+            </p>
+          )}
+        </div>
+      ),
+      actionCta: { label: "Open the fix in Chrome extension", href: CHROME_EXT_URL },
+    };
+  }
+
   return (
     <div
-      className="rounded-[var(--radius-lg)] border bg-[var(--color-surface)] overflow-hidden flex flex-col h-full"
-      style={{ borderColor: "rgba(150,162,131,0.45)" }}
+      className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col h-full"
+      style={{ borderTop: `4px solid ${RUST}` }}
     >
+      {/* Red banner — same gradient + rounded corners as GapsToFillCard
+          and SentimentAttentionCard so all three "needs attention" cards
+          across Surven read as a matched set. */}
       <div
-        className="px-5 py-3.5 border-b border-[var(--color-border)] flex items-center justify-between flex-wrap gap-3"
+        className="px-5 py-3 border-b border-[var(--color-border)] flex items-center justify-between gap-2"
         style={{
           background:
-            "linear-gradient(135deg, rgba(150,162,131,0.28) 0%, rgba(184,160,48,0.14) 50%, rgba(201,123,69,0.14) 100%)",
+            "linear-gradient(135deg, rgba(181,70,49,0.18) 0%, rgba(181,70,49,0.04) 100%)",
+          borderTopLeftRadius: "calc(var(--radius-lg) - 4px)",
+          borderTopRightRadius: "calc(var(--radius-lg) - 4px)",
         }}
       >
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div
-            className="h-9 w-9 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
-            style={{ backgroundColor: "rgba(150,162,131,0.22)" }}
-          >
-            <Sparkles className="h-4.5 w-4.5" style={{ color: COLORS.primary, height: 18, width: 18 }} />
-          </div>
-          <SectionHeading text="Fix these first" />
-          <HoverHint hint="Top fixes ranked by score points you'd reclaim. Tackle these first — each one adds the most to your AI-readiness score. Use the arrows to scroll.">
-            <Info
-              className="h-3.5 w-3.5 text-[var(--color-fg-muted)] hover:text-[var(--color-fg-secondary)] cursor-help transition-colors"
-              aria-label="What this card shows"
-            />
-          </HoverHint>
+        <div className="flex items-center gap-2 min-w-0">
+          <AlertTriangle className="h-4 w-4 shrink-0" style={{ color: RUST }} />
+          <SectionHeading
+            text="Fix these first"
+            info={`The ${fixable.length} highest-impact failures across all pillars, ranked by score points recoverable. Tap any row for the full readability impact, fix recipe, and a deep link into the Chrome extension.`}
+          />
         </div>
-        <p className="text-[var(--color-fg-secondary)]" style={{ fontSize: 14 }}>
-          Recover ~
-          <span className="font-semibold tabular-nums" style={{ color: COLORS.primary }}>
-            {Math.round(totalGain)}
-          </span>{" "}
-          points across {fixable.length} fix{fixable.length === 1 ? "" : "es"}.
-        </p>
+        <div className="shrink-0">
+          <span
+            className="inline-flex items-center text-xs font-semibold rounded-md px-2 py-0.5 whitespace-nowrap tabular-nums"
+            style={{ color: RUST, backgroundColor: RUST_BG }}
+            title={`Recover ~${Math.round(totalGain)} points by tackling all ${fixable.length} of these.`}
+          >
+            ~{Math.round(totalGain)} pts · {fixable.length}{" "}
+            {fixable.length === 1 ? "fix" : "fixes"}
+          </span>
+        </div>
       </div>
 
-      {/* Up arrow — same pattern as WhatsNextCard. */}
-      <div className="flex justify-center pt-2 pb-1">
-        <button
-          type="button"
-          onClick={goUp}
-          disabled={!canUp}
-          aria-label="Show previous fixes"
-          className={
-            "rounded-full p-1 transition-colors " +
-            (canUp
-              ? "text-[var(--color-fg-secondary)] hover:text-[var(--color-fg)] hover:bg-[var(--color-surface-alt)] cursor-pointer"
-              : "text-[var(--color-border)] cursor-default")
-          }
-        >
-          <ChevronUp className="h-5 w-5" />
-        </button>
-      </div>
+      <div className="flex-1 flex flex-col gap-2.5 p-5">
+        {/* Up-arrow pager — keeps the previous-page affordance the file
+            already had, just slimmed for the compact card. */}
+        {canUp && (
+          <button
+            type="button"
+            onClick={goUp}
+            aria-label="Show previous fixes"
+            className="self-center rounded-full p-1 text-[var(--color-fg-secondary)] hover:text-[var(--color-fg)] hover:bg-[var(--color-surface-alt)] transition-colors"
+          >
+            <ChevronUp className="h-4 w-4" />
+          </button>
+        )}
 
-      <ul className="divide-y divide-[var(--color-border)] flex-1">
         {visible.map(({ check, gain }, idx) => {
           const tok = STATUS_TOK[check.status];
-          const Icon = tok.Icon;
-          const eff = effortBadge(check.effortMin);
           return (
-            <motion.li
-              // Re-key on startIndex so paging through retriggers the
-              // stagger entrance for each row.
+            <motion.button
               key={`${startIndex}-${check.id}`}
+              type="button"
+              onClick={() => setActivePlaybook(buildFixPlaybook(check, gain))}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: 0.45,
-                ease: EASE,
-                delay: idx * 0.06,
-              }}
-              className="px-5 py-5 flex items-start gap-4 hover:bg-[var(--color-surface-alt)]/30 transition-colors"
+              transition={{ duration: 0.35, ease: EASE, delay: idx * 0.05 }}
+              className="text-left rounded-[var(--radius-md)] border border-[var(--color-border)] p-2.5 flex items-start gap-2.5 cursor-pointer transition-colors hover:border-[rgba(181,70,49,0.45)]"
+              style={{ background: "var(--color-surface-alt)" }}
             >
-              <span
-                className="inline-flex items-center justify-center rounded-[var(--radius-md)] shrink-0 mt-0.5"
-                style={{
-                  width: 44,
-                  height: 44,
-                  backgroundColor: tok.bg,
-                  color: tok.color,
-                }}
-                aria-label={tok.label}
+              <div
+                className="h-7 w-7 rounded-md flex items-center justify-center shrink-0"
+                style={{ backgroundColor: RUST_BG }}
               >
-                <Icon className="h-6 w-6" />
-              </span>
-              <div className="flex-1 min-w-0 space-y-2.5">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3
-                    className="text-[var(--color-fg)]"
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: 22,
-                      fontWeight: 600,
-                      letterSpacing: "-0.01em",
-                      lineHeight: 1.2,
-                    }}
+                <AlertTriangle className="h-3.5 w-3.5" style={{ color: RUST }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <p
+                    className="text-[var(--color-fg)] font-semibold"
+                    style={{ fontSize: 12.5, lineHeight: 1.25 }}
                   >
                     {check.label}
-                  </h3>
+                  </p>
                   <span
-                    className="rounded-full px-2 py-0.5 font-semibold uppercase"
+                    className="rounded-full px-1.5 py-0.5 font-semibold uppercase"
                     style={{
-                      fontSize: 10.5,
-                      letterSpacing: "0.12em",
+                      fontSize: 9,
+                      letterSpacing: "0.10em",
                       backgroundColor: tok.bg,
                       color: tok.color,
                     }}
@@ -1147,16 +1207,16 @@ function PriorityFixCards({ checks }: { checks: CheckResult[] }) {
                   </span>
                 </div>
                 <p
-                  className="text-[var(--color-fg-secondary)]"
-                  style={{ fontSize: 15, lineHeight: 1.55 }}
+                  className="text-[var(--color-fg-secondary)] mt-0.5 line-clamp-2"
+                  style={{ fontSize: 11.5, lineHeight: 1.4 }}
                 >
                   {check.readabilityImpact}
                 </p>
-                <div className="flex items-center gap-2 flex-wrap pt-1">
+                <div className="flex items-center gap-1.5 mt-1.5 tabular-nums">
                   <span
-                    className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold tabular-nums"
+                    className="rounded-full px-1.5 py-0.5 font-semibold"
                     style={{
-                      fontSize: 12.5,
+                      fontSize: 10,
                       backgroundColor: `${COLORS.primary}1f`,
                       color: COLORS.primaryHover,
                     }}
@@ -1164,67 +1224,48 @@ function PriorityFixCards({ checks }: { checks: CheckResult[] }) {
                     +{Math.round(gain)} pts
                   </span>
                   <span
-                    className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold tabular-nums"
-                    style={{
-                      fontSize: 12.5,
-                      backgroundColor: "rgba(60,62,60,0.06)",
-                      color: "var(--color-fg-secondary)",
-                    }}
+                    className="text-[var(--color-fg-muted)]"
+                    style={{ fontSize: 10 }}
                   >
                     {formatEffort(check.effortMin)}
                   </span>
-                  <span
-                    className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold uppercase"
-                    style={{
-                      fontSize: 11,
-                      letterSpacing: "0.10em",
-                      backgroundColor: eff.bg,
-                      color: eff.color,
-                    }}
-                  >
-                    {eff.label}
-                  </span>
-                  <a
-                    href={CHROME_EXT_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 ml-auto font-semibold transition-opacity hover:opacity-80"
-                    style={{ fontSize: 13, color: COLORS.primaryHover }}
-                  >
-                    <Puzzle className="h-3.5 w-3.5" />
-                    Open the fix in Chrome extension
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </a>
                 </div>
               </div>
-            </motion.li>
+              <ArrowRight
+                className="h-3.5 w-3.5 mt-1 shrink-0"
+                style={{ color: RUST }}
+              />
+            </motion.button>
           );
         })}
-      </ul>
 
-      {/* Down arrow + page indicator */}
-      <div className="flex items-center justify-center gap-3 pt-1 pb-2">
-        <span
-          className="text-[var(--color-fg-muted)] tabular-nums"
-          style={{ fontSize: 11.5 }}
-        >
-          {Math.min(startIndex + PAGE_SIZE, fixable.length)} of {fixable.length}
-        </span>
-        <button
-          type="button"
-          onClick={goDown}
-          disabled={!canDown}
-          aria-label="Show next fixes"
-          className={
-            "rounded-full p-1 transition-colors " +
-            (canDown
-              ? "text-[var(--color-fg-secondary)] hover:text-[var(--color-fg)] hover:bg-[var(--color-surface-alt)] cursor-pointer"
-              : "text-[var(--color-border)] cursor-default")
-          }
-        >
-          <ChevronDown className="h-5 w-5" />
-        </button>
+        {/* Down-arrow pager + page indicator. */}
+        {canDown && (
+          <div className="flex items-center justify-center gap-2 mt-auto">
+            <span
+              className="text-[var(--color-fg-muted)] tabular-nums"
+              style={{ fontSize: 11 }}
+            >
+              {Math.min(startIndex + PAGE_SIZE, fixable.length)} of{" "}
+              {fixable.length}
+            </span>
+            <button
+              type="button"
+              onClick={goDown}
+              aria-label="Show next fixes"
+              className="rounded-full p-1 text-[var(--color-fg-secondary)] hover:text-[var(--color-fg)] hover:bg-[var(--color-surface-alt)] transition-colors"
+            >
+              <ChevronDown className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
+
+      <GapPlaybookModal
+        open={activePlaybook != null}
+        onClose={() => setActivePlaybook(null)}
+        playbook={activePlaybook}
+      />
     </div>
   );
 }
@@ -1259,14 +1300,21 @@ function PillarBars({
         />
       </div>
       <div className="px-5 py-5 flex-1 flex flex-col justify-around gap-5">
-        {pillars.map((p, i) => (
-          <PillarBarRow
-            key={p.pillar}
-            score={p}
-            checks={checks.filter((c) => c.pillar === p.pillar)}
-            staggerIndex={i}
-          />
-        ))}
+        {/* "Findable" (discoverable) is hidden from the breakdown UI —
+            its checks are SEO foundations (HTTPS, robots.txt, sitemap,
+            canonical, indexability), not true AEO signals. We keep the
+            underlying data so overall score, priority fixes, and any
+            future "full audit" view still reflect those checks. */}
+        {pillars
+          .filter((p) => p.pillar !== "discoverable")
+          .map((p, i) => (
+            <PillarBarRow
+              key={p.pillar}
+              score={p}
+              checks={checks.filter((c) => c.pillar === p.pillar)}
+              staggerIndex={i}
+            />
+          ))}
       </div>
     </div>
   );

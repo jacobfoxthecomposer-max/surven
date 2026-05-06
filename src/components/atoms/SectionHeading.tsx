@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Info } from "lucide-react";
+import { HoverHint } from "@/components/atoms/HoverHint";
 
 interface SectionHeadingProps {
   text: string;
@@ -27,32 +28,17 @@ export function SectionHeading({ text, className = "", info }: SectionHeadingPro
     return <div className={className}>{heading}</div>;
   }
 
+  // HoverHint portals the tooltip to document.body so it can never be
+  // clipped by ancestor overflow:hidden, transforms, or stacking contexts.
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       {heading}
-      <span className="relative inline-flex items-center group">
+      <HoverHint hint={info} placement="top" width={260}>
         <Info
-          className="h-4 w-4 text-[var(--color-fg-muted)] group-hover:text-[var(--color-fg-secondary)] cursor-help transition-colors"
+          className="h-4 w-4 text-[var(--color-fg-muted)] hover:text-[var(--color-fg-secondary)] cursor-help transition-colors"
           aria-label="More info"
         />
-        <span
-          role="tooltip"
-          className="pointer-events-none absolute left-1/2 bottom-full z-50 mb-2 -translate-x-1/2 translate-y-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 transition-all duration-200 ease-out rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[12px] leading-snug text-[var(--color-fg-secondary)] shadow-md"
-          style={{ width: 260 }}
-        >
-          {info}
-          <span
-            className="absolute left-1/2 top-full -translate-x-1/2 -mt-px"
-            style={{
-              width: 0,
-              height: 0,
-              borderLeft: "5px solid transparent",
-              borderRight: "5px solid transparent",
-              borderTop: "5px solid var(--color-border)",
-            }}
-          />
-        </span>
-      </span>
+      </HoverHint>
     </div>
   );
 }

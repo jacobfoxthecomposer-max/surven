@@ -18,9 +18,9 @@ import { CompetitorHero } from "@/features/competitor-comparison/CompetitorHero"
 import { VisibilityLeaderboard } from "@/features/competitor-comparison/VisibilityLeaderboard";
 import { CompetitorVisibilityChart } from "@/features/competitor-comparison/CompetitorVisibilityChart";
 import { PromptClusterDominance } from "@/features/competitor-comparison/PromptClusterDominance";
-import { CompetitorFixActions } from "@/features/competitor-comparison/CompetitorFixActions";
+import { CompetitorGapsAndWinsStack } from "@/features/competitor-comparison/CompetitorGapsAndWinsStack";
 import { CompetitorRankChart } from "@/features/competitor-comparison/CompetitorRankChart";
-import { CompetitorShareOfVoiceChart } from "@/features/competitor-comparison/CompetitorShareOfVoiceChart";
+import { CompetitorRankAndSoVRow } from "@/features/competitor-comparison/CompetitorRankAndSoVRow";
 import { BetaFeedbackFooter } from "@/components/organisms/BetaFeedbackFooter";
 import { AI_MODELS, COMPETITOR_PALETTE } from "@/utils/constants";
 
@@ -427,12 +427,26 @@ export default function CompetitorComparisonPage() {
                 transition={{ duration: 0.4, delay: 0.15, ease }}
                 className="flex flex-wrap items-center gap-2"
               >
+                {/* Primary CTA treatment — solid sage + white text + drop
+                    shadow + hover lift, plus a subtle sage glow ring. Reads
+                    as "the action we want you to take" rather than another
+                    bordered chip in the filter row. */}
                 <a
                   href="/settings"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 font-medium rounded-[var(--radius-md)] border border-[var(--color-primary)]/40 bg-[var(--color-surface)] text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-alt)] transition-all shadow-[0_0_14px_-3px_rgba(150,162,131,0.55)] hover:shadow-[0_0_20px_-2px_rgba(150,162,131,0.7)]"
-                  style={{ fontSize: 14 }}
+                  className="group inline-flex items-center gap-2 px-4 py-2 rounded-[var(--radius-md)] bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] hover:-translate-y-px transition-all shadow-[0_2px_8px_rgba(0,0,0,0.08),0_0_18px_-2px_rgba(150,162,131,0.55)] hover:shadow-[0_4px_14px_rgba(0,0,0,0.12),0_0_24px_-2px_rgba(150,162,131,0.75)]"
+                  style={{
+                    fontSize: 14,
+                    fontFamily: "var(--font-display)",
+                    fontWeight: 600,
+                    letterSpacing: "0.01em",
+                  }}
                 >
-                  <RefreshCw className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+                  <span
+                    className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-white/20"
+                    aria-hidden
+                  >
+                    <RefreshCw className="h-3 w-3 group-hover:rotate-180 transition-transform duration-500" />
+                  </span>
                   Manage competitors
                 </a>
 
@@ -525,34 +539,37 @@ export default function CompetitorComparisonPage() {
               </div>
             </div>
             <div className="flex flex-col min-w-0">
-              <CompetitorFixActions
-                results={filteredResults}
-                businessName={business.name}
-                competitors={competitorNames}
-              />
+              {/* Right rail — two stacked cards: Gaps to fill (rust, top)
+                  and Where you're leading (sage, bottom). Same component
+                  code as the AI Visibility Tracker's GapsToFillCard, with
+                  a sibling WinsToWidenCard that mirrors the chrome in
+                  sage for positive wins-vs-competitors content. */}
+              <CompetitorGapsAndWinsStack />
             </div>
           </div>
         )}
 
         {hasResults && (
           <>
-            {/* Cluster dominance (wide) + Share of voice (narrow, donut-only)
-                side-by-side. items-stretch keeps both bottoms aligned. */}
-            <motion.div
-              {...reveal}
-              className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] gap-4 items-stretch"
-            >
+            {/* Cluster dominance — full-width now that the standalone Share
+                of voice donut has been replaced by the four-card rank + SoV
+                row below. */}
+            <motion.div {...reveal}>
               <PromptClusterDominance
                 results={filteredResults}
                 businessName={business.name}
                 competitors={competitorNames}
                 industry={business.industry}
               />
-              <CompetitorShareOfVoiceChart />
             </motion.div>
 
-            {/* Gaps + Wins now live inside the "Ways to take the lead"
-                panel above (CompetitorFixActions), so no separate row here. */}
+            {/* Rank + SoV block — same four cards (Avg rank when mentioned +
+                Avg rank over time + Share of voice + Share of voice over time)
+                as the AI Visibility Tracker. Uses the canonical card chrome,
+                delta pills, and shared list-↔-chart hover correlation. */}
+            <motion.div {...reveal}>
+              <CompetitorRankAndSoVRow />
+            </motion.div>
 
             {/* Beta feedback callout — shared organism with Code Scanner. */}
             <BetaFeedbackFooter />

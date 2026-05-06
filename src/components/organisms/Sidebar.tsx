@@ -251,12 +251,18 @@ function UpgradeCTA({
   plan?: string;
   isExpanded: boolean;
 }) {
-  // Premium + admin users have nothing to upgrade to. Loading-state (no
-  // plan yet) skips the CTA so we don't flash an upsell at premium users.
-  if (!plan || plan === "premium" || plan === "admin") return null;
-
-  const targetPlan = plan === "free" ? "Plus" : "Premium";
-  const subline = plan === "free" ? "Unlock the full toolkit" : "Track 5 competitors + 50 prompts";
+  // CTA is rendered at all times so the sidebar reads identically on
+  // every page — no flash, no inconsistency between dev (mock plan =
+  // admin) and prod (real plan), no disappearance during the brief
+  // loading window before the profile query resolves. We default the
+  // copy to the "free → Plus" upsell when plan is unknown / admin /
+  // premium, since pre-launch every user is effectively pre-tier.
+  const effectivePlan = plan ?? "free";
+  const targetPlan = effectivePlan === "plus" ? "Premium" : "Plus";
+  const subline =
+    effectivePlan === "plus"
+      ? "Track 5 competitors + 50 prompts"
+      : "Unlock the full toolkit";
 
   if (!isExpanded) {
     return (

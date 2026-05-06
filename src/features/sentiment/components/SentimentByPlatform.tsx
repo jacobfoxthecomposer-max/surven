@@ -18,6 +18,25 @@ const MODEL_LABELS: Record<ModelName, string> = {
   google_ai: "Google AI",
 };
 
+// Mirror SentimentHero's verdict thresholds + vocabulary so every
+// one-word verdict on the Brand Sentiment page reads from the same
+// dictionary (strong / mixed / concerning). Sensitivity rule
+// (Joey 2026-05-05): a pos+neutral mix with zero negatives is Mixed,
+// never Concerning — only a meaningful negative presence (≥20%, or
+// negatives > positives when both are low) tips into Concerning.
+function statusFromBreakdown(
+  positivePct: number,
+  negativePct: number,
+): { word: string; color: string } {
+  if (negativePct >= 20 || (negativePct > positivePct && negativePct > 0)) {
+    return { word: "concerning", color: SURVEN_SEMANTIC.bad };
+  }
+  if (positivePct >= 70 && negativePct <= 10) {
+    return { word: "strong", color: SURVEN_SEMANTIC.good };
+  }
+  return { word: "mixed", color: SURVEN_SEMANTIC.mid };
+}
+
 interface Props {
   results: ScanResult[];
 }
@@ -71,7 +90,7 @@ export function SentimentByPlatform({ results }: Props) {
 
       <div className="divide-y divide-[var(--color-border)]">
         {rows.map((row, i) => {
-          const positiveColor = row.positive >= 70 ? SURVEN_SEMANTIC.good : row.positive >= 40 ? SURVEN_SEMANTIC.mid : SURVEN_SEMANTIC.bad;
+          const verdict = statusFromBreakdown(row.positive, row.negative);
           return (
             <div key={row.model} className="flex items-center gap-4 py-3 first:pt-0 last:pb-0">
               {/* Engine */}
@@ -119,18 +138,19 @@ export function SentimentByPlatform({ results }: Props) {
                 </div>
               </div>
 
-              {/* Headline % */}
-              <div className="shrink-0 text-right" style={{ minWidth: 64 }}>
+              {/* One-word verdict — same vocabulary + pill treatment as
+                  the SentimentHero header, so every verdict on the page
+                  reads from the same dictionary. */}
+              <div className="shrink-0 flex justify-end" style={{ minWidth: 110 }}>
                 <span
+                  className="inline-flex items-center text-xs font-semibold rounded-md px-2 py-0.5 whitespace-nowrap capitalize"
                   style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: 24,
-                    fontWeight: 600,
-                    lineHeight: 1,
-                    color: positiveColor,
+                    color: verdict.color,
+                    backgroundColor: `${verdict.color}1F`,
                   }}
+                  title={`${MODEL_LABELS[row.model]} sentiment verdict: ${verdict.word} (${row.positive}% positive).`}
                 >
-                  {row.positive}%
+                  {verdict.word}
                 </span>
               </div>
 
