@@ -2,6 +2,15 @@ import type { CrawledPage, AuditFinding, AuditSeverity } from "@/types/audit";
 
 type RuleCheck = (homepage: CrawledPage, allPages: CrawledPage[]) => AuditFinding | null;
 
+// Hostnames that should never receive a LocalBusiness finding — SaaS / online-only
+// products without physical location, hours, or address. Publishing incomplete
+// LocalBusiness markup is worse than no markup (Google demotes it).
+const LOCAL_BUSINESS_SKIP_HOSTS = new Set([
+  "surven.ai",
+  "www.surven.ai",
+  "surven.vercel.app",
+]);
+
 // LocalBusiness-compatible schema.org types
 const LOCAL_BUSINESS_TYPES = new Set([
   "LocalBusiness",
