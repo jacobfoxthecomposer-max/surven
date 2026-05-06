@@ -17,7 +17,10 @@ import {
   Upload,
   Zap,
   Search,
+  Crown,
+  ArrowRight,
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useUserProfile } from "@/features/auth/hooks/useUserProfile";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
@@ -153,6 +156,9 @@ export function Sidebar() {
         ))}
       </nav>
 
+      {/* Upgrade CTA (above profile, hidden when already at top tier) */}
+      <UpgradeCTA plan={plan} isExpanded={isExpanded} />
+
       {/* Profile section */}
       <div className="border-t border-[var(--color-border)] p-3">
         <ProfileCard user={user} business={business} plan={plan} isExpanded={isExpanded} />
@@ -234,6 +240,120 @@ function NavItem({
       <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg px-2 py-1 text-xs text-[var(--color-fg)] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
         {item.label}
       </div>
+    </div>
+  );
+}
+
+function UpgradeCTA({
+  plan,
+  isExpanded,
+}: {
+  plan?: string;
+  isExpanded: boolean;
+}) {
+  // Premium + admin users have nothing to upgrade to. Loading-state (no
+  // plan yet) skips the CTA so we don't flash an upsell at premium users.
+  if (!plan || plan === "premium" || plan === "admin") return null;
+
+  const targetPlan = plan === "free" ? "Plus" : "Premium";
+  const subline = plan === "free" ? "Unlock the full toolkit" : "Track 5 competitors + 50 prompts";
+
+  if (!isExpanded) {
+    return (
+      <div className="px-2 pb-2 relative group">
+        <Link
+          href="/pricing"
+          className="relative mx-auto flex items-center justify-center h-10 w-10 rounded-lg overflow-hidden text-white"
+          style={{
+            background:
+              "linear-gradient(135deg, #96A283 0%, #B8A030 50%, #C97B45 100%)",
+          }}
+        >
+          <Crown className="h-4 w-4" />
+        </Link>
+        <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg px-2 py-1 text-xs text-[var(--color-fg)] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+          Upgrade to {targetPlan}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-3 pb-2">
+      <motion.div
+        animate={{
+          boxShadow: [
+            "0 0 14px rgba(150,162,131,0.22), 0 0 28px rgba(201,123,69,0.10)",
+            "0 0 22px rgba(150,162,131,0.36), 0 0 44px rgba(201,123,69,0.18)",
+            "0 0 14px rgba(150,162,131,0.22), 0 0 28px rgba(201,123,69,0.10)",
+          ],
+        }}
+        transition={{
+          boxShadow: { duration: 2.6, repeat: Infinity, ease: "easeInOut" },
+        }}
+        className="relative rounded-[var(--radius-lg)] overflow-hidden"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(150,162,131,0.16) 0%, rgba(184,160,48,0.10) 50%, rgba(201,123,69,0.14) 100%)",
+        }}
+      >
+        {/* Animated gradient border ring (matches AI Summary button palette) */}
+        <motion.span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-[var(--radius-lg)]"
+          style={{
+            padding: 1,
+            background:
+              "linear-gradient(135deg, #96A283 0%, #B8A030 50%, #C97B45 100%)",
+            WebkitMask:
+              "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+            WebkitMaskComposite: "xor",
+            maskComposite: "exclude",
+          }}
+          animate={{ opacity: [0.55, 0.9, 0.55] }}
+          transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <Link
+          href="/pricing"
+          className="relative flex items-start gap-2.5 px-3 py-2.5 hover:bg-[rgba(150,162,131,0.06)] transition-colors"
+        >
+          <div
+            className="h-7 w-7 rounded-md flex items-center justify-center shrink-0 text-white"
+            style={{
+              background:
+                "linear-gradient(135deg, #96A283 0%, #B8A030 50%, #C97B45 100%)",
+            }}
+          >
+            <Crown className="h-3.5 w-3.5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p
+              className="font-semibold tracking-wide truncate"
+              style={{
+                fontSize: 12.5,
+                lineHeight: 1.2,
+                background:
+                  "linear-gradient(135deg, #6C7A5A 0%, #8E7B26 50%, #A35F32 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              Upgrade to {targetPlan}
+            </p>
+            <p
+              className="text-[var(--color-fg-muted)] truncate mt-0.5"
+              style={{ fontSize: 10.5, lineHeight: 1.3 }}
+            >
+              {subline}
+            </p>
+          </div>
+          <ArrowRight
+            className="h-3.5 w-3.5 mt-0.5 shrink-0"
+            style={{ color: "#A35F32" }}
+          />
+        </Link>
+      </motion.div>
     </div>
   );
 }

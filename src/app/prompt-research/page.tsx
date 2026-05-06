@@ -12,6 +12,8 @@ import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { NextScanCard } from "@/components/atoms/NextScanCard";
 import { AISummaryGenerator } from "@/components/atoms/AISummaryGenerator";
+import { TimeRangeDropdown, type TimeRangeKey } from "@/components/atoms/TimeRangeDropdown";
+import { BetaFeedbackFooter } from "@/components/organisms/BetaFeedbackFooter";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
 import { useScan } from "@/features/dashboard/hooks/useScan";
@@ -246,31 +248,10 @@ export default function PromptResearchPage() {
 
             {/* Filter bar */}
             <div className="flex flex-wrap items-center gap-2">
-              <div className="inline-flex rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-1 gap-1">
-                {TIME_RANGES.map(({ key, label }) => (
-                  <button
-                    key={key}
-                    onClick={() => setTimeRange(key)}
-                    className={
-                      "px-3.5 py-2 font-medium rounded-[var(--radius-sm)] transition-colors " +
-                      (timeRange === key
-                        ? "bg-[var(--color-primary)] text-white"
-                        : "text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-alt)]")
-                    }
-                    style={{ fontSize: 14 }}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              <button
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 font-medium rounded-[var(--radius-md)] border transition-colors bg-[var(--color-surface)] text-[var(--color-fg-secondary)] border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]"
-                style={{ fontSize: 14 }}
-                title="Custom date range (coming soon)"
-              >
-                <Calendar className="h-4 w-4" /> Custom
-              </button>
+              <TimeRangeDropdown
+                value={timeRange as TimeRangeKey}
+                onChange={(key) => setTimeRange(key as typeof timeRange)}
+              />
 
               <div className="h-4 w-px bg-[var(--color-border)]" />
 
@@ -444,6 +425,8 @@ export default function PromptResearchPage() {
             {toast}
           </motion.div>
         )}
+
+        <BetaFeedbackFooter />
       </div>
     </DashboardLayout>
   );

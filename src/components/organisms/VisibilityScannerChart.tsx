@@ -707,8 +707,10 @@ export function VisibilityScannerChart({
                 const body = isPositive
                   ? `visibility since this optimization.`
                   : `Optimization is still working — most changes take 1–3 months to show full results.`;
-                const markerColor =
-                  m.color ?? MARKER_PALETTE[i % MARKER_PALETTE.length];
+                // Marker shape — small black down-arrow whose tip sits on
+                // the YOU line, with a "?" above the shaft. Hover surfaces
+                // the same floating tooltip as before.
+                const markerColor = "var(--color-fg)";
                 return (
                   <ReferenceDot
                     key={`opt-${i}`}
@@ -718,6 +720,13 @@ export function VisibilityScannerChart({
                     shape={(props: { cx?: number; cy?: number }) => {
                       const cx = props.cx ?? 0;
                       const cy = props.cy ?? 0;
+                      // Geometry: arrow tip touches (cx, cy). Shaft goes
+                      // up from cy-4 to cy-11. "?" centers above the shaft
+                      // at cy-15.
+                      const tipY = cy - 1; // tiny gap so the tip kisses the line, not crosses it
+                      const headTopY = tipY - 5;
+                      const shaftTopY = headTopY - 6;
+                      const questionY = shaftTopY - 4;
                       return (
                         <g
                           style={{ cursor: "help" }}
@@ -733,22 +742,44 @@ export function VisibilityScannerChart({
                           }
                           onMouseLeave={() => setHoveredMarker(null)}
                         >
-                          <circle
-                            cx={cx}
-                            cy={cy}
-                            r={14}
+                          {/* Hover hit-area covering the whole marker
+                              stack. Invisible but catches pointer events. */}
+                          <rect
+                            x={cx - 9}
+                            y={questionY - 11}
+                            width={18}
+                            height={tipY - questionY + 14}
                             fill="rgba(0,0,0,0.001)"
                             style={{ pointerEvents: "all" }}
                           />
-                          <circle
-                            cx={cx}
-                            cy={cy}
-                            r={4}
+                          {/* Question mark */}
+                          <text
+                            x={cx}
+                            y={questionY}
+                            textAnchor="middle"
+                            fontSize={10}
+                            fontWeight={700}
                             fill={markerColor}
-                            style={{
-                              pointerEvents: "none",
-                              filter: `drop-shadow(0 0 2px ${markerColor}) drop-shadow(0 0 5px ${markerColor}) drop-shadow(0 0 10px ${markerColor}AA)`,
-                            }}
+                            style={{ pointerEvents: "none" }}
+                          >
+                            ?
+                          </text>
+                          {/* Vertical shaft */}
+                          <line
+                            x1={cx}
+                            y1={shaftTopY}
+                            x2={cx}
+                            y2={headTopY}
+                            stroke={markerColor}
+                            strokeWidth={1.25}
+                            style={{ pointerEvents: "none" }}
+                          />
+                          {/* Arrow head — solid triangle pointing DOWN at
+                              the line. */}
+                          <polygon
+                            points={`${cx - 3.5},${headTopY} ${cx + 3.5},${headTopY} ${cx},${tipY}`}
+                            fill={markerColor}
+                            style={{ pointerEvents: "none" }}
                           />
                         </g>
                       );

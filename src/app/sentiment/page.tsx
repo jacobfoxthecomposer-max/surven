@@ -9,6 +9,8 @@ import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { NextScanCard } from "@/components/atoms/NextScanCard";
 import { CustomDatePopover } from "@/components/atoms/CustomDatePopover";
 import { AISummaryGenerator } from "@/components/atoms/AISummaryGenerator";
+import { TimeRangeDropdown, type TimeRangeKey } from "@/components/atoms/TimeRangeDropdown";
+import { BetaFeedbackFooter } from "@/components/organisms/BetaFeedbackFooter";
 import { Calendar, AlertTriangle, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -16,15 +18,10 @@ import { useBusiness } from "@/features/business/hooks/useBusiness";
 import { useScan } from "@/features/dashboard/hooks/useScan";
 import { useSentimentHistory } from "@/features/sentiment/hooks/useSentimentHistory";
 import { SentimentHero } from "@/features/sentiment/components/SentimentHero";
-import { SentimentMetricRows } from "@/features/sentiment/components/SentimentMetricRows";
 import { SentimentByPlatform } from "@/features/sentiment/components/SentimentByPlatform";
-import { SentimentByFeature } from "@/features/sentiment/components/SentimentByFeature";
-import { SentimentDrivers } from "@/features/sentiment/components/SentimentDrivers";
-import { SentimentDiagnostic } from "@/features/sentiment/components/SentimentDiagnostic";
-import { SentimentFixActions } from "@/features/sentiment/components/SentimentFixActions";
-import { SentimentCrossLinks } from "@/features/sentiment/components/SentimentCrossLinks";
-import { SentimentCTABanner } from "@/features/sentiment/components/SentimentCTABanner";
-import { WhatAISaid } from "@/features/sentiment/components/WhatAISaid";
+import { SentimentByIntent } from "@/features/sentiment/components/SentimentByIntent";
+import { SentimentPromptsSplit } from "@/features/sentiment/components/SentimentPromptsSplit";
+import { SentimentSources } from "@/features/sentiment/components/SentimentSources";
 import { SURVEN_SEMANTIC } from "@/utils/brandColors";
 import { AI_MODELS } from "@/utils/constants";
 import type { ModelName } from "@/types/database";
@@ -57,7 +54,7 @@ const reveal = {
 export default function SentimentPage() {
   const router = useRouter();
 
-  const [timeRange, setTimeRange] = useState<TimeRange>("all");
+  const [timeRange, setTimeRange] = useState<TimeRange>("90d");
   const [customStart, setCustomStart] = useState<Date | null>(null);
   const [customEnd, setCustomEnd] = useState<Date | null>(null);
   const [customOpen, setCustomOpen] = useState(false);
@@ -239,52 +236,18 @@ export default function SentimentPage() {
           transition={{ duration: 0.4, delay: 0.1, ease }}
           className="flex flex-wrap items-center gap-2 pb-4 border-b border-[var(--color-border)]"
         >
-          <div className="inline-flex rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-1 gap-1">
-            {TIME_RANGES.map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => setTimeRange(key)}
-                className={
-                  "px-3.5 py-2 font-medium rounded-[var(--radius-sm)] transition-colors " +
-                  (timeRange === key
-                    ? "bg-[var(--color-primary)] text-white"
-                    : "text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-alt)]")
-                }
-                style={{ fontSize: 14 }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          <div className="relative">
-            <button
-              onClick={() => setCustomOpen((o) => !o)}
-              className={
-                "inline-flex items-center gap-1.5 px-3.5 py-2 font-medium rounded-[var(--radius-md)] border transition-colors " +
-                (timeRange === "custom"
-                  ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
-                  : "bg-[var(--color-surface)] text-[var(--color-fg-secondary)] border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]")
+          <TimeRangeDropdown
+            value={timeRange as TimeRangeKey}
+            customFrom={customStart ? customStart.toISOString().slice(0, 10) : undefined}
+            customTo={customEnd ? customEnd.toISOString().slice(0, 10) : undefined}
+            onChange={(key, fromISO, toISO) => {
+              setTimeRange(key as typeof timeRange);
+              if (key === "custom" && fromISO && toISO) {
+                setCustomStart(new Date(fromISO + "T00:00:00"));
+                setCustomEnd(new Date(toISO + "T00:00:00"));
               }
-              style={{ fontSize: 14 }}
-            >
-              <Calendar className="h-4 w-4" />
-              {timeRange === "custom" && customStart && customEnd
-                ? `${customStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${customEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
-                : "Custom"}
-            </button>
-            <CustomDatePopover
-              open={customOpen}
-              onClose={() => setCustomOpen(false)}
-              initialStart={customStart ?? new Date(Date.now() - 30 * 86400000)}
-              initialEnd={customEnd ?? new Date()}
-              onApply={(s, e) => {
-                setCustomStart(s);
-                setCustomEnd(e);
-                setTimeRange("custom");
-              }}
-            />
-          </div>
+            }}
+          />
 
           <div className="h-4 w-px bg-[var(--color-border)]" />
 
@@ -340,93 +303,69 @@ export default function SentimentPage() {
               />
             </motion.div>
 
-            {/* Metric rows + warning (left 3/5) + fix actions (right 2/5) */}
-            <motion.div {...reveal}>
-              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-                <div className="lg:col-span-3 flex flex-col gap-4">
-                  <SentimentMetricRows results={results} history={filteredHistory} />
-
-                  {warning && (
+            {/* Prompts split (70%) + Sentiment by AI engine (30%). The
+                negative-engine warning sits below the right-side card so
+                it stays anchored to the engine context. */}
+            <motion.div
+              {...reveal}
+              className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-stretch"
+            >
+              <div className="lg:col-span-3 min-w-0 flex">
+                <SentimentPromptsSplit results={results} />
+              </div>
+              <div className="lg:col-span-2 min-w-0 flex flex-col gap-4">
+                <SentimentByPlatform results={results} />
+                <SentimentByIntent
+                  results={results}
+                  brandNames={[business.name, ...competitorNames]}
+                />
+                {warning && (
+                  <div
+                    className="rounded-[var(--radius-lg)] border p-4 flex items-start gap-3"
+                    style={{
+                      background: "rgba(181,70,49,0.04)",
+                      borderColor: "rgba(181,70,49,0.25)",
+                    }}
+                  >
                     <div
-                      className="rounded-[var(--radius-lg)] border p-4 flex items-start gap-3"
-                      style={{
-                        background: "rgba(181,70,49,0.04)",
-                        borderColor: "rgba(181,70,49,0.25)",
-                      }}
+                      className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0"
+                      style={{ background: "rgba(181,70,49,0.12)" }}
                     >
-                      <div
-                        className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ background: "rgba(181,70,49,0.12)" }}
-                      >
-                        <AlertTriangle className="h-4 w-4" style={{ color: SURVEN_SEMANTIC.bad }} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className="text-sm font-semibold mb-1"
-                          style={{ color: "var(--color-fg)" }}
-                        >
-                          {MODEL_LABELS[warning.engine]} is showing {warning.negPct}% negative sentiment
-                        </p>
-                        <p className="text-xs text-[var(--color-fg-secondary)] leading-snug">
-                          {warning.negCount} of {warning.total} mentions on {MODEL_LABELS[warning.engine]} use critical or dismissive language. This is the highest-leverage engine to fix — every prompt hitting this engine inherits the negative framing.
-                        </p>
-                      </div>
-                      <Link
-                        href="/audit"
-                        className="shrink-0 inline-flex items-center gap-1 px-3 py-2 rounded-[var(--radius-md)] text-xs font-semibold text-white transition-opacity hover:opacity-90 self-center"
-                        style={{ background: SURVEN_SEMANTIC.bad }}
-                      >
-                        <span>Fix with audit</span>
-                        <ArrowRight className="h-3 w-3" />
-                      </Link>
+                      <AlertTriangle className="h-4 w-4" style={{ color: SURVEN_SEMANTIC.bad }} />
                     </div>
-                  )}
-                </div>
-
-                <div className="lg:col-span-2">
-                  <SentimentFixActions results={results} />
-                </div>
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className="text-sm font-semibold mb-1"
+                        style={{ color: "var(--color-fg)" }}
+                      >
+                        {MODEL_LABELS[warning.engine]} is showing {warning.negPct}% negative sentiment
+                      </p>
+                      <p className="text-xs text-[var(--color-fg-secondary)] leading-snug">
+                        {warning.negCount} of {warning.total} mentions on {MODEL_LABELS[warning.engine]} use critical or dismissive language. Every prompt hitting this engine inherits the negative framing.
+                      </p>
+                    </div>
+                    <Link
+                      href="/audit"
+                      className="shrink-0 inline-flex items-center gap-1 px-3 py-2 rounded-[var(--radius-md)] text-xs font-semibold text-white transition-opacity hover:opacity-90 self-center"
+                      style={{ background: SURVEN_SEMANTIC.bad }}
+                    >
+                      <span>Fix with audit</span>
+                      <ArrowRight className="h-3 w-3" />
+                    </Link>
+                  </div>
+                )}
               </div>
             </motion.div>
 
-            {/* Sentiment by AI engine — restyled compact rows */}
+            {/* Sources driving your sentiment — full breakdown by domain */}
             <motion.div {...reveal}>
-              <SentimentByPlatform results={results} />
+              <SentimentSources results={results} />
             </motion.div>
 
-            {/* Sentiment by feature */}
-            <motion.div {...reveal}>
-              <SentimentByFeature results={results} businessName={business.name} competitors={competitorNames} />
-            </motion.div>
-
-            {/* Cross-link cards */}
-            <motion.div {...reveal}>
-              <SentimentCrossLinks
-                totalMentions={totalMentions}
-                negativeCount={negativeCount}
-              />
-            </motion.div>
-
-            {/* What's working / What to watch diagnostic */}
-            <motion.div {...reveal}>
-              <SentimentDiagnostic results={results} history={filteredHistory} />
-            </motion.div>
-
-            {/* Sentiment drivers + WhatAISaid */}
-            <motion.div {...reveal}>
-              <SentimentDrivers results={results} businessName={business.name} />
-            </motion.div>
-
-            <motion.div {...reveal}>
-              <WhatAISaid results={results} businessName={business.name} />
-            </motion.div>
-
-            {/* Bottom CTA banner */}
-            <motion.div {...reveal}>
-              <SentimentCTABanner negativeCount={negativeCount} />
-            </motion.div>
           </>
         )}
+
+        <BetaFeedbackFooter />
 
         {/* historyLoading kept referenced to avoid lint warning during initial paint */}
         {historyLoading && null}

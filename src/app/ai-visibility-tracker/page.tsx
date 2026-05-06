@@ -14,6 +14,7 @@ import {
   MOCK_N,
   type MockBrand,
 } from "@/features/dashboard/pages/VisibilityScannerSection";
+import { BetaFeedbackFooter } from "@/components/organisms/BetaFeedbackFooter";
 import { COLORS } from "@/utils/constants";
 import type { Business, Competitor } from "@/types/database";
 
@@ -113,10 +114,13 @@ export default function AIVisibilityTrackerPage() {
 
   return (
     <DashboardLayout>
-      <VisibilityScannerSection
-        brands={brandsAndDates?.brands}
-        dates={brandsAndDates?.dates}
-      />
+      <div className="space-y-6">
+        <VisibilityScannerSection
+          brands={brandsAndDates?.brands}
+          dates={brandsAndDates?.dates}
+        />
+        <BetaFeedbackFooter />
+      </div>
     </DashboardLayout>
   );
 }

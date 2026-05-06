@@ -19,6 +19,7 @@ import { HistorySection } from "@/features/dashboard/pages/HistorySection";
 import { SentimentSection } from "@/features/dashboard/pages/SentimentSection";
 import { CitationGapSection } from "@/features/dashboard/pages/CitationGapSection";
 import { WhatsNextCard } from "@/components/organisms/WhatsNextCard";
+import { BetaFeedbackFooter } from "@/components/organisms/BetaFeedbackFooter";
 import { exportScanResultsAsCsv } from "@/utils/csvExport";
 import { Button } from "@/components/atoms/Button";
 import { Download } from "lucide-react";
@@ -268,6 +269,10 @@ function DashboardPageContent() {
             <WhatsNextCard />
           </div>
         </aside>
+      </div>
+
+      <div className="mt-6">
+        <BetaFeedbackFooter />
       </div>
     </DashboardLayout>
   );

@@ -36,6 +36,7 @@ import { HoverHint } from "@/components/atoms/HoverHint";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { SectionHeading } from "@/components/atoms/SectionHeading";
 import { NextScanCard } from "@/components/atoms/NextScanCard";
+import { TimeRangeDropdown, type TimeRangeKey } from "@/components/atoms/TimeRangeDropdown";
 import { PromptsByCluster } from "@/features/dashboard/pages/PromptsByCluster";
 import { BetaFeedbackFooter } from "@/components/organisms/BetaFeedbackFooter";
 import { useActiveBusiness } from "@/features/business/hooks/useActiveBusiness";
@@ -3120,6 +3121,10 @@ function PromptsTable({
           className="w-full"
           style={{ fontSize: 13, tableLayout: "fixed" }}
         >
+          {/* Column widths (in order): checkbox · Prompt (flexible) · Volume ·
+              Status · Cited · Branded · Intent · Avg Rank (widened to push
+              right toward Sentiment) · Sentiment (explicit so the table
+              doesn't dump leftover whitespace into this column). */}
           <colgroup>
             <col style={{ width: 30 }} />
             <col />
@@ -3128,6 +3133,7 @@ function PromptsTable({
             <col style={{ width: 130 }} />
             <col style={{ width: 240 }} />
             <col style={{ width: 100 }} />
+            <col style={{ width: 240 }} />
             <col style={{ width: 140 }} />
           </colgroup>
           <thead
@@ -5384,7 +5390,26 @@ export function PromptsSection({ data: dataOverride }: { data?: PromptsData } = 
         transition={{ duration: 0.45, delay: 0.1, ease: EASE }}
         className="flex flex-wrap items-center gap-3"
       >
-        <RangePills value={range} onChange={setRange} />
+        <TimeRangeDropdown
+          value={
+            range === "YTD"
+              ? "ytd"
+              : range === "All"
+                ? "all"
+                : (range.toLowerCase() as TimeRangeKey)
+          }
+          onChange={(key) => {
+            const next: Range =
+              key === "ytd"
+                ? "YTD"
+                : key === "all"
+                  ? "All"
+                  : key === "custom"
+                    ? "custom"
+                    : (key as Range);
+            setRange(next);
+          }}
+        />
         <EngineChips enabled={enabledEngines} onToggle={toggleEngine} />
       </motion.div>
 
@@ -5436,44 +5461,6 @@ export function PromptsSection({ data: dataOverride }: { data?: PromptsData } = 
           summary="Highest-leverage fixes — these are where coverage is bleeding."
           items={data.concerns}
         />
-      </motion.div>
-
-      {/* Final page-level CTA — directs to optimization */}
-      <motion.div
-        {...reveal}
-        className="rounded-[var(--radius-lg)] p-5"
-        style={{
-          borderLeft: `5px solid ${COLORS.primary}`,
-          backgroundColor: TOK.primarySoftBg,
-        }}
-      >
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="min-w-0">
-            <p
-              className="uppercase tracking-wider text-[var(--color-fg-secondary)] font-semibold mb-1"
-              style={{ fontSize: 11, letterSpacing: "0.12em" }}
-            >
-              Ready to fix the gaps?
-            </p>
-            <p
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: 22,
-                fontWeight: 500,
-                color: "var(--color-fg)",
-                letterSpacing: "-0.01em",
-              }}
-            >
-              Run a full GEO audit and we'll write the fixes for you.
-            </p>
-          </div>
-          <CtaLink
-            icon={Target}
-            label="Start GEO audit"
-            href="/audit"
-            className="shrink-0"
-          />
-        </div>
       </motion.div>
 
       <BetaFeedbackFooter />

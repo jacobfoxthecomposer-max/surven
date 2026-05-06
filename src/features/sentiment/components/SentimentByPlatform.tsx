@@ -7,7 +7,6 @@ import { motion } from "framer-motion";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
-import { ChartExplainer } from "@/components/atoms/ChartExplainer";
 import { SURVEN_SEMANTIC } from "@/utils/brandColors";
 import type { ScanResult, ModelName } from "@/types/database";
 
@@ -135,40 +134,11 @@ export function SentimentByPlatform({ results }: Props) {
                 </span>
               </div>
 
-              {/* Drill-in link */}
-              <Link
-                href="/prompts"
-                className="shrink-0 flex items-center gap-1 text-xs font-medium hover:opacity-70 transition-opacity"
-                style={{ color: SURVEN_SEMANTIC.good, minWidth: 90, justifyContent: "flex-end" }}
-              >
-                <span>Audit</span>
-                <ArrowRight className="h-3 w-3" />
-              </Link>
             </div>
           );
         })}
       </div>
 
-      <ChartExplainer
-        blocks={[
-          {
-            label: "Rows",
-            body: "Each row is one AI engine. Engines with no mentions are hidden.",
-          },
-          {
-            label: "Bar",
-            body: "The stacked bar splits each engine's mentions by tone. Sage = positive, gray = neutral, rust = negative. The full bar always equals 100%.",
-          },
-          {
-            label: "Headline %",
-            body: "The big number on the right is the positive rate — your headline metric per engine. Above 70% is healthy; below 40% is concerning.",
-          },
-          {
-            label: "Audit link",
-            body: "Click Audit on any row to open that engine's prompts and see exactly which queries are driving the score.",
-          },
-        ]}
-      />
     </Card>
   );
 }

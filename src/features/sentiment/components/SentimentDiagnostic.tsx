@@ -164,7 +164,7 @@ export function SentimentDiagnostic({ results, history }: Props) {
             fontSize: 26,
             fontWeight: 600,
             lineHeight: 1.15,
-            color: "var(--color-fg)",
+            color: SURVEN_SEMANTIC.goodAlt,
             marginBottom: 4,
           }}
         >

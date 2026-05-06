@@ -47,8 +47,8 @@ export function SentimentCTABanner({ negativeCount }: Props) {
           }}
         >
           {hasNegatives
-            ? "Run a sentiment audit and we'll write the rewrites for you."
-            : "Run a sentiment audit to lock in your positive framing."}
+            ? "Run a website audit and we'll write the rewrites for you."
+            : "Run a website audit to lock in your positive framing."}
         </h3>
       </div>
 
@@ -58,7 +58,7 @@ export function SentimentCTABanner({ negativeCount }: Props) {
         style={{ background: accent }}
       >
         <Sparkles className="h-3.5 w-3.5" />
-        <span>Start sentiment audit</span>
+        <span>Start website audit</span>
         <ArrowRight className="h-3.5 w-3.5" />
       </Link>
     </Card>
