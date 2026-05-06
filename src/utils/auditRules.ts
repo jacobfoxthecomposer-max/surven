@@ -70,6 +70,12 @@ const checkOrgSchema: RuleCheck = (homepage) => {
 
 const checkLocalBizSchema: RuleCheck = (homepage) => {
   if (homepage.schemaTypes.some((t) => LOCAL_BUSINESS_TYPES.has(t))) return null;
+  try {
+    const host = new URL(homepage.url).hostname.toLowerCase();
+    if (LOCAL_BUSINESS_SKIP_HOSTS.has(host)) return null;
+  } catch {
+    // bad URL — fall through and run the rule normally
+  }
   return findingBase(
     "local_business_schema_missing",
     "LocalBusiness Schema Missing",
