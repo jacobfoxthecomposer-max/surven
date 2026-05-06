@@ -179,12 +179,28 @@ export function ApiKeysTab() {
           </div>
 
           <div className="space-y-3">
-            <h3 className="font-semibold text-sm">How to use:</h3>
+            <h3 className="font-semibold text-sm">First-time setup:</h3>
             <ol className="text-sm text-[var(--color-fg-secondary)] space-y-2 list-decimal list-inside">
-              <li>Open the Surven Auditor extension settings</li>
-              <li>Paste this API key into the "API Key" field</li>
-              <li>Set API URL to: <code className="bg-[var(--color-surface)] px-2 py-1 rounded text-xs">https://surven.ai/api/audit/run</code></li>
-              <li>Save settings and start auditing</li>
+              <li>
+                Install the Surven Auditor Chrome extension (
+                <a
+                  href="https://chromewebstore.google.com/detail/surven-auditor/..."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[var(--color-primary)] hover:underline"
+                >
+                  Chrome Web Store
+                </a>
+                )
+              </li>
+              <li>Pin the extension and click its icon to open the side panel</li>
+              <li>Click the gear icon in the top-right of the side panel to open Settings</li>
+              <li>
+                Set API URL to:{" "}
+                <code className="bg-[var(--color-surface)] px-2 py-1 rounded text-xs">https://surven.ai/api/audit/run</code>
+              </li>
+              <li>Paste your API key (above) into the API Key field</li>
+              <li>Click Save — you're ready to audit any site you visit</li>
             </ol>
           </div>
         </div>
