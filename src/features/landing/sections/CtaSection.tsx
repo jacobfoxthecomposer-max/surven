@@ -23,8 +23,8 @@ export function CtaSection() {
               <em className="italic font-normal text-[#96A283]">you show up?</em>
             </h2>
             <p className="text-[#C8C2B4] text-base max-w-md mx-auto leading-relaxed">
-              Join businesses already tracking their AI visibility with Surven.
-              Free to start — no credit card required.
+              See exactly how ChatGPT, Claude, Gemini, and Google AI talk
+              about your business — in under a minute. Free to start, no credit card required.
             </p>
             <div className="pt-2">
               <Link href="/signup">

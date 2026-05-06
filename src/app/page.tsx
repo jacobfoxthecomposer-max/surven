@@ -5,6 +5,7 @@ import { ValuePropsSection } from "@/features/landing/sections/ValuePropsSection
 import { HowItWorksSection } from "@/features/landing/sections/HowItWorksSection";
 import { PricingSection } from "@/features/landing/sections/PricingSection";
 import { StatsSection } from "@/features/landing/sections/StatsSection";
+import { FaqSection } from "@/features/landing/sections/FaqSection";
 import { CtaSection } from "@/features/landing/sections/CtaSection";
 import { Footer } from "@/features/landing/sections/Footer";
 
@@ -31,6 +32,7 @@ export default function LandingPage() {
       <HowItWorksSection />
       <PricingSection />
       <StatsSection />
+      <FaqSection />
       <CtaSection />
       <Footer />
     </>

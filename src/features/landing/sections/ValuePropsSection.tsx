@@ -61,7 +61,8 @@ export function ValuePropsSection() {
             <em className="italic font-normal text-[var(--color-primary)]">own AI search</em>
           </h2>
           <p className="mt-4 text-[var(--color-fg-secondary)] max-w-xl mx-auto">
-            The same intelligence as enterprise GEO tools — without the enterprise price tag.
+            Track your visibility across every major AI engine, score every prompt,
+            spot every citation gap, and compare every competitor — from one dashboard.
           </p>
         </ScrollReveal>
       </div>

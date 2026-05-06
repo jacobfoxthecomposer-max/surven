@@ -34,21 +34,21 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
     // Treated as Trial / post-trial fallback. No permanent free product.
     label: "Trial",
     maxCompetitors: 1,
-    maxPrompts: 6, // defaults only — no custom adds
+    maxPrompts: 50,
     scansPerDay: 5,
     blursPremiumData: true,
   },
   plus: {
     label: "Plus",
     maxCompetitors: 1,
-    maxPrompts: 15,
+    maxPrompts: 150,
     scansPerDay: 10,
     blursPremiumData: false,
   },
   premium: {
     label: "Premium",
     maxCompetitors: 5,
-    maxPrompts: 50,
+    maxPrompts: 300,
     scansPerDay: 20,
     blursPremiumData: false,
   },

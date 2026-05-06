@@ -17,8 +17,9 @@ const plans = [
     yearlyPrice: 39,
     highlight: false,
     features: [
-      "5 AI visibility scans / day",
-      "ChatGPT, Claude & Gemini tracking",
+      "10 AI visibility scans / day",
+      "150 prompts per scan across 4 AI engines",
+      "ChatGPT, Claude, Gemini & Google AI tracking",
       "Competitor mention tracking",
       "Full visibility score & history",
       "Chrome extension (site auditor)",
@@ -35,7 +36,8 @@ const plans = [
     highlight: true,
     features: [
       "20 AI visibility scans / day",
-      "ChatGPT, Claude & Gemini tracking",
+      "300 prompts per scan across 4 AI engines",
+      "ChatGPT, Claude, Gemini & Google AI tracking",
       "Competitor mention tracking",
       "Full visibility score & history",
       "Chrome extension (site auditor)",
@@ -204,7 +206,7 @@ export function PricingSection() {
                     </a>
                   ) : (
                     <Link
-                      href={isFirstTime ? plan.button.href : "/pricing"}
+                      href={isFirstTime ? plan.button.href : `/contact?upgrade=${plan.id}`}
                       className={cn(
                         "flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg text-sm font-semibold transition-all",
                         plan.highlight

@@ -4,13 +4,16 @@ import { useState } from "react";
 import { Trash2, Plus, Search } from "lucide-react";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
 import { useSearchPrompts } from "@/features/business/hooks/useSearchPrompts";
+import { useUserProfile } from "@/features/auth/hooks/useUserProfile";
 import { useToast } from "@/components/molecules/Toast";
 import { Button } from "@/components/atoms/Button";
 import { Input } from "@/components/atoms/Input";
 import { Card } from "@/components/atoms/Card";
+import { getPromptCountForPlan } from "@/utils/constants";
 
 export function PromptsTab() {
   const { business } = useBusiness();
+  const { profile } = useUserProfile();
   const { prompts, isLoading, addPrompt, deletePrompt, isAdding, isDeleting } =
     useSearchPrompts(business?.id);
   const { toast } = useToast();
@@ -110,7 +113,7 @@ export function PromptsTab() {
 
       <p className="text-xs text-[var(--color-fg-muted)]">
         {prompts.length} custom prompt{prompts.length !== 1 ? "s" : ""} ·{" "}
-        {6 + prompts.length} total prompts per scan
+        {getPromptCountForPlan(profile?.plan)}+ prompts per scan on your plan
       </p>
     </div>
   );
