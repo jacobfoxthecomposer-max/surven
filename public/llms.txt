@@ -1,7 +1,7 @@
 # Surven — AI Visibility Tracker
 
-> GitHub hosts jacobfoxthecomposer-max&#x27;s Surven project in San Francisco, CA, offering JSON-LD schema for businesses to track AI visibility.
+> Surven tracks your visibility across ChatGPT, Claude, Gemini, and Google AI. See how often AI engines recommend your business and where you're losing visibility to competitors.
 
 ## Products & Services
 
-- [Surven — AI Visibility Tracker](https://surven.vercel.app/pricing)
+- [Surven — AI Visibility Tracker](https://surven.ai/pricing)
