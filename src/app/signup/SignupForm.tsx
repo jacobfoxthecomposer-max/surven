@@ -48,6 +48,8 @@ export function SignupForm() {
   const { signUp } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileInstance | null>(null);
 
   const {
     register,
@@ -70,11 +72,35 @@ export function SignupForm() {
   async function onSubmit(data: SignUpInput) {
     setLoading(true);
     try {
+      // Bot-check: only enforced when site key is configured. Without keys
+      // (local dev), the verify route short-circuits to success.
+      if (TURNSTILE_SITE_KEY && !turnstileToken) {
+        toast("Please complete the bot check before submitting.", "error");
+        setLoading(false);
+        return;
+      }
+
+      const verifyRes = await fetch("/api/auth/verify-turnstile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: turnstileToken }),
+      });
+      const verifyData = (await verifyRes.json()) as { success: boolean };
+      if (!verifyData.success) {
+        toast("Bot check failed. Please try again.", "error");
+        turnstileRef.current?.reset();
+        setTurnstileToken(null);
+        setLoading(false);
+        return;
+      }
+
       await signUp(data.email, data.password);
       toast("Account created! Let's set up your business.", "success");
       router.push("/onboarding");
     } catch (err: unknown) {
       toast(humanizeAuthError(err), "error");
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
     } finally {
       setLoading(false);
     }
