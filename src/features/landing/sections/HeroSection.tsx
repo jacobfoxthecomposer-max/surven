@@ -161,7 +161,7 @@ export function HeroSection() {
       />
 
       {/* Two-column layout */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-12 lg:gap-16 items-start pt-16 pb-12">
+      <div className="relative z-10 w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-[clamp(2rem,4vw,4rem)] items-start pt-[clamp(3rem,5vw,5rem)] pb-[clamp(2rem,3vw,3.5rem)]">
 
         {/* LEFT: Copy */}
         <div className="flex flex-col gap-7 mt-8">
@@ -182,8 +182,16 @@ export function HeroSection() {
             transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
           >
             <h1
+<<<<<<< HEAD
               className="text-5xl sm:text-6xl lg:text-6xl xl:text-7xl font-light leading-[1.08] tracking-tight text-[var(--color-fg)]"
               style={{ fontFamily: "var(--font-display)" }}
+=======
+              className="font-light leading-[1.08] tracking-tight text-[var(--color-fg)]"
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "clamp(2.75rem, 4.5vw + 1rem, 4.75rem)",
+              }}
+>>>>>>> 8d9d4a6 (fix(hero): fluid typography + cursor wrap fix)
             >
               AI is ignoring
               <br />
@@ -191,9 +199,15 @@ export function HeroSection() {
                 <span
                   className="absolute -z-10"
                   style={{
+<<<<<<< HEAD
                     inset: "-6px -14px",
                     border: "2px dashed var(--color-primary)",
                     borderRadius: "16px",
+=======
+                    inset: "-0.1em -0.18em",
+                    border: "2px dashed var(--color-primary)",
+                    borderRadius: "0.22em",
+>>>>>>> 8d9d4a6 (fix(hero): fluid typography + cursor wrap fix)
                   }}
                 />
                 <em
@@ -201,13 +215,23 @@ export function HeroSection() {
                     fontFamily: "var(--font-display)",
                     fontStyle: "italic",
                     color: "var(--color-primary)",
+<<<<<<< HEAD
+=======
+                    whiteSpace: "nowrap",
+>>>>>>> 8d9d4a6 (fix(hero): fluid typography + cursor wrap fix)
                   }}
                 >
                   {typed}
                   <span
+<<<<<<< HEAD
                     className={`inline-block w-[2px] ml-1 align-middle ${isResting ? "" : "animate-pulse"}`}
                     style={{
                       height: "0.85em",
+=======
+                    className={`inline-block w-[2px] ml-1 align-baseline ${isResting ? "" : "animate-pulse"}`}
+                    style={{
+                      height: "0.75em",
+>>>>>>> 8d9d4a6 (fix(hero): fluid typography + cursor wrap fix)
                       backgroundColor: "var(--color-primary)",
                       opacity: isResting ? 0.85 : 0.7,
                     }}
@@ -222,7 +246,12 @@ export function HeroSection() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+<<<<<<< HEAD
             className="text-base sm:text-lg text-[var(--color-fg-secondary)] max-w-lg leading-relaxed"
+=======
+            className="text-[var(--color-fg-secondary)] max-w-lg leading-relaxed"
+            style={{ fontSize: "clamp(0.95rem, 0.4vw + 0.85rem, 1.2rem)" }}
+>>>>>>> 8d9d4a6 (fix(hero): fluid typography + cursor wrap fix)
           >
             ChatGPT, Claude, Gemini, and Google AI answer millions of buying questions
             every day. If your business isn&apos;t in their answers, your competitors
