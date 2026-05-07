@@ -60,7 +60,8 @@ import { DashboardKpiStrip } from "@/features/dashboard/components/DashboardKpiS
 import { buildDashboardHero } from "@/features/dashboard/utils/heroSentence";
 import { exportScanResultsAsCsv } from "@/utils/csvExport";
 import { AI_MODELS } from "@/utils/constants";
-import type { ScanResult } from "@/types/database";
+import { runMockScan } from "@/services/mockScanEngine";
+import type { Scan, ScanResult, ScanWithResults } from "@/types/database";
 
 const MODEL_LABELS: Record<ScanResult["model_name"], string> = {
   chatgpt: "ChatGPT",
@@ -158,8 +159,8 @@ function DashboardPageContent() {
   }
 
   function handleExport() {
-    if (!latestScan || !business) return;
-    exportScanResultsAsCsv(latestScan, business.name);
+    if (!effectiveLatestScan || !business) return;
+    exportScanResultsAsCsv(effectiveLatestScan, business.name);
   }
 
   async function handleRunScan() {
@@ -192,10 +193,78 @@ function DashboardPageContent() {
   }, [business, latestScan, scanning, scanLoading, searchParams, router, runScan, toast]);
 
   // ── Hooks above must run unconditionally; keep auth/loading branches below.
-  const score = latestScan?.visibility_score ?? 0;
-  const allResults = latestScan?.results ?? [];
   const competitorList = competitors;
   const competitorNames = competitorList.map((c) => c.name);
+
+  // ── Mock-data fallback ───────────────────────────────────────────────
+  // When Supabase has no scan yet (placeholder env, fresh dev machine, or
+  // a brand-new business that hasn't run its first scan), synthesize a
+  // ScanWithResults using runMockScan — the SAME engine that powers the
+  // mock fallback on /api/scan and the mock-data layer used across the
+  // rest of the site. This keeps the dashboard populated for design QA
+  // and demos. Real scans (when available) take priority.
+  const effectiveLatestScan = useMemo<ScanWithResults | null>(() => {
+    if (latestScan) return latestScan;
+    if (!business) return null;
+    const mock = runMockScan({
+      businessName: business.name,
+      industry: business.industry,
+      city: business.city,
+      state: business.state,
+      competitors: competitorNames,
+    });
+    const now = new Date().toISOString();
+    return {
+      id: "mock-scan-latest",
+      business_id: business.id,
+      visibility_score: mock.visibilityScore,
+      scan_type: "manual",
+      model_scores: null,
+      created_at: now,
+      results: mock.results.map((r, i) => ({
+        ...r,
+        id: `mock-scan-result-${i}`,
+        scan_id: "mock-scan-latest",
+        created_at: now,
+      })),
+    };
+    // Note: competitorNames is already a derived array; depend on its
+    // joined identity to avoid re-running mockScan on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [latestScan, business, competitorNames.join("|")]);
+
+  // 6 weekly history points anchored to the effective-latest score so the
+  // history chart has a meaningful trend to draw when Supabase is empty.
+  const effectiveHistory = useMemo<Scan[]>(() => {
+    if (history.length > 0) return history;
+    if (!business || !effectiveLatestScan) return [];
+    const now = Date.now();
+    const points: Scan[] = [];
+    for (let i = 0; i < 6; i++) {
+      const created = new Date(now - i * 7 * 24 * 60 * 60 * 1000);
+      // Walk the score backward by ~1.5pts/week with ±4pt jitter so the
+      // line breathes without getting wild.
+      const drift = i * 1.5;
+      const jitter = (((i * 73) % 9) - 4) * 0.6;
+      const score = Math.max(
+        0,
+        Math.min(100, effectiveLatestScan.visibility_score - drift + jitter),
+      );
+      points.push({
+        id: `mock-history-${i}`,
+        business_id: business.id,
+        visibility_score: Math.round(score * 10) / 10,
+        scan_type: i === 0 ? "manual" : "automated",
+        model_scores: null,
+        created_at: created.toISOString(),
+      });
+    }
+    // Reverse so the chart x-axis runs oldest → newest.
+    return points.reverse();
+  }, [history, business, effectiveLatestScan]);
+
+  const score = effectiveLatestScan?.visibility_score ?? 0;
+  const allResults = effectiveLatestScan?.results ?? [];
 
   // Apply engine filter — every results-derived section uses this.
   const results = useMemo(
@@ -206,33 +275,33 @@ function DashboardPageContent() {
   // Apply time range to history (chart only). Range cutoffs in days; "ytd"
   // and "all" handled explicitly. Custom ranges use the from/to ISO pair.
   const filteredHistory = useMemo(() => {
-    if (history.length === 0) return history;
+    if (effectiveHistory.length === 0) return effectiveHistory;
     const now = Date.now();
     const cutoffDays: Partial<Record<TimeRangeKey, number>> = {
       "14d": 14,
       "30d": 30,
       "90d": 90,
     };
-    if (timeRange === "all") return history;
+    if (timeRange === "all") return effectiveHistory;
     if (timeRange === "ytd") {
       const startOfYear = new Date(new Date().getFullYear(), 0, 1).getTime();
-      return history.filter(
+      return effectiveHistory.filter(
         (s) => new Date(s.created_at).getTime() >= startOfYear,
       );
     }
     if (timeRange === "custom" && customRange) {
       const fromTs = new Date(customRange.from + "T00:00:00").getTime();
       const toTs = new Date(customRange.to + "T23:59:59").getTime();
-      return history.filter((s) => {
+      return effectiveHistory.filter((s) => {
         const t = new Date(s.created_at).getTime();
         return t >= fromTs && t <= toTs;
       });
     }
     const days = cutoffDays[timeRange];
-    if (!days) return history;
+    if (!days) return effectiveHistory;
     const cutoff = now - days * 24 * 60 * 60 * 1000;
-    return history.filter((s) => new Date(s.created_at).getTime() >= cutoff);
-  }, [history, timeRange, customRange]);
+    return effectiveHistory.filter((s) => new Date(s.created_at).getTime() >= cutoff);
+  }, [effectiveHistory, timeRange, customRange]);
 
   const hero = useMemo(
     () =>
@@ -241,9 +310,9 @@ function DashboardPageContent() {
           ? { industry: business.industry, city: business.city, state: business.state }
           : null,
         results,
-        lastScanDate: latestScan?.created_at ?? null,
+        lastScanDate: effectiveLatestScan?.created_at ?? null,
       }),
-    [business, results, latestScan?.created_at],
+    [business, results, effectiveLatestScan?.created_at],
   );
 
   const topMentionedCompetitorMemo = useMemo(() => {
@@ -326,7 +395,10 @@ function DashboardPageContent() {
     return null;
   }
 
-  const hasScan = !!latestScan;
+  // hasScan = "show populated dashboard." True when we have any data,
+  // real OR mock-fallback. Empty state only fires when there's no
+  // business to even synthesize from.
+  const hasScan = !!effectiveLatestScan;
   const noResults = results.length === 0 && !scanLoading;
 
   return (
