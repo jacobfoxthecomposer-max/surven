@@ -48,7 +48,7 @@ export function FaqSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <section className="py-24 px-4 bg-[var(--color-bg)]">
+    <section id="faq" className="scroll-mt-20 py-24 px-4 bg-[var(--color-bg)]">
       <div className="max-w-3xl mx-auto">
         <ScrollReveal className="text-center mb-12">
           <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-fg-muted)] mb-3 block">
