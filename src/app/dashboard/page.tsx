@@ -46,7 +46,7 @@ import { useToast } from "@/components/molecules/Toast";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
 import { useScan } from "@/features/dashboard/hooks/useScan";
-import { GaugeSection } from "@/features/dashboard/pages/GaugeSection";
+import { VisibilityScoreGauge } from "@/components/atoms/VisibilityScoreGauge";
 import {
   ChartCard,
   MOCK_BRANDS,
@@ -484,15 +484,26 @@ function DashboardPageContent() {
             <NextScanCard />
           </div>
 
-          {/* Tracker-style visibility chart card lives INSIDE the hero
-              block at the top of the data area. Identical chrome to the
-              one on /ai-visibility-tracker — glowing YOU line, end-of-
-              line dual pill, hover-to-highlight, Focus / Full toggle, and
-              the period-over-period delta pill in the header — but
-              shorter (chartHeight=300) so it fits the dashboard hero's
-              shape. */}
+          {/* Visibility gauge sits directly above the over-time chart so
+              the at-a-glance number lives next to the trend line. Atom is
+              used directly (no wrapping section card) — that's the chrome
+              the user wanted gone. */}
           {hasScan && (
-            <div className="mt-5">
+            <div className="mt-5 flex justify-center">
+              <VisibilityScoreGauge
+                score={scannerData.youToday}
+                delta={scannerData.youDelta}
+              />
+            </div>
+          )}
+
+          {/* Tracker-style visibility chart card. Same chrome as
+              /ai-visibility-tracker — glowing YOU line, end-of-line dual
+              pill, hover-to-highlight, Focus / Full toggle, period-over-
+              period delta pill in the header. Shorter (chartHeight=300)
+              so it fits the dashboard hero's shape. */}
+          {hasScan && (
+            <div className="mt-4">
               <ChartCard
                 data={scannerData}
                 treatment={TREATMENT_STANDARD_LABEL}
@@ -519,18 +530,10 @@ function DashboardPageContent() {
           )}
         </motion.div>
 
-        {/* ─── 4. Trio: Gauge + What's Next ───────────────────────────── */}
-        <motion.div
-          {...reveal}
-          className="grid grid-cols-1 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)] gap-4 items-stretch"
-        >
-          <GaugeSection
-            score={score}
-            hasScan={hasScan}
-            scanning={scanning}
-            isLoading={scanLoading}
-            onRunScan={handleRunScan}
-          />
+        {/* ─── 4. What's Next ─────────────────────────────────────────── */}
+        {/* Visibility gauge moved INTO the hero (above the chart card);
+            this row is now just the actions card on its own. */}
+        <motion.div {...reveal}>
           <WhatsNextCard />
         </motion.div>
 
