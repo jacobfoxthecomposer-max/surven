@@ -10,7 +10,7 @@ import { ScrollReveal } from "@/components/molecules/ScrollReveal";
 /* -------------------------------------------------------------------------- */
 
 const SCENE_1_MS = 4800; // typing + cursor moves + click + zoom-in scan
-const SCENE_2_MS = 4200; // engines querying with dramatic checkmarks
+const SCENE_2_MS = 1400; // engines querying with dramatic checkmarks (snappy)
 // Scene 3 = ~2.1s for the slowest stat animation (chart end-dot) to finish
 // + 2s dwell before the loop restarts.
 const SCENE_3_MS = 4200;
@@ -26,10 +26,10 @@ const TYPE_CHAR_MS = 70;
 type EnginePhase = "idle" | "loading" | "done";
 
 const ENGINES: { name: string; finishAt: number; mentions: number; share: number }[] = [
-  { name: "ChatGPT", finishAt: 900, mentions: 12, share: 84 },
-  { name: "Claude", finishAt: 1800, mentions: 8, share: 71 },
-  { name: "Gemini", finishAt: 2700, mentions: 10, share: 65 },
-  { name: "Google AI", finishAt: 3600, mentions: 15, share: 72 },
+  { name: "ChatGPT", finishAt: 200, mentions: 12, share: 84 },
+  { name: "Claude", finishAt: 400, mentions: 8, share: 71 },
+  { name: "Gemini", finishAt: 600, mentions: 10, share: 65 },
+  { name: "Google AI", finishAt: 800, mentions: 15, share: 72 },
 ];
 
 const PROMPTS: { text: string; mentioned: boolean; engine: string | null }[] = [
