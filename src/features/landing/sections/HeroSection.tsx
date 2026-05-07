@@ -194,15 +194,9 @@ export function HeroSection() {
                 <span
                   className="absolute -z-10"
                   style={{
-<<<<<<< HEAD
-                    inset: "-6px -14px",
-                    border: "2px dashed var(--color-primary)",
-                    borderRadius: "16px",
-=======
                     inset: "-0.1em -0.18em",
                     border: "2px dashed var(--color-primary)",
                     borderRadius: "0.22em",
->>>>>>> 8d9d4a6 (fix(hero): fluid typography + cursor wrap fix)
                   }}
                 />
                 <em
