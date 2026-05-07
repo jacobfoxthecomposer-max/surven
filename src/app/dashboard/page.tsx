@@ -346,7 +346,42 @@ function DashboardPageContent() {
     return { label: "Open Code Scanner", href: "/site-audit" };
   }
 
-  // Auth protection
+  // ── Tracker-style visibility chart data ─────────────────────────────
+  // Same data shape + hook the AI Visibility Tracker uses, so the
+  // ChartCard rendered on the dashboard is byte-identical to the Tracker
+  // (gauge, glowing YOU line, end-of-line dual pill, hover-to-highlight,
+  // delta pill in the header). RangeN translates the dashboard's
+  // TimeRangeKey to a day count using the same map MOCK_BRANDS does.
+  // IMPORTANT: these hooks must run unconditionally on every render —
+  // never put them after the auth/loading early-return guards below or
+  // React throws "Rendered more hooks than during the previous render."
+  const rangeN = useMemo(() => {
+    const map: Record<string, number> = { "14d": 14, "30d": 30, "90d": 90 };
+    if (timeRange === "all") return MOCK_N;
+    if (timeRange === "ytd") {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), 0, 1);
+      const days = Math.ceil((now.getTime() - start.getTime()) / 86400000);
+      return Math.max(2, Math.min(MOCK_N, days));
+    }
+    if (timeRange === "custom" && customRange) {
+      const from = new Date(customRange.from + "T00:00:00").getTime();
+      const to = new Date(customRange.to + "T23:59:59").getTime();
+      const days = Math.ceil((to - from) / 86400000);
+      return Math.max(2, Math.min(MOCK_N, days));
+    }
+    return map[timeRange] ?? MOCK_N;
+  }, [timeRange, customRange]);
+
+  const scannerData = useScannerData(MOCK_BRANDS, MOCK_DATES, rangeN, enabledEngineIds);
+  const enabledBrandIds = useMemo<Set<string>>(
+    () => new Set(MOCK_BRANDS.map((b) => b.id)),
+    [],
+  );
+
+  // Auth protection — early returns must come AFTER all hooks have
+  // executed for this render so the hook order stays stable across
+  // mounts (React's Rules of Hooks).
   if (!user && !authLoading) {
     router.push("/login");
     return null;
@@ -372,36 +407,6 @@ function DashboardPageContent() {
   // business to even synthesize from.
   const hasScan = !!effectiveLatestScan;
   const noResults = results.length === 0 && !scanLoading;
-
-  // ── Tracker-style visibility chart data ─────────────────────────────
-  // Same data shape + hook the AI Visibility Tracker uses, so the
-  // ChartCard rendered on the dashboard is byte-identical to the Tracker
-  // (gauge, glowing YOU line, end-of-line dual pill, hover-to-highlight,
-  // delta pill in the header). RangeN translates the dashboard's
-  // TimeRangeKey to a day count using the same map MOCK_BRANDS does.
-  const rangeN = useMemo(() => {
-    const map: Record<string, number> = { "14d": 14, "30d": 30, "90d": 90 };
-    if (timeRange === "all") return MOCK_N;
-    if (timeRange === "ytd") {
-      const now = new Date();
-      const start = new Date(now.getFullYear(), 0, 1);
-      const days = Math.ceil((now.getTime() - start.getTime()) / 86400000);
-      return Math.max(2, Math.min(MOCK_N, days));
-    }
-    if (timeRange === "custom" && customRange) {
-      const from = new Date(customRange.from + "T00:00:00").getTime();
-      const to = new Date(customRange.to + "T23:59:59").getTime();
-      const days = Math.ceil((to - from) / 86400000);
-      return Math.max(2, Math.min(MOCK_N, days));
-    }
-    return map[timeRange] ?? MOCK_N;
-  }, [timeRange, customRange]);
-
-  const scannerData = useScannerData(MOCK_BRANDS, MOCK_DATES, rangeN, enabledEngineIds);
-  const enabledBrandIds = useMemo<Set<string>>(
-    () => new Set(MOCK_BRANDS.map((b) => b.id)),
-    [],
-  );
 
   return (
     <DashboardLayout>
