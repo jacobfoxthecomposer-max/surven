@@ -353,7 +353,9 @@ function DashboardPageContent() {
                   fontFamily: "var(--font-display)",
                   fontSize: "clamp(36px, 4.6vw, 60px)",
                   fontWeight: 600,
-                  lineHeight: 1.12,
+                  // Tight line-height (1.0) trims the descender space below
+                  // the period so the filter row sits visually flush.
+                  lineHeight: 1.0,
                   letterSpacing: "-0.01em",
                   color: "var(--color-fg)",
                 }}
@@ -370,10 +372,11 @@ function DashboardPageContent() {
             </div>
           </div>
 
-          {/* Filter row sits TIGHT to the title (mt-3 = 12px) — the
-              title-to-filter gap was the empty cream Joey called out;
-              other vertical gaps stay at 20px (mt-5). */}
-          <div className="flex flex-wrap items-center gap-3 mt-3">
+          {/* Filter row sits directly under the title baseline. mt-2 (8px)
+              pairs with the title's line-height: 1.0 above so the chips
+              read as "directly underneath" — no descender slack, no
+              decorative cream gap. */}
+          <div className="flex flex-wrap items-center gap-3 mt-2">
             <TimeRangeDropdown
               value={timeRange}
               customFrom={customRange?.from}
