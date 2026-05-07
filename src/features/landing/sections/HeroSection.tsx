@@ -182,16 +182,11 @@ export function HeroSection() {
             transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
           >
             <h1
-<<<<<<< HEAD
-              className="text-5xl sm:text-6xl lg:text-6xl xl:text-7xl font-light leading-[1.08] tracking-tight text-[var(--color-fg)]"
-              style={{ fontFamily: "var(--font-display)" }}
-=======
               className="font-light leading-[1.08] tracking-tight text-[var(--color-fg)]"
               style={{
                 fontFamily: "var(--font-display)",
                 fontSize: "clamp(2.75rem, 4.5vw + 1rem, 4.75rem)",
               }}
->>>>>>> 8d9d4a6 (fix(hero): fluid typography + cursor wrap fix)
             >
               AI is ignoring
               <br />
