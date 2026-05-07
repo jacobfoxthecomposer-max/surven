@@ -127,19 +127,16 @@ export function ProductPreviewSection() {
 function PreviewBrowserFrame() {
   const reduced = useReducedMotion();
   const [scene, setScene] = useState<1 | 2 | 3>(reduced ? 3 : 1);
-  const [paused, setPaused] = useState(false);
   const [iteration, setIteration] = useState(0);
 
-  // Self-cycling loop. The effect only re-runs when paused/reduced toggle,
-  // never when iteration changes — that would cause races on every loop.
-  // A `cancelled` flag short-circuits any in-flight timer that fires after
-  // unmount or pause, so state can never desync.
+  // Self-cycling loop. Effect runs once on mount (re-runs only if the
+  // OS reduce-motion preference flips). A `cancelled` flag short-circuits
+  // any in-flight timer that fires after unmount, so state can never desync.
   useEffect(() => {
     if (reduced) {
       setScene(3);
       return;
     }
-    if (paused) return;
 
     let cancelled = false;
     const timers: number[] = [];
@@ -169,14 +166,10 @@ function PreviewBrowserFrame() {
       cancelled = true;
       timers.forEach(clearTimeout);
     };
-  }, [paused, reduced]);
+  }, [reduced]);
 
   return (
-    <div
-      onMouseEnter={() => !reduced && setPaused(true)}
-      onMouseLeave={() => !reduced && setPaused(false)}
-      className="mx-auto w-full max-w-5xl rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] shadow-2xl overflow-hidden"
-    >
+    <div className="mx-auto w-full max-w-5xl rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] shadow-2xl overflow-hidden">
       {/* Faux browser chrome */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]">
         <div className="flex items-center gap-1.5">
