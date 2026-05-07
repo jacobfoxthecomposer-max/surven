@@ -88,6 +88,14 @@ const FAQ_SCHEMA = {
     },
     {
       "@type": "Question",
+      name: "How is Surven different from regular SEO?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "SEO is about ranking on Google's classic blue-link search results. Surven tracks something newer: whether ChatGPT, Claude, Gemini, and Google AI actually mention your business when people ask them for recommendations. AI tools weight different signals than Google search, pull from different directories, and increasingly answer questions before people ever click through to a search engine. SEO and AI visibility (GEO) overlap, but they aren't the same — Surven is built specifically for the AI side.",
+      },
+    },
+    {
+      "@type": "Question",
       name: "How does Surven help improve AI visibility?",
       acceptedAnswer: {
         "@type": "Answer",
