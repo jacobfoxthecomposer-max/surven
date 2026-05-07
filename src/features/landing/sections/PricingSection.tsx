@@ -72,7 +72,7 @@ export function PricingSection() {
 
   return (
     <section id="pricing" className="scroll-mt-20 py-24 px-6">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col items-center gap-4 text-center mb-12">
           <p className="text-sm font-semibold text-[var(--color-primary)] uppercase tracking-widest">
