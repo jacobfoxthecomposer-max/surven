@@ -170,7 +170,7 @@ export function HistoryView({ apiUrl, apiKey, onBack }: HistoryViewProps) {
   }
 
   return (
-    <div style={{ padding: "16px", fontFamily: "var(--font-inter), -apple-system, sans-serif", background: CREAM, minHeight: "100vh" }}>
+    <div style={{ padding: "16px", fontFamily: "var(--font-inter), -apple-system, sans-serif", background: CREAM, height: "100vh", overflowY: "auto" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
         <button
           onClick={onBack}
