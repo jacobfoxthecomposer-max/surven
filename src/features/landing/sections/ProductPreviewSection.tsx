@@ -9,10 +9,11 @@ import { ScrollReveal } from "@/components/molecules/ScrollReveal";
 /*  Scene timing                                                               */
 /* -------------------------------------------------------------------------- */
 
-const SCENE_1_MS = 3500; // typing + click
-const SCENE_2_MS = 3500; // engines querying
-const SCENE_3_MS = 5500; // results populate
-const PAUSE_MS = 1500; //  hold finished state, then loop
+const SCENE_1_MS = 4800; // typing + cursor moves + click + zoom-in scan
+const SCENE_2_MS = 4200; // engines querying with dramatic checkmarks
+const SCENE_3_MS = 4500; // results populate + hold
+const PAUSE_MS = 900; //   short pause before loop
+const TOTAL_MS = SCENE_1_MS + SCENE_2_MS + SCENE_3_MS + PAUSE_MS;
 
 /* -------------------------------------------------------------------------- */
 /*  Mock content                                                               */
@@ -24,10 +25,10 @@ const TYPE_CHAR_MS = 70;
 type EnginePhase = "idle" | "loading" | "done";
 
 const ENGINES: { name: string; finishAt: number; mentions: number; share: number }[] = [
-  { name: "ChatGPT", finishAt: 700, mentions: 12, share: 84 },
-  { name: "Claude", finishAt: 1300, mentions: 8, share: 71 },
-  { name: "Gemini", finishAt: 1950, mentions: 10, share: 65 },
-  { name: "Google AI", finishAt: 2600, mentions: 15, share: 72 },
+  { name: "ChatGPT", finishAt: 900, mentions: 12, share: 84 },
+  { name: "Claude", finishAt: 1800, mentions: 8, share: 71 },
+  { name: "Gemini", finishAt: 2700, mentions: 10, share: 65 },
+  { name: "Google AI", finishAt: 3600, mentions: 15, share: 72 },
 ];
 
 const PROMPTS: { text: string; mentioned: boolean; engine: string | null }[] = [
@@ -41,7 +42,6 @@ const PROMPTS: { text: string; mentioned: boolean; engine: string | null }[] = [
 const TARGET_SCORE = 73;
 const TARGET_SCORE_DELTA = 12; // vs prior scan
 
-// 30 daily visibility points, ending at TARGET_SCORE.
 const CHART_POINTS: number[] = [
   38, 41, 39, 43, 42, 47, 45, 49, 51, 50, 53, 56, 54, 58, 60, 62, 60, 64, 63,
   66, 68, 67, 69, 71, 70, 72, 71, 73, 72, 73,
@@ -77,7 +77,6 @@ function buildChartArea(values: number[], width: number, height: number) {
 export function ProductPreviewSection() {
   return (
     <section className="relative py-24 px-4 bg-[var(--color-surface)] overflow-hidden">
-      {/* Subtle backdrop accents */}
       <div
         aria-hidden
         className="absolute -top-32 -right-32 w-[40rem] h-[40rem] rounded-full blur-3xl opacity-[0.18] pointer-events-none"
@@ -130,9 +129,9 @@ function PreviewBrowserFrame() {
   const [scene, setScene] = useState<1 | 2 | 3>(reduced ? 3 : 1);
   const [paused, setPaused] = useState(false);
   const [iteration, setIteration] = useState(0);
-  const timers = useRef<number[]>([]);
 
-  // Master loop. Each iteration steps 1 → 2 → 3 → pause → loop.
+  // Single, race-free scene driver. Each effect run owns its own `cancelled`
+  // flag so any in-flight timeouts that fire AFTER cleanup are ignored.
   useEffect(() => {
     if (reduced) {
       setScene(3);
@@ -140,18 +139,28 @@ function PreviewBrowserFrame() {
     }
     if (paused) return;
 
+    let cancelled = false;
+    const guard = (fn: () => void) => () => {
+      if (!cancelled) fn();
+    };
+
     setScene(1);
 
-    const t1 = window.setTimeout(() => setScene(2), SCENE_1_MS);
-    const t2 = window.setTimeout(() => setScene(3), SCENE_1_MS + SCENE_2_MS);
-    const t3 = window.setTimeout(() => {
-      setIteration((n) => n + 1);
-    }, SCENE_1_MS + SCENE_2_MS + SCENE_3_MS + PAUSE_MS);
+    const t1 = window.setTimeout(guard(() => setScene(2)), SCENE_1_MS);
+    const t2 = window.setTimeout(
+      guard(() => setScene(3)),
+      SCENE_1_MS + SCENE_2_MS,
+    );
+    const t3 = window.setTimeout(
+      guard(() => setIteration((n) => n + 1)),
+      TOTAL_MS,
+    );
 
-    timers.current = [t1, t2, t3];
     return () => {
-      timers.current.forEach((id) => clearTimeout(id));
-      timers.current = [];
+      cancelled = true;
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
     };
   }, [iteration, paused, reduced]);
 
@@ -178,8 +187,8 @@ function PreviewBrowserFrame() {
         </div>
       </div>
 
-      {/* Dashboard body */}
-      <div className="relative bg-[var(--color-bg)]">
+      {/* Dashboard body — FIXED height across all scenes */}
+      <div className="relative bg-[var(--color-bg)] h-[640px] overflow-hidden">
         <DashboardCanvas scene={scene} iteration={iteration} reduced={!!reduced} />
       </div>
     </div>
@@ -187,7 +196,7 @@ function PreviewBrowserFrame() {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Dashboard canvas — one layout, scene-driven content                        */
+/*  Dashboard canvas — every widget always present, content morphs by scene    */
 /* -------------------------------------------------------------------------- */
 
 function DashboardCanvas({
@@ -200,48 +209,48 @@ function DashboardCanvas({
   reduced: boolean;
 }) {
   return (
-    <div className="px-6 sm:px-8 py-8 sm:py-10 min-h-[460px] sm:min-h-[520px]">
+    <div className="absolute inset-0 px-6 sm:px-8 py-6 flex flex-col">
       {/* Scan bar — morphs between large-centered (scene 1) and small-top (scenes 2/3) */}
       <ScanBar scene={scene} iteration={iteration} reduced={reduced} />
 
       {/* Engines row — appears in scene 2 onward */}
-      <AnimatePresence>
-        {scene >= 2 && (
-          <motion.div
-            key={`engines-${iteration}`}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.35 }}
-            className="mt-6"
-          >
-            <EnginesRow scene={scene} iteration={iteration} reduced={reduced} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <motion.div
+        animate={{
+          opacity: scene >= 2 ? 1 : 0,
+          y: scene >= 2 ? 0 : 8,
+          height: scene >= 2 ? "auto" : 0,
+          marginTop: scene >= 2 ? 24 : 0,
+        }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        className="overflow-hidden"
+      >
+        <EnginesRow scene={scene} iteration={iteration} reduced={reduced} />
+      </motion.div>
 
-      {/* Results grid — appears in scene 3 */}
-      <AnimatePresence>
-        {scene === 3 && (
-          <motion.div
-            key={`results-${iteration}`}
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="mt-7"
-          >
-            <ResultsGrid iteration={iteration} reduced={reduced} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Results grid — always rendered, content morphs in at scene 3 */}
+      <motion.div
+        animate={{
+          opacity: scene === 3 ? 1 : 0.18,
+          y: scene === 3 ? 0 : 6,
+        }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="mt-6 flex-1"
+      >
+        <ResultsGrid
+          active={scene === 3}
+          iteration={iteration}
+          reduced={reduced}
+        />
+      </motion.div>
     </div>
   );
 }
 
 /* -------------------------------------------------------------------------- */
-/*  ScanBar — types business name, then "scans" with progress fill             */
+/*  ScanBar — typewriter + cursor + click + zoom-in scan                       */
 /* -------------------------------------------------------------------------- */
+
+type MouseStage = "hidden" | "approaching" | "hovering" | "clicking" | "leaving";
 
 function ScanBar({
   scene,
@@ -253,169 +262,278 @@ function ScanBar({
   reduced: boolean;
 }) {
   const [typed, setTyped] = useState(reduced ? TYPED_TEXT : "");
-  const [showCursor, setShowCursor] = useState(true);
+  const [textCursorVisible, setTextCursorVisible] = useState(true);
   const [scanProgress, setScanProgress] = useState(reduced ? 1 : 0);
+  const [mouseStage, setMouseStage] = useState<MouseStage>("hidden");
+  const [buttonPressed, setButtonPressed] = useState(false);
+  const [zoomActive, setZoomActive] = useState(false);
 
-  // Typewriter — runs whenever scene 1 starts (each iteration).
+  // Scripted scene-1 sequence with proper cancellation.
   useEffect(() => {
     if (reduced) {
       setTyped(TYPED_TEXT);
       setScanProgress(1);
+      setMouseStage("hidden");
+      setZoomActive(false);
       return;
     }
-    if (scene !== 1) return;
+    if (scene !== 1) {
+      setMouseStage("hidden");
+      setZoomActive(false);
+      return;
+    }
+
+    let cancelled = false;
+    const guard = (fn: () => void) => () => {
+      if (!cancelled) fn();
+    };
 
     setTyped("");
     setScanProgress(0);
-    let i = 0;
-    const t = window.setInterval(() => {
-      i += 1;
-      setTyped(TYPED_TEXT.slice(0, i));
-      if (i >= TYPED_TEXT.length) {
-        clearInterval(t);
-      }
-    }, TYPE_CHAR_MS);
+    setButtonPressed(false);
+    setMouseStage("hidden");
+    setZoomActive(false);
 
-    // Once typing is done, fill the scan progress bar.
-    const fillStart = TYPED_TEXT.length * TYPE_CHAR_MS + 350;
-    const fillTimer = window.setTimeout(() => {
-      const start = performance.now();
-      const dur = 850;
-      function frame(now: number) {
-        const p = Math.min(1, (now - start) / dur);
-        setScanProgress(p);
-        if (p < 1) requestAnimationFrame(frame);
+    const timers: number[] = [];
+
+    // 1. Type characters one by one.
+    let charIdx = 0;
+    const typeInt = window.setInterval(() => {
+      if (cancelled) {
+        clearInterval(typeInt);
+        return;
       }
-      requestAnimationFrame(frame);
-    }, fillStart);
+      charIdx += 1;
+      setTyped(TYPED_TEXT.slice(0, charIdx));
+      if (charIdx >= TYPED_TEXT.length) clearInterval(typeInt);
+    }, TYPE_CHAR_MS);
+    const typingDoneAt = TYPED_TEXT.length * TYPE_CHAR_MS;
+
+    // 2. Cursor enters from off-canvas + glides toward button.
+    timers.push(
+      window.setTimeout(guard(() => setMouseStage("approaching")), typingDoneAt + 250),
+    );
+    timers.push(
+      window.setTimeout(guard(() => setMouseStage("hovering")), typingDoneAt + 1100),
+    );
+
+    // 3. Click — cursor presses, button presses, scan begins, zoom kicks in.
+    const clickAt = typingDoneAt + 1500;
+    timers.push(
+      window.setTimeout(
+        guard(() => {
+          setMouseStage("clicking");
+          setButtonPressed(true);
+          setZoomActive(true);
+        }),
+        clickAt,
+      ),
+    );
+    timers.push(window.setTimeout(guard(() => setButtonPressed(false)), clickAt + 200));
+    // Cursor exits AFTER scan progress completes so it doesn't ghost mid-flight.
+    timers.push(window.setTimeout(guard(() => setMouseStage("leaving")), clickAt + 1400));
+
+    // 4. Scan progress fills.
+    const fillStart = clickAt + 100;
+    timers.push(
+      window.setTimeout(
+        guard(() => {
+          const start = performance.now();
+          const dur = 1100;
+          const tick = (now: number) => {
+            if (cancelled) return;
+            const p = Math.min(1, (now - start) / dur);
+            setScanProgress(p);
+            if (p < 1) requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        }),
+        fillStart,
+      ),
+    );
 
     return () => {
-      clearInterval(t);
-      clearTimeout(fillTimer);
+      cancelled = true;
+      clearInterval(typeInt);
+      timers.forEach(clearTimeout);
     };
   }, [scene, iteration, reduced]);
 
-  // Cursor blink
+  // Text caret blink.
   useEffect(() => {
     if (reduced) return;
-    const t = setInterval(() => setShowCursor((v) => !v), 500);
+    const t = setInterval(() => setTextCursorVisible((v) => !v), 500);
     return () => clearInterval(t);
   }, [reduced]);
 
   const isBig = scene === 1;
 
   return (
-    <motion.div
-      animate={{
-        scale: isBig ? 1 : 0.92,
-      }}
-      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className={
-        isBig
-          ? "flex flex-col items-center justify-center pt-8 pb-4"
-          : "flex items-center justify-between"
-      }
-    >
-      {isBig && (
-        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-fg-muted)]">
-          New scan
-        </p>
-      )}
+    <div className={isBig ? "relative pt-2 pb-2" : "relative"}>
+      <div className={isBig ? "flex flex-col items-center justify-center" : "flex items-center justify-between"}>
+        {isBig && (
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-fg-muted)]">
+            New scan
+          </p>
+        )}
 
-      <motion.div
-        layout
-        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className={
-          isBig
-            ? "w-full max-w-xl flex flex-col gap-3"
-            : "flex-1 flex items-center gap-3"
-        }
-      >
-        <div
+        <motion.div
+          layout
+          animate={{
+            scale: isBig && zoomActive ? 1.06 : 1,
+          }}
+          transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
           className={
-            "relative flex items-center gap-2 rounded-xl border bg-[var(--color-bg)] transition-shadow " +
-            (isBig
-              ? "border-[var(--color-primary)] shadow-md px-4 py-3"
-              : "border-[var(--color-border)] px-3 py-2")
+            isBig
+              ? "relative w-full max-w-xl flex flex-col gap-3"
+              : "flex-1 flex items-center gap-3"
           }
         >
-          <Search
-            className={
-              isBig
-                ? "h-5 w-5 text-[var(--color-primary)] shrink-0"
-                : "h-4 w-4 text-[var(--color-fg-muted)] shrink-0"
-            }
-          />
-          <span
-            className={
-              "text-[var(--color-fg)] font-medium truncate " +
-              (isBig ? "text-base" : "text-sm")
-            }
-          >
-            {typed}
-            {scene === 1 && showCursor && typed.length < TYPED_TEXT.length && (
-              <span
-                aria-hidden
-                className="inline-block w-[2px] ml-0.5 align-middle"
-                style={{
-                  height: "0.95em",
-                  backgroundColor: "var(--color-primary)",
-                }}
-              />
-            )}
-          </span>
-        </div>
-
-        {/* Run scan button — visible in scene 1 only */}
-        {isBig && (
-          <motion.button
-            type="button"
-            tabIndex={-1}
-            initial={{ opacity: 0, y: 4 }}
+          <motion.div
             animate={{
-              opacity: typed.length === TYPED_TEXT.length ? 1 : 0.6,
-              y: 0,
+              boxShadow:
+                isBig && zoomActive
+                  ? "0 0 0 6px rgba(150,162,131,0.18), 0 18px 40px -12px rgba(150,162,131,0.45)"
+                  : "0 0 0 0px rgba(0,0,0,0), 0 0 0 0px rgba(0,0,0,0)",
             }}
-            transition={{ duration: 0.3 }}
-            className="relative overflow-hidden flex items-center justify-center gap-2 self-end px-5 py-2.5 rounded-lg bg-[var(--color-primary)] text-white text-sm font-semibold shadow-sm"
-            style={{ pointerEvents: "none" }}
+            transition={{ duration: 0.4 }}
+            className={
+              "relative flex items-center gap-2 rounded-xl border bg-[var(--color-bg)] " +
+              (isBig
+                ? "border-[var(--color-primary)] px-4 py-3"
+                : "border-[var(--color-border)] px-3 py-2")
+            }
           >
-            {/* Progress fill — sweeps from left after typing completes */}
-            <span
-              aria-hidden
-              className="absolute inset-y-0 left-0 bg-[var(--color-primary-hover)]"
-              style={{ width: `${scanProgress * 100}%`, transition: "none" }}
+            <Search
+              className={
+                isBig
+                  ? "h-5 w-5 text-[var(--color-primary)] shrink-0"
+                  : "h-4 w-4 text-[var(--color-fg-muted)] shrink-0"
+              }
             />
-            <span className="relative z-[1] flex items-center gap-2">
-              {scanProgress < 1 && typed.length === TYPED_TEXT.length ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Scanning…
-                </>
-              ) : (
-                <>
-                  Run Scan
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </>
+            <span
+              className={
+                "text-[var(--color-fg)] font-medium truncate " +
+                (isBig ? "text-base" : "text-sm")
+              }
+            >
+              {typed}
+              {scene === 1 && textCursorVisible && typed.length < TYPED_TEXT.length && (
+                <span
+                  aria-hidden
+                  className="inline-block w-[2px] ml-0.5 align-middle"
+                  style={{
+                    height: "0.95em",
+                    backgroundColor: "var(--color-primary)",
+                  }}
+                />
               )}
             </span>
-          </motion.button>
-        )}
-      </motion.div>
+          </motion.div>
 
-      {/* Compact "scan complete" pill on right side once results land */}
-      {!isBig && (
-        <div className="hidden sm:flex items-center gap-2 ml-4 px-3 py-1.5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary-hover)] text-xs font-semibold">
-          <Sparkles className="h-3 w-3" />
-          {scene === 3 ? "Scan complete" : "Scanning…"}
-        </div>
-      )}
+          {/* Run scan button — visible in scene 1 only */}
+          {isBig && (
+            <motion.button
+              type="button"
+              tabIndex={-1}
+              animate={{
+                opacity: typed.length === TYPED_TEXT.length ? 1 : 0.55,
+                scale: buttonPressed ? 0.96 : 1,
+              }}
+              transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+              className="relative overflow-hidden flex items-center justify-center gap-2 self-end px-5 py-2.5 rounded-lg bg-[var(--color-primary)] text-white text-sm font-semibold shadow-sm"
+              style={{ pointerEvents: "none" }}
+            >
+              <span
+                aria-hidden
+                className="absolute inset-y-0 left-0 bg-[var(--color-primary-hover)]"
+                style={{ width: `${scanProgress * 100}%`, transition: "none" }}
+              />
+              <span className="relative z-[1] flex items-center gap-2">
+                {scanProgress > 0 && scanProgress < 1 ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Scanning…
+                  </>
+                ) : (
+                  <>
+                    Run Scan
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </>
+                )}
+              </span>
+            </motion.button>
+          )}
+
+          {/* Animated mouse cursor — only mounts during scene 1 active stages */}
+          <AnimatePresence>
+            {isBig && mouseStage !== "hidden" && (
+              <MouseCursor stage={mouseStage} />
+            )}
+          </AnimatePresence>
+        </motion.div>
+
+        {/* "Scanning" / "Scan complete" pill on right side */}
+        {!isBig && (
+          <div className="hidden sm:flex items-center gap-2 ml-4 px-3 py-1.5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary-hover)] text-xs font-semibold">
+            <Sparkles className="h-3 w-3" />
+            {scene === 3 ? "Scan complete" : "Scanning…"}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---- Mouse cursor (clean version, no ghosting) ---- */
+
+function MouseCursor({ stage }: { stage: Exclude<MouseStage, "hidden"> }) {
+  // Map each stage to a single transform target. AnimatePresence handles
+  // mount/unmount; framer-motion smoothly animates between targets.
+  const targets: Record<typeof stage, { x: number; y: number; scale: number; opacity: number }> = {
+    approaching: { x: 360, y: 130, scale: 1, opacity: 1 },
+    hovering: { x: 478, y: 102, scale: 1, opacity: 1 },
+    clicking: { x: 478, y: 102, scale: 0.85, opacity: 1 },
+    leaving: { x: 540, y: 60, scale: 1, opacity: 0 },
+  };
+  const t = targets[stage];
+
+  return (
+    <motion.div
+      key="cursor"
+      initial={{ x: 560, y: 220, scale: 1, opacity: 0 }}
+      animate={t}
+      exit={{ opacity: 0, transition: { duration: 0.15 } }}
+      transition={{
+        x: { duration: 0.85, ease: [0.16, 1, 0.3, 1] },
+        y: { duration: 0.85, ease: [0.16, 1, 0.3, 1] },
+        scale: { duration: 0.16, ease: "easeOut" },
+        opacity: { duration: 0.3 },
+      }}
+      className="pointer-events-none absolute top-0 left-0 z-30"
+      style={{ transformOrigin: "top left" }}
+    >
+      <svg
+        width="22"
+        height="26"
+        viewBox="0 0 22 26"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M2 2 L2 21 L7.2 16.5 L10.5 24 L13.5 22.7 L10.4 15.3 L17.5 14.5 Z"
+          fill="#1A1C1A"
+          stroke="#FFFFFF"
+          strokeWidth="1.4"
+          strokeLinejoin="round"
+        />
+      </svg>
     </motion.div>
   );
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Engine pills row                                                           */
+/*  Engine pills row + dramatic done celebration                               */
 /* -------------------------------------------------------------------------- */
 
 function EnginesRow({
@@ -431,7 +549,6 @@ function EnginesRow({
     reduced ? ["done", "done", "done", "done"] : ["idle", "idle", "idle", "idle"],
   );
 
-  // When scene 2 starts, each engine independently transitions idle → loading → done.
   useEffect(() => {
     if (reduced) {
       setPhases(["done", "done", "done", "done"]);
@@ -442,58 +559,160 @@ function EnginesRow({
       return;
     }
 
-    // All start loading immediately.
+    let cancelled = false;
+    const guard = (fn: () => void) => () => {
+      if (!cancelled) fn();
+    };
+
     setPhases(["loading", "loading", "loading", "loading"]);
     const timers: number[] = [];
     ENGINES.forEach((eng, i) => {
       timers.push(
-        window.setTimeout(() => {
-          setPhases((prev) => {
-            const next = [...prev];
-            next[i] = "done";
-            return next;
-          });
-        }, eng.finishAt),
+        window.setTimeout(
+          guard(() =>
+            setPhases((prev) => {
+              const next = [...prev];
+              next[i] = "done";
+              return next;
+            }),
+          ),
+          eng.finishAt,
+        ),
       );
     });
 
-    return () => timers.forEach((id) => clearTimeout(id));
+    return () => {
+      cancelled = true;
+      timers.forEach(clearTimeout);
+    };
   }, [scene, iteration, reduced]);
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-      {ENGINES.map((eng, i) => {
-        const phase = phases[i];
-        return (
-          <div
-            key={eng.name}
-            className={
-              "relative flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg border transition-colors duration-300 " +
-              (phase === "done"
-                ? "border-[var(--color-primary)] bg-[var(--color-primary)]/5"
-                : "border-[var(--color-border)] bg-[var(--color-surface)]")
-            }
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <EngineDot phase={phase} />
-              <span className="text-xs sm:text-[13px] font-semibold text-[var(--color-fg)] truncate">
-                {eng.name}
-              </span>
-            </div>
-            <span className="text-[11px] font-medium text-[var(--color-fg-muted)]">
-              {phase === "idle" && "—"}
-              {phase === "loading" && "Querying…"}
-              {phase === "done" && (
-                <span className="text-[var(--color-primary-hover)] flex items-center gap-1">
-                  <Check className="h-3 w-3" />
-                  {eng.mentions} mentions
-                </span>
-              )}
-            </span>
-          </div>
-        );
-      })}
+      {ENGINES.map((eng, i) => (
+        <EnginePill
+          key={`${iteration}-${eng.name}`}
+          name={eng.name}
+          mentions={eng.mentions}
+          phase={phases[i]}
+        />
+      ))}
     </div>
+  );
+}
+
+function EnginePill({
+  name,
+  mentions,
+  phase,
+}: {
+  name: string;
+  mentions: number;
+  phase: EnginePhase;
+}) {
+  const isDone = phase === "done";
+
+  return (
+    <motion.div
+      animate={
+        isDone
+          ? { scale: [1, 1.08, 1], y: [0, -3, 0] }
+          : { scale: 1, y: 0 }
+      }
+      transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+      className={
+        "relative flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg border overflow-hidden " +
+        (isDone
+          ? "border-[var(--color-primary)] bg-[var(--color-primary)]/8"
+          : "border-[var(--color-border)] bg-[var(--color-surface)] transition-colors duration-300")
+      }
+    >
+      {/* Done flash overlay */}
+      <AnimatePresence>
+        {isDone && (
+          <motion.span
+            aria-hidden
+            initial={{ opacity: 0.5 }}
+            animate={{ opacity: 0 }}
+            transition={{ duration: 0.7, ease: "easeOut" }}
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                "linear-gradient(120deg, rgba(150,162,131,0.55) 0%, rgba(201,169,91,0.32) 50%, rgba(150,162,131,0) 100%)",
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Done expanding ring */}
+      <AnimatePresence>
+        {isDone && (
+          <motion.span
+            aria-hidden
+            initial={{ scale: 0.6, opacity: 0.55 }}
+            animate={{ scale: 1.6, opacity: 0 }}
+            transition={{ duration: 0.7, ease: "easeOut" }}
+            className="absolute inset-0 pointer-events-none rounded-lg"
+            style={{ border: "2px solid var(--color-primary)" }}
+          />
+        )}
+      </AnimatePresence>
+
+      <div className="relative flex items-center gap-2 min-w-0">
+        <EngineDot phase={phase} />
+        <span className="text-xs sm:text-[13px] font-semibold text-[var(--color-fg)] truncate">
+          {name}
+        </span>
+      </div>
+
+      <div className="relative text-[11px] font-medium min-w-[68px] text-right">
+        <AnimatePresence mode="wait">
+          {phase === "idle" && (
+            <motion.span
+              key="idle"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-[var(--color-fg-muted)]"
+            >
+              —
+            </motion.span>
+          )}
+          {phase === "loading" && (
+            <motion.span
+              key="loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-[var(--color-fg-muted)] flex items-center gap-1 justify-end"
+            >
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Querying…
+            </motion.span>
+          )}
+          {phase === "done" && (
+            <motion.span
+              key="done"
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.35, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
+              className="text-[var(--color-primary-hover)] flex items-center gap-1.5 justify-end font-semibold"
+            >
+              <motion.span
+                initial={{ scale: 0, rotate: -25 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: "spring", stiffness: 520, damping: 14, delay: 0.04 }}
+                className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-[var(--color-primary)] text-white shadow-sm"
+              >
+                <Check className="h-2.5 w-2.5" strokeWidth={3.5} />
+              </motion.span>
+              {mentions} mentions
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
   );
 }
 
@@ -513,36 +732,67 @@ function EngineDot({ phase }: { phase: EnginePhase }) {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Results grid — gauge, chart, prompts, engine breakdown                     */
+/*  Results grid — every card always rendered, content morphs on `active`      */
 /* -------------------------------------------------------------------------- */
 
-function ResultsGrid({ iteration, reduced }: { iteration: number; reduced: boolean }) {
+function ResultsGrid({
+  active,
+  iteration,
+  reduced,
+}: {
+  active: boolean;
+  iteration: number;
+  reduced: boolean;
+}) {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 h-full">
       {/* Score card */}
-      <div className="lg:col-span-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:p-5">
+      <div className="lg:col-span-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:p-5 flex flex-col">
         <div className="flex items-center justify-between mb-2">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-fg-muted)]">
             Visibility score
           </p>
-          <span className="text-[10px] font-semibold text-[var(--color-primary-hover)] bg-[var(--color-primary)]/10 px-2 py-0.5 rounded-full">
-            +{TARGET_SCORE_DELTA} vs last
-          </span>
+          {active && (
+            <motion.span
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.7, duration: 0.3 }}
+              className="text-[10px] font-semibold text-[var(--color-primary-hover)] bg-[var(--color-primary)]/10 px-2 py-0.5 rounded-full"
+            >
+              +{TARGET_SCORE_DELTA} vs last
+            </motion.span>
+          )}
         </div>
-        <ScoreGauge target={TARGET_SCORE} iteration={iteration} reduced={reduced} />
+        <div className="flex-1 flex items-center justify-center">
+          <ScoreGauge
+            target={TARGET_SCORE}
+            active={active}
+            iteration={iteration}
+            reduced={reduced}
+          />
+        </div>
       </div>
 
       {/* Trend chart */}
-      <div className="lg:col-span-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:p-5">
+      <div className="lg:col-span-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:p-5 flex flex-col">
         <div className="flex items-center justify-between mb-2">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-fg-muted)]">
             30-day trend
           </p>
-          <span className="text-[10px] text-[var(--color-fg-muted)]">
-            150 prompts · 4 engines
-          </span>
+          {active && (
+            <motion.span
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              className="text-[10px] text-[var(--color-fg-muted)]"
+            >
+              150 prompts · 4 engines
+            </motion.span>
+          )}
         </div>
-        <TrendChart iteration={iteration} reduced={reduced} />
+        <div className="flex-1 flex items-center">
+          <TrendChart active={active} iteration={iteration} reduced={reduced} />
+        </div>
       </div>
 
       {/* Prompts table */}
@@ -550,7 +800,7 @@ function ResultsGrid({ iteration, reduced }: { iteration: number; reduced: boole
         <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-fg-muted)] mb-3">
           Top prompts
         </p>
-        <PromptsList iteration={iteration} reduced={reduced} />
+        <PromptsList active={active} iteration={iteration} reduced={reduced} />
       </div>
 
       {/* Engine share bars */}
@@ -558,7 +808,7 @@ function ResultsGrid({ iteration, reduced }: { iteration: number; reduced: boole
         <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-fg-muted)] mb-3">
           Coverage by engine
         </p>
-        <EngineBars iteration={iteration} reduced={reduced} />
+        <EngineBars active={active} iteration={iteration} reduced={reduced} />
       </div>
     </div>
   );
@@ -568,10 +818,12 @@ function ResultsGrid({ iteration, reduced }: { iteration: number; reduced: boole
 
 function ScoreGauge({
   target,
+  active,
   iteration,
   reduced,
 }: {
   target: number;
+  active: boolean;
   iteration: number;
   reduced: boolean;
 }) {
@@ -582,31 +834,37 @@ function ScoreGauge({
       setScore(target);
       return;
     }
-    setScore(0);
+    if (!active) {
+      setScore(0);
+      return;
+    }
+
+    let cancelled = false;
     const start = performance.now();
-    const dur = 1800;
+    const dur = 1700;
     let raf = 0;
     const tick = (now: number) => {
+      if (cancelled) return;
       const p = Math.min(1, (now - start) / dur);
-      // ease out cubic
       const eased = 1 - Math.pow(1 - p, 3);
       setScore(Math.round(target * eased));
       if (p < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [iteration, target, reduced]);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+    };
+  }, [active, iteration, target, reduced]);
 
-  // Half-circle arc: stroke from -90° (left) to +90° (right). Gauge displays 0-100.
   const RADIUS = 60;
-  const CIRC = Math.PI * RADIUS; // half circumference
+  const CIRC = Math.PI * RADIUS;
   const fillRatio = Math.min(1, Math.max(0, score / 100));
   const dashOffset = CIRC * (1 - fillRatio);
 
   return (
-    <div className="relative flex flex-col items-center justify-center pt-1">
+    <div className="relative flex flex-col items-center justify-center">
       <svg width="180" height="100" viewBox="0 0 180 100" aria-hidden>
-        {/* Track */}
         <path
           d={`M 30 90 A ${RADIUS} ${RADIUS} 0 0 1 150 90`}
           fill="none"
@@ -614,7 +872,6 @@ function ScoreGauge({
           strokeWidth="10"
           strokeLinecap="round"
         />
-        {/* Filled arc */}
         <path
           d={`M 30 90 A ${RADIUS} ${RADIUS} 0 0 1 150 90`}
           fill="none"
@@ -631,7 +888,7 @@ function ScoreGauge({
           className="text-4xl sm:text-5xl font-light text-[var(--color-fg)] leading-none"
           style={{ fontFamily: "var(--font-display)" }}
         >
-          {score}
+          {active ? score : "—"}
         </span>
         <span className="text-[10px] text-[var(--color-fg-muted)] mt-1">
           out of 100
@@ -643,11 +900,26 @@ function ScoreGauge({
 
 /* ---- Trend chart ---- */
 
-function TrendChart({ iteration, reduced }: { iteration: number; reduced: boolean }) {
+function TrendChart({
+  active,
+  iteration,
+  reduced,
+}: {
+  active: boolean;
+  iteration: number;
+  reduced: boolean;
+}) {
   const W = 380;
   const H = 110;
   const linePath = buildChartPath(CHART_POINTS, W, H);
   const areaPath = buildChartArea(CHART_POINTS, W, H);
+
+  const lastY =
+    H -
+    ((CHART_POINTS[CHART_POINTS.length - 1] - Math.min(...CHART_POINTS)) /
+      (Math.max(...CHART_POINTS) - Math.min(...CHART_POINTS))) *
+      (H - 6) -
+    3;
 
   return (
     <div className="w-full">
@@ -659,43 +931,54 @@ function TrendChart({ iteration, reduced }: { iteration: number; reduced: boolea
           </linearGradient>
         </defs>
 
-        {/* Area fill */}
-        <motion.path
-          key={`area-${iteration}`}
-          d={areaPath}
-          fill="url(#surven-trend-gradient)"
-          initial={reduced ? { opacity: 1 } : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1.2, delay: 0.6 }}
-        />
+        {active && (
+          <>
+            <motion.path
+              key={`area-${iteration}`}
+              d={areaPath}
+              fill="url(#surven-trend-gradient)"
+              initial={reduced ? { opacity: 1 } : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 1.2, delay: 0.6 }}
+            />
+            <motion.path
+              key={`line-${iteration}`}
+              d={linePath}
+              fill="none"
+              stroke="var(--color-primary)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              initial={reduced ? { pathLength: 1 } : { pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 1.6, ease: "easeOut" }}
+            />
+            <motion.circle
+              key={`dot-${iteration}`}
+              cx={W}
+              cy={lastY}
+              r="3.5"
+              fill="var(--color-primary)"
+              stroke="var(--color-bg)"
+              strokeWidth="2"
+              initial={reduced ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, delay: 1.7 }}
+            />
+          </>
+        )}
 
-        {/* Line */}
-        <motion.path
-          key={`line-${iteration}`}
-          d={linePath}
-          fill="none"
-          stroke="var(--color-primary)"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          initial={reduced ? { pathLength: 1 } : { pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 1.6, ease: "easeOut" }}
-        />
-
-        {/* End-point dot */}
-        <motion.circle
-          key={`dot-${iteration}`}
-          cx={W}
-          cy={H - ((CHART_POINTS[CHART_POINTS.length - 1] - Math.min(...CHART_POINTS)) / (Math.max(...CHART_POINTS) - Math.min(...CHART_POINTS))) * (H - 6) - 3}
-          r="3.5"
-          fill="var(--color-primary)"
-          stroke="var(--color-bg)"
-          strokeWidth="2"
-          initial={reduced ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.4, delay: 1.7 }}
-        />
+        {!active && (
+          <line
+            x1="0"
+            y1={H - 12}
+            x2={W}
+            y2={H - 12}
+            stroke="var(--color-border)"
+            strokeWidth="1"
+            strokeDasharray="3,5"
+          />
+        )}
       </svg>
     </div>
   );
@@ -703,35 +986,51 @@ function TrendChart({ iteration, reduced }: { iteration: number; reduced: boolea
 
 /* ---- Prompts list ---- */
 
-function PromptsList({ iteration, reduced }: { iteration: number; reduced: boolean }) {
+function PromptsList({
+  active,
+  iteration,
+  reduced,
+}: {
+  active: boolean;
+  iteration: number;
+  reduced: boolean;
+}) {
   return (
     <ul className="divide-y divide-[var(--color-border)]">
       {PROMPTS.map((p, i) => (
         <motion.li
           key={`${iteration}-${p.text}`}
           initial={reduced ? { opacity: 1, x: 0 } : { opacity: 0, x: -6 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.35, delay: 0.4 + i * 0.15 }}
+          animate={{
+            opacity: active ? 1 : 0.35,
+            x: 0,
+          }}
+          transition={{ duration: 0.35, delay: active ? 0.4 + i * 0.15 : 0 }}
           className="flex items-center gap-3 py-2 first:pt-0 last:pb-0"
         >
           <span
             className={
               "h-5 w-5 rounded-full flex items-center justify-center shrink-0 " +
-              (p.mentioned
+              (active && p.mentioned
                 ? "bg-[var(--color-primary)]/15 text-[var(--color-primary-hover)]"
-                : "bg-[var(--color-danger)]/15 text-[var(--color-danger)]")
+                : active
+                  ? "bg-[var(--color-danger)]/15 text-[var(--color-danger)]"
+                  : "bg-[var(--color-border)] text-[var(--color-fg-muted)]")
             }
           >
-            {p.mentioned ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+            {active ? (
+              p.mentioned ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />
+            ) : null}
           </span>
           <span className="text-[13px] text-[var(--color-fg)] flex-1 truncate">
             {p.text}
           </span>
-          {p.engine ? (
+          {active && p.engine && (
             <span className="text-[10px] font-medium text-[var(--color-fg-muted)] uppercase tracking-wider shrink-0">
               {p.engine}
             </span>
-          ) : (
+          )}
+          {active && !p.engine && (
             <span className="text-[10px] font-medium text-[var(--color-danger)] uppercase tracking-wider shrink-0">
               No mention
             </span>
@@ -744,7 +1043,15 @@ function PromptsList({ iteration, reduced }: { iteration: number; reduced: boole
 
 /* ---- Engine share bars ---- */
 
-function EngineBars({ iteration, reduced }: { iteration: number; reduced: boolean }) {
+function EngineBars({
+  active,
+  iteration,
+  reduced,
+}: {
+  active: boolean;
+  iteration: number;
+  reduced: boolean;
+}) {
   return (
     <div className="space-y-3">
       {ENGINES.map((eng, i) => (
@@ -754,15 +1061,15 @@ function EngineBars({ iteration, reduced }: { iteration: number; reduced: boolea
               {eng.name}
             </span>
             <span className="text-[11px] font-semibold text-[var(--color-fg-muted)]">
-              {eng.share}%
+              {active ? `${eng.share}%` : "—"}
             </span>
           </div>
           <div className="relative h-1.5 rounded-full bg-[var(--color-border)] overflow-hidden">
             <motion.div
               key={`${iteration}-${eng.name}`}
               initial={reduced ? { width: `${eng.share}%` } : { width: 0 }}
-              animate={{ width: `${eng.share}%` }}
-              transition={{ duration: 0.9, delay: 0.5 + i * 0.12, ease: [0.16, 1, 0.3, 1] }}
+              animate={{ width: active ? `${eng.share}%` : 0 }}
+              transition={{ duration: 0.9, delay: active ? 0.5 + i * 0.12 : 0, ease: [0.16, 1, 0.3, 1] }}
               className="absolute inset-y-0 left-0 bg-[var(--color-primary)] rounded-full"
             />
           </div>
