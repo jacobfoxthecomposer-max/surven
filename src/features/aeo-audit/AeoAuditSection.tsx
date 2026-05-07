@@ -733,8 +733,10 @@ function ResultStatStrip({ result }: { result: ScanResult }) {
   const partialCount = result.checks.filter((c) => c.status === "partial").length;
   const criticalCount = result.checks.filter((c) => c.status === "critical").length;
 
-  // Half-circle gauge math
-  const gaugeWidth = 240;
+  // Half-circle gauge math — gaugeWidth must match the SVG viewBox width
+  // (260) so the gauge renders 1:1 with no CSS downscale; otherwise the
+  // strokes anti-alias and edges look soft.
+  const gaugeWidth = 260;
   const cx = 130;
   const cy = 130;
   const r = 100;
@@ -758,7 +760,7 @@ function ResultStatStrip({ result }: { result: ScanResult }) {
     >
       {/* Half-circle gauge */}
       <div className="relative shrink-0" style={{ width: gaugeWidth }}>
-        <svg viewBox="0 0 260 150" width="100%" style={{ display: "block" }}>
+        <svg viewBox="0 0 260 150" width="100%" shapeRendering="geometricPrecision" style={{ display: "block" }}>
           <defs>
             {/*
               Both gradients anchored to user-space coordinates spanning the

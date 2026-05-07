@@ -20,7 +20,6 @@ import {
   ArrowUpDown,
   CheckCircle2,
   ChevronDown,
-  ChevronRight,
   FilterX,
   Hash,
   Layers,
@@ -572,7 +571,7 @@ export function IntentsTable({
                             style={{ fontSize: 13, minWidth: 0 }}
                             title={i.canonical}
                           >
-                            {i.canonical}
+                            &ldquo;{i.canonical}&rdquo;
                           </span>
                           <button
                             type="button"
@@ -624,11 +623,18 @@ export function IntentsTable({
                             >
                               variants
                             </span>
-                            <ChevronRight
-                              className="h-3 w-3 transition-transform"
+                            {/* Standard expand/collapse affordance —
+                                ChevronDown when collapsed (click to drop
+                                the variant list down) flips 180° to point
+                                up when the list is open (click to roll it
+                                back up). Bumped from h-3 to h-3.5 + bold
+                                strokeWidth so the rotation is unmissable. */}
+                            <ChevronDown
+                              className="h-3.5 w-3.5 transition-transform duration-200"
+                              strokeWidth={2.5}
                               style={{
                                 transform: isExpanded
-                                  ? "rotate(90deg)"
+                                  ? "rotate(180deg)"
                                   : "rotate(0deg)",
                                 color: "currentColor",
                               }}
@@ -1495,7 +1501,7 @@ function VariantList({
                 className="flex-1 text-[var(--color-fg)] leading-snug min-w-0"
                 style={{ fontSize: 13 }}
               >
-                {v.text}
+                &ldquo;{v.text}&rdquo;
               </p>
             </li>
           );

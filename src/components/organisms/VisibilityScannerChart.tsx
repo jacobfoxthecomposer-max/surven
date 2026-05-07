@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   ResponsiveContainer,
   LineChart,
@@ -11,6 +12,7 @@ import {
   CartesianGrid,
   Area,
   ReferenceDot,
+  ReferenceLine,
 } from "recharts";
 import { COLORS } from "@/utils/constants";
 
@@ -27,12 +29,71 @@ export type EndLabelStyle = "value" | "name-value" | "name-value-large" | "none"
 export type FocusMode = "full" | "tight" | "padded" | "window";
 
 export interface OptimizationMarker {
-  /** Index into the dates array where this optimization happened. */
-  dateIndex: number;
+  /** Real calendar date the optimization shipped. */
+  date: Date;
   /** Short label for the optimization (e.g. "FAQ schema added"). */
   label: string;
-  /** Optional accent color — defaults to a rotating palette by index. */
+  /** Optional accent color — defaults to sage on positive gain, gray on loss. */
   color?: string;
+}
+
+/**
+ * Prompt-set change event. Surfaces as a vertical dashed line spanning the
+ * chart with a labeled flag at the top so the viewer can attribute any
+ * dip/spike in the rate to a denominator change rather than performance.
+ * Sage = prompts added, rust = prompts removed.
+ */
+export interface PromptChangeMarker {
+  /** Real calendar date the prompt set changed. */
+  date: Date;
+  /** Net delta. Positive = prompts added; negative = prompts removed. */
+  delta: number;
+  /** Optional explainer (e.g. "Comparison + Use-case prompts"). */
+  detail?: string;
+}
+
+/**
+ * ISO-week key — "YYYY-Www" using Monday-start weeks. Two events that fall
+ * in the same calendar week (Mon–Sun) get the same key. Used to collapse
+ * multiple tactics shipped in the same week into one marker on the chart.
+ */
+function isoWeekKey(d: Date): string {
+  const t = new Date(d);
+  t.setHours(0, 0, 0, 0);
+  // Move to the Thursday of this week — Thursday's year owns the ISO week
+  t.setDate(t.getDate() + 3 - ((t.getDay() + 6) % 7));
+  const week1 = new Date(t.getFullYear(), 0, 4);
+  const week =
+    1 +
+    Math.round(
+      ((t.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) /
+        7,
+    );
+  return `${t.getFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+/**
+ * Find the index in `dates` whose value is closest to `target`. Returns -1
+ * if `dates` is empty or the closest match is more than `toleranceMs` away
+ * (event happened outside the visible range — should not render).
+ */
+function findNearestDateIndex(
+  dates: Date[],
+  target: Date,
+  toleranceMs: number = 1000 * 60 * 60 * 24 * 3,
+): number {
+  if (dates.length === 0) return -1;
+  const t = target.getTime();
+  let bestIdx = -1;
+  let bestDiff = Infinity;
+  for (let i = 0; i < dates.length; i++) {
+    const diff = Math.abs(dates[i].getTime() - t);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      bestIdx = i;
+    }
+  }
+  return bestDiff <= toleranceMs ? bestIdx : -1;
 }
 
 const MARKER_PALETTE = [
@@ -75,6 +136,12 @@ interface VisibilityScannerChartProps {
   focusMode?: FocusMode;
   /** Optional list of optimization markers shown as small dots on YOU's line. */
   optimizationMarkers?: OptimizationMarker[];
+  /**
+   * Optional prompt-set change events. Rendered as full-height dashed
+   * vertical lines with "+N" / "−N" flag labels so a denominator shift is
+   * visually attributable, not invisible. Sage = added, rust = removed.
+   */
+  promptChangeMarkers?: PromptChangeMarker[];
 }
 
 function fmtDate(d: Date) {
@@ -401,6 +468,7 @@ export function VisibilityScannerChart({
   endLabelGutter = 130,
   focusMode = "full",
   optimizationMarkers,
+  promptChangeMarkers,
 }: VisibilityScannerChartProps) {
   const [legendHoverId, setLegendHoverId] = useState<string | null>(null);
   const [hoveredMarker, setHoveredMarker] = useState<{
@@ -598,6 +666,7 @@ export function VisibilityScannerChart({
             cursor={<CrosshairCursor stroke={COLORS.fgMuted} />}
             offset={0}
             allowEscapeViewBox={{ x: true }}
+            wrapperStyle={{ zIndex: 1000, pointerEvents: "none" }}
             content={(props) => (
               <CustomTooltip
                 active={props.active as boolean}
@@ -692,101 +761,245 @@ export function VisibilityScannerChart({
               />
             ))}
 
+          {/* Prompt-set change events. Dashed vertical SEGMENT drawn from
+              the top of the chart down to YOU's line value at that date —
+              never below the YOU line. Carries a "+N" / "−N" flag at the
+              top. Anchored to real calendar dates so they stay put when
+              the time range changes. */}
+          {promptChangeMarkers && promptChangeMarkers.length > 0 &&
+            (() => {
+              const youSeriesPC = (visibleBrands.find((b) => b.isYou) ?? brands.find((b) => b.isYou))?.data ?? [];
+              const chartYMaxPC = typeof yDomain[1] === "number" ? yDomain[1] : 100;
+              return promptChangeMarkers
+                .map((m) => ({ m, idx: findNearestDateIndex(dates, m.date) }))
+                .filter(({ idx }) => idx >= 0 && idx < data.length)
+                .map(({ m, idx }, i) => {
+                const added = m.delta >= 0;
+                const color = added ? "#5E7250" : "#B54631";
+                const sign = added ? "+" : "−";
+                const flagLabel = `${sign}${Math.abs(m.delta)}`;
+                const detail = m.detail
+                  ? `${flagLabel} prompts · ${m.detail}`
+                  : `${flagLabel} prompts tracked`;
+                const youVal = youSeriesPC[idx] ?? 0;
+                return (
+                  <ReferenceLine
+                    key={`promptchange-${i}`}
+                    segment={[
+                      { x: data[idx].date, y: chartYMaxPC },
+                      { x: data[idx].date, y: youVal },
+                    ]}
+                    stroke={color}
+                    strokeWidth={1}
+                    strokeDasharray="3 3"
+                    ifOverflow="visible"
+                    label={{
+                      position: "insideTopLeft",
+                      offset: 6,
+                      content: (props: unknown) => {
+                        const vb = (props as { viewBox?: { x?: number; y?: number } }).viewBox ?? {};
+                        const x = vb.x ?? 0;
+                        const y = (vb.y ?? 0) + 4;
+                        const padX = 6;
+                        const padY = 2;
+                        const fontSize = 10;
+                        // Width approx: sign(1) + digits + 'p' = ~5 chars
+                        const w = Math.max(28, flagLabel.length * 6 + padX * 2);
+                        const h = fontSize + padY * 2;
+                        return (
+                          <g
+                            style={{ cursor: "help", pointerEvents: "all" }}
+                            onMouseEnter={(e) =>
+                              setHoveredMarker({
+                                x: e.clientX,
+                                y: e.clientY,
+                                label: detail,
+                                body: added
+                                  ? "New prompts widen the denominator. Any rate dip here may be dilution, not real performance loss."
+                                  : "Removing prompts narrows the denominator. Rate changes here may not reflect real movement.",
+                                color,
+                              })
+                            }
+                            onMouseLeave={() => setHoveredMarker(null)}
+                          >
+                            <rect
+                              x={x}
+                              y={y}
+                              width={w}
+                              height={h}
+                              rx={3}
+                              fill={color}
+                              opacity={0.92}
+                            />
+                            <text
+                              x={x + w / 2}
+                              y={y + h / 2 + 0.5}
+                              textAnchor="middle"
+                              dominantBaseline="middle"
+                              fontSize={fontSize}
+                              fontWeight={700}
+                              fill="#FFFFFF"
+                              style={{ pointerEvents: "none" }}
+                            >
+                              {flagLabel}
+                            </text>
+                          </g>
+                        );
+                      },
+                    }}
+                  />
+                );
+              });
+            })()}
+
+          {/* Optimization markers — same vertical-dashed-line + flag chrome
+              as prompt-change events, but the flag carries the % visibility
+              gained since the optimization shipped. Sage on positive gain;
+              if the optimization lost / held flat, the line dims to gray
+              and the flag is suppressed entirely. */}
           {optimizationMarkers && optimizationMarkers.length > 0 && (() => {
             const you = visibleBrands.find((b) => b.isYou);
             if (!you) return null;
             const youSeries = you.data;
             const lastValue = youSeries[youSeries.length - 1] ?? 0;
-            return optimizationMarkers
-              .filter((m) => m.dateIndex >= 0 && m.dateIndex < data.length)
-              .map((m, i) => {
-                const markerValue = youSeries[m.dateIndex] ?? 0;
-                const gain = lastValue - markerValue;
-                const isPositive = gain >= 0.5;
-                const highlight = isPositive ? `+${gain.toFixed(1)}%` : undefined;
-                const body = isPositive
-                  ? `visibility since this optimization.`
-                  : `Optimization is still working — most changes take 1–3 months to show full results.`;
-                // Marker shape — small black down-arrow whose tip sits on
-                // the YOU line, with a "?" above the shaft. Hover surfaces
-                // the same floating tooltip as before.
-                const markerColor = "var(--color-fg)";
-                return (
-                  <ReferenceDot
-                    key={`opt-${i}`}
-                    x={data[m.dateIndex].date}
-                    y={markerValue}
-                    ifOverflow="visible"
-                    shape={(props: { cx?: number; cy?: number }) => {
-                      const cx = props.cx ?? 0;
-                      const cy = props.cy ?? 0;
-                      // Geometry: arrow tip touches (cx, cy). Shaft goes
-                      // up from cy-4 to cy-11. "?" centers above the shaft
-                      // at cy-15.
-                      const tipY = cy - 1; // tiny gap so the tip kisses the line, not crosses it
-                      const headTopY = tipY - 5;
-                      const shaftTopY = headTopY - 6;
-                      const questionY = shaftTopY - 4;
-                      return (
-                        <g
-                          style={{ cursor: "help" }}
-                          onMouseEnter={() =>
-                            setHoveredMarker({
-                              x: cx,
-                              y: cy,
-                              label: m.label,
-                              highlight,
-                              body,
-                              color: markerColor,
-                            })
-                          }
-                          onMouseLeave={() => setHoveredMarker(null)}
-                        >
-                          {/* Hover hit-area covering the whole marker
-                              stack. Invisible but catches pointer events. */}
-                          <rect
-                            x={cx - 9}
-                            y={questionY - 11}
-                            width={18}
-                            height={tipY - questionY + 14}
-                            fill="rgba(0,0,0,0.001)"
-                            style={{ pointerEvents: "all" }}
-                          />
-                          {/* Question mark */}
-                          <text
-                            x={cx}
-                            y={questionY}
-                            textAnchor="middle"
-                            fontSize={10}
-                            fontWeight={700}
-                            fill={markerColor}
-                            style={{ pointerEvents: "none" }}
-                          >
-                            ?
-                          </text>
-                          {/* Vertical shaft */}
-                          <line
-                            x1={cx}
-                            y1={shaftTopY}
-                            x2={cx}
-                            y2={headTopY}
-                            stroke={markerColor}
-                            strokeWidth={1.25}
-                            style={{ pointerEvents: "none" }}
-                          />
-                          {/* Arrow head — solid triangle pointing DOWN at
-                              the line. */}
-                          <polygon
-                            points={`${cx - 3.5},${headTopY} ${cx + 3.5},${headTopY} ${cx},${tipY}`}
-                            fill={markerColor}
-                            style={{ pointerEvents: "none" }}
-                          />
-                        </g>
-                      );
-                    }}
-                  />
-                );
-              });
+            const chartYMaxOpt = typeof yDomain[1] === "number" ? yDomain[1] : 100;
+
+            // Group tactics by ISO week so multiple optimizations shipped
+            // in the same Mon–Sun span collapse into a single chart marker.
+            // Anchor the marker at the EARLIEST event in the group so the
+            // % gain reflects "how much have we climbed since the first
+            // tactic in this batch shipped" — the most truthful read.
+            type Group = { idx: number; labels: string[] };
+            const grouped = new Map<string, Group>();
+            for (const entry of optimizationMarkers) {
+              const idx = findNearestDateIndex(dates, entry.date);
+              if (idx < 0 || idx >= data.length) continue;
+              const key = isoWeekKey(dates[idx]);
+              const existing = grouped.get(key);
+              if (existing) {
+                if (idx < existing.idx) existing.idx = idx;
+                existing.labels.push(entry.label);
+              } else {
+                grouped.set(key, { idx, labels: [entry.label] });
+              }
+            }
+            const groups = Array.from(grouped.values()).sort((a, b) => a.idx - b.idx);
+
+            return groups.map((g, i) => {
+              const markerValue = youSeries[g.idx] ?? 0;
+              const gain = lastValue - markerValue;
+              const isPositive = gain >= 0.5;
+              const color = isPositive ? "#5E7250" : "#9CA09A";
+              const flagLabel = isPositive ? `+${gain.toFixed(1)}%` : null;
+              // Hover label collapses cleanly: 1 tactic = plain text;
+              // 2+ = bulleted multi-line so the user sees every item that
+              // shipped in that week.
+              const labelDisplay =
+                g.labels.length === 1
+                  ? g.labels[0]
+                  : g.labels.map((l) => `• ${l}`).join("\n");
+              const body = isPositive
+                ? `Visibility climbed ${gain.toFixed(1)}% since ${
+                    g.labels.length === 1 ? "this shipped" : "these shipped"
+                  }.`
+                : `Still settling — most optimizations take 1–3 months to show full impact.`;
+              return (
+                <ReferenceLine
+                  key={`opt-${i}`}
+                  segment={[
+                    { x: data[g.idx].date, y: chartYMaxOpt },
+                    { x: data[g.idx].date, y: markerValue },
+                  ]}
+                  stroke={color}
+                  strokeWidth={1}
+                  strokeDasharray="3 3"
+                  strokeOpacity={isPositive ? 1 : 0.55}
+                  ifOverflow="visible"
+                  label={
+                    flagLabel
+                      ? {
+                          position: "insideTopLeft",
+                          offset: 6,
+                          content: (props: unknown) => {
+                            const vb =
+                              (props as { viewBox?: { x?: number; y?: number } }).viewBox ?? {};
+                            const x = vb.x ?? 0;
+                            const y = (vb.y ?? 0) + 4;
+                            const padX = 6;
+                            const padY = 2;
+                            const fontSize = 10;
+                            const w = Math.max(36, flagLabel.length * 6 + padX * 2);
+                            const h = fontSize + padY * 2;
+                            return (
+                              <g
+                                style={{ cursor: "help", pointerEvents: "all" }}
+                                onMouseEnter={(e) =>
+                                  setHoveredMarker({
+                                    x: e.clientX,
+                                    y: e.clientY,
+                                    label: labelDisplay,
+                                    highlight: flagLabel,
+                                    body,
+                                    color,
+                                  })
+                                }
+                                onMouseLeave={() => setHoveredMarker(null)}
+                              >
+                                <rect
+                                  x={x}
+                                  y={y}
+                                  width={w}
+                                  height={h}
+                                  rx={3}
+                                  fill={color}
+                                  opacity={0.92}
+                                />
+                                {/* Subtle count badge if 2+ tactics shipped that week. */}
+                                {g.labels.length > 1 && (
+                                  <>
+                                    <circle
+                                      cx={x + w + 2}
+                                      cy={y + h / 2}
+                                      r={7}
+                                      fill="#FFFFFF"
+                                      stroke={color}
+                                      strokeWidth={1.25}
+                                    />
+                                    <text
+                                      x={x + w + 2}
+                                      y={y + h / 2 + 0.5}
+                                      textAnchor="middle"
+                                      dominantBaseline="middle"
+                                      fontSize={9}
+                                      fontWeight={700}
+                                      fill={color}
+                                      style={{ pointerEvents: "none" }}
+                                    >
+                                      {g.labels.length}
+                                    </text>
+                                  </>
+                                )}
+                                <text
+                                  x={x + w / 2}
+                                  y={y + h / 2 + 0.5}
+                                  textAnchor="middle"
+                                  dominantBaseline="middle"
+                                  fontSize={fontSize}
+                                  fontWeight={700}
+                                  fill="#FFFFFF"
+                                  style={{ pointerEvents: "none" }}
+                                >
+                                  {flagLabel}
+                                </text>
+                              </g>
+                            );
+                          },
+                        }
+                      : undefined
+                  }
+                />
+              );
+            });
           })()}
         </LineChart>
       </ResponsiveContainer>
@@ -796,63 +1009,87 @@ export function VisibilityScannerChart({
           to   { opacity: 1; transform: translate(-50%, calc(-100% - 22px)); }
         }
       `}</style>
-      {hoveredMarker && (
+      {/* Marker tooltip — portaled to <body> with position:fixed so it
+          can never be clipped by ancestor overflow:hidden, transforms, or
+          stacking contexts. Mouse coords are captured in viewport space
+          via e.clientX/clientY at hover time. */}
+      <MarkerTooltipPortal hovered={hoveredMarker} />
+    </div>
+  );
+}
+
+interface MarkerTooltipPortalProps {
+  hovered: {
+    x: number;
+    y: number;
+    label: string;
+    highlight?: string;
+    body: string;
+    color: string;
+  } | null;
+}
+
+function MarkerTooltipPortal({ hovered }: MarkerTooltipPortalProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  if (!mounted || !hovered || typeof document === "undefined") return null;
+  return createPortal(
+    <div
+      style={{
+        position: "fixed",
+        left: hovered.x,
+        top: hovered.y - 14,
+        transform: "translate(-50%, -100%)",
+        zIndex: 9999,
+        pointerEvents: "none",
+      }}
+    >
+      <div
+        className="rounded-md border bg-[var(--color-surface)] shadow-md"
+        style={{
+          borderColor: "var(--color-border)",
+          borderLeft: `3px solid ${hovered.color}`,
+          padding: "6px 10px",
+          minWidth: 200,
+          maxWidth: 260,
+        }}
+      >
         <div
-          key={`${hoveredMarker.x}-${hoveredMarker.y}`}
-          className="pointer-events-none absolute z-50"
           style={{
-            left: hoveredMarker.x,
-            top: hoveredMarker.y,
-            transform: "translate(-50%, calc(-100% - 22px))",
-            animation: "vsmFade 40ms ease-out",
-            transition: "none",
+            fontSize: 12,
+            fontWeight: 600,
+            color: "var(--color-fg)",
+            marginBottom: 2,
+            whiteSpace: "pre-line",
           }}
         >
-          <div
-            className="rounded-md border bg-[var(--color-surface)] shadow-md"
-            style={{
-              borderColor: "var(--color-border)",
-              borderLeft: `3px solid ${hoveredMarker.color}`,
-              padding: "6px 10px",
-              minWidth: 200,
-              maxWidth: 260,
-            }}
-          >
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "var(--color-fg)",
-                marginBottom: 2,
-              }}
-            >
-              {hoveredMarker.label}
-            </div>
-            <div
-              style={{
-                fontSize: 11,
-                lineHeight: 1.4,
-                color: "var(--color-fg-secondary)",
-              }}
-            >
-              {hoveredMarker.highlight && (
-                <span
-                  style={{
-                    color: "#5a9b5a",
-                    fontWeight: 700,
-                    fontSize: 12,
-                    textShadow: "0 0 8px rgba(106, 158, 106, 0.45)",
-                    marginRight: 4,
-                  }}
-                >
-                  {hoveredMarker.highlight}
-                </span>
-              )}
-              {hoveredMarker.body}
-            </div>
-          </div>
+          {hovered.label}
         </div>
-      )}
-    </div>
+        <div
+          style={{
+            fontSize: 11,
+            lineHeight: 1.4,
+            color: "var(--color-fg-secondary)",
+          }}
+        >
+          {hovered.highlight && (
+            <span
+              style={{
+                color: hovered.color,
+                fontWeight: 700,
+                fontSize: 12,
+                marginRight: 4,
+              }}
+            >
+              {hovered.highlight}
+            </span>
+          )}
+          {hovered.body}
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }

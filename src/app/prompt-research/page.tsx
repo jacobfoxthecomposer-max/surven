@@ -5,16 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
-  AlertTriangle,
   ArrowUpRight,
-  CheckCircle2,
   Crown,
-  Layers,
-  ListChecks,
-  Sparkles,
   Target,
   Trash2,
-  TrendingUp,
   Undo2,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
@@ -32,10 +26,11 @@ import { promptLimit, planLabel, type Plan } from "@/utils/plans";
 import { generatePromptResearchData } from "@/features/prompt-research/mockData";
 import { IntentsTable } from "@/features/prompt-research/IntentsTable";
 import { CustomPromptsSection } from "@/features/prompt-research/CustomPromptsSection";
+import { PromptResearchStrip } from "@/features/prompt-research/PromptResearchStrip";
 import {
-  CleanStatCard,
-  type CleanStatCardSpec,
-} from "@/features/dashboard/pages/PromptsSection";
+  addUserTrackedPrompt,
+  removeUserTrackedPrompt,
+} from "@/utils/userTrackedPrompts";
 import {
   INTENT_LABEL,
   INTENT_COLOR,
@@ -217,6 +212,25 @@ export default function PromptResearchPage() {
       for (const id of selectedIds) next.set(id, true);
       return next;
     });
+    // Persist to localStorage so /prompts (Tracked Prompts page) can pick
+    // these up too. Bridge stays here until a real Supabase
+    // tracked_prompts table lands — same call shape, swap implementation.
+    if (data?.intents) {
+      const lookup = new Map(data.intents.map((i) => [i.id, i]));
+      const addedAt = new Date().toISOString();
+      for (const id of selectedIds) {
+        const intent = lookup.get(id);
+        if (!intent) continue;
+        addUserTrackedPrompt({
+          id: intent.id,
+          canonical: intent.canonical,
+          intentType: intent.intentType,
+          variantCount: intent.variants.length,
+          addedAt,
+          source: "prompt-research",
+        });
+      }
+    }
     setToast(
       `Sent ${selectedIds.length} prompt${selectedIds.length === 1 ? "" : "s"} to Tracker.`
     );
@@ -256,6 +270,9 @@ export default function PromptResearchPage() {
       next.set(intentId, false);
       return next;
     });
+    // Mirror the removal to the cross-page localStorage layer so the
+    // /prompts table reflects it too.
+    removeUserTrackedPrompt(intentId);
     setToast("Removed from Tracker.");
     setTimeout(() => setToast(null), 3000);
   };
@@ -266,6 +283,18 @@ export default function PromptResearchPage() {
       next.set(intentId, true);
       return next;
     });
+    // Restore puts the prompt back on /prompts too.
+    const target = data?.intents.find((i) => i.id === intentId);
+    if (target) {
+      addUserTrackedPrompt({
+        id: target.id,
+        canonical: target.canonical,
+        intentType: target.intentType,
+        variantCount: target.variants.length,
+        addedAt: new Date().toISOString(),
+        source: "prompt-research",
+      });
+    }
     setRecentlyDeleted((prev) => {
       const next = prev.filter((p) => p.id !== intentId);
       if (business?.id) {
@@ -491,70 +520,20 @@ export default function PromptResearchPage() {
               </motion.div>
             )}
 
-            {/* ===== STAT STRIP — 4 CleanStatCards summarizing the
-                 research dataset. Same exported chrome as the /prompts
-                 stat strip so visual rhythm matches. ===== */}
+            {/* ===== STAT STRIP — 4 visually-rich research-relevant cards:
+                 coverage distribution, top untracked win, per-engine
+                 coverage gap, and branded vs unbranded split. Each carries
+                 its own inline visual (stacked bar / hero card / mini
+                 bars / split donut). ===== */}
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.15, ease }}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
             >
-              {(() => {
-                const cards: CleanStatCardSpec[] = [
-                  {
-                    icon: ListChecks,
-                    label: "Intents Researched",
-                    hint: "How many distinct prompt intents we've researched for you. Each intent rolls up multiple phrasings — more researched = more options to send to Tracker.",
-                    value: insights.totalIntents.toString(),
-                    sub: `${insights.trackedCount} tracked · ${insights.untrackedCount} waiting to add`,
-                    featured: true,
-                    engineHits: insights.enginesWithCoverage,
-                  },
-                  {
-                    icon: Layers,
-                    label: "Variants Explored",
-                    hint: "How many ways we phrase each question. AI returns different answers per phrasing, so testing variants gives you a real signal instead of a shaky one. 5+ variants per intent is healthy.",
-                    value: insights.totalVariants.toString(),
-                    sub: `~${Math.round(insights.totalVariants / Math.max(insights.totalIntents, 1))} avg per intent`,
-                    bottomLine:
-                      insights.totalVariants / Math.max(insights.totalIntents, 1) >= 5
-                        ? { icon: CheckCircle2, text: "Healthy variant depth — coverage signal is reliable", tone: "good" }
-                        : { icon: TrendingUp, text: "Add more paraphrasings per intent to firm up the signal", tone: "warn" },
-                  },
-                  {
-                    icon: Sparkles,
-                    label: "Avg Coverage",
-                    hint: "How often AI engines mention you across every prompt variant. Above 60% is strong; 30–60% means gaps in some phrasings; under 30% means most don't pick you up.",
-                    value: `${insights.avgCoverage}%`,
-                    sub: `Across ${AI_MODELS.length} AI engines`,
-                    gauge: { type: "citation", pct: insights.avgCoverage },
-                    bottomLine:
-                      insights.avgCoverage >= 60
-                        ? { icon: CheckCircle2, text: "Strong coverage — AI is naming you across most phrasings", tone: "good" }
-                        : insights.avgCoverage >= 30
-                          ? { icon: TrendingUp, text: "Mid-pack — defend the strong intents and lift the weak ones", tone: "warn" }
-                          : { icon: AlertTriangle, text: "Below 30% — most phrasings answer without you. Audit + add more anchor sources", tone: "warn" },
-                  },
-                  {
-                    icon: Target,
-                    label: "Untracked Opportunities",
-                    hint: "Researched intents that aren't in your tracker yet. The high-coverage ones are quick wins to lock in; the low-coverage ones are leaks worth investigating.",
-                    value: insights.untrackedCount.toString(),
-                    sub: `${insights.untrackedAvgCoverage}% avg coverage · ready to add`,
-                    bottomLine:
-                      insights.untrackedCount === 0
-                        ? { icon: CheckCircle2, text: "Everything researched is being tracked — nothing to claim", tone: "good" }
-                        : insights.untrackedCount >= 20
-                          ? { icon: AlertTriangle, text: "Big untracked pool — start with the highest-coverage rows below", tone: "warn" }
-                          : { icon: TrendingUp, text: "Pick the highest-coverage rows below to lock in quick wins", tone: "warn" },
-                    cta: { label: "Pick what to track", href: "#intents-table" },
-                  },
-                ];
-                return cards.map((c) => (
-                  <CleanStatCard key={c.label} spec={c} />
-                ));
-              })()}
+              <PromptResearchStrip
+                intents={intentsWithOverrides}
+                onTrack={(id) => handleSendToTracker([id])}
+              />
             </motion.div>
 
 
@@ -997,7 +976,7 @@ function TrackedPromptsTable({
           }}
         >
           <colgroup>
-            <col style={{ width: 56 }} />
+            <col style={{ width: 90 }} />
             <col />
             <col style={{ width: 150 }} />
             <col style={{ width: 100 }} />
@@ -1056,18 +1035,7 @@ function TrackedPromptsTable({
                       aria-label={`Remove ${i.canonical} from Tracker`}
                       title="Remove from Tracker"
                     >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="h-3.5 w-3.5"
-                      >
-                        <path d="M18 6L6 18" />
-                        <path d="M6 6l12 12" />
-                      </svg>
+                      <Trash2 className="h-3.5 w-3.5" strokeWidth={2} />
                     </button>
                   </td>
                   <td className="py-2.5 px-4">
@@ -1076,7 +1044,7 @@ function TrackedPromptsTable({
                       style={{ fontSize: 13 }}
                       title={i.canonical}
                     >
-                      {i.canonical}
+                      &ldquo;{i.canonical}&rdquo;
                     </span>
                   </td>
                   <td className="py-2.5 px-4">

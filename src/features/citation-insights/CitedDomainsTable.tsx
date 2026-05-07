@@ -10,16 +10,15 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   ArrowDown,
-  ArrowRight,
   ArrowUp,
   ArrowUpDown,
   ChevronDown,
   ExternalLink,
   FilterX,
+  HelpCircle,
   RotateCcw,
 } from "lucide-react";
 import { HoverHint } from "@/components/atoms/HoverHint";
@@ -400,12 +399,11 @@ export function CitedDomainsTable({ results }: CitedDomainsTableProps) {
         >
           <colgroup>
             <col />
-            <col style={{ width: 110 }} />
+            <col style={{ width: 140 }} />
+            <col style={{ width: 140 }} />
             <col style={{ width: 130 }} />
-            <col style={{ width: 100 }} />
             <col style={{ width: 160 }} />
-            <col style={{ width: 100 }} />
-            <col style={{ width: 110 }} />
+            <col style={{ width: 120 }} />
           </colgroup>
           {/* Sticky thead — every <th> carries its own sticky positioning
               + opaque bg + bottom border so each cell individually pins
@@ -429,6 +427,7 @@ export function CitedDomainsTable({ results }: CitedDomainsTableProps) {
                 sortDir={sortDir}
                 onSort={toggleSort}
                 align="left"
+                hint="Domain trust tier. High-authority editorial sources carry more weight in AI answers."
               />
               <CategoryFilterHeader
                 allCategories={availableCategories}
@@ -442,6 +441,7 @@ export function CitedDomainsTable({ results }: CitedDomainsTableProps) {
                 sortDir={sortDir}
                 onSort={toggleSort}
                 align="right"
+                hint="How many times AI engines cited this domain across your tracked prompts."
               />
               <th
                 className="py-3 px-4 text-center"
@@ -453,15 +453,27 @@ export function CitedDomainsTable({ results }: CitedDomainsTableProps) {
                   boxShadow: "inset 0 -2px 0 rgba(60,62,60,0.22)",
                 }}
               >
-                <span
-                  className="inline-flex items-center font-semibold uppercase text-[var(--color-fg-muted)]"
-                  style={{
-                    fontSize: 11,
-                    letterSpacing: "0.08em",
-                    fontFamily: "var(--font-sans)",
-                  }}
-                >
-                  Engines
+                <span className="inline-flex items-center justify-center gap-1">
+                  <span
+                    className="inline-flex items-center font-semibold uppercase text-[var(--color-fg-muted)]"
+                    style={{
+                      fontSize: 11,
+                      letterSpacing: "0.08em",
+                      fontFamily: "var(--font-sans)",
+                    }}
+                  >
+                    Engines
+                  </span>
+                  <HoverHint
+                    hint="Which AI engines cited this domain. Sage dot means cited; dim means not."
+                    placement="top"
+                    width={260}
+                  >
+                    <HelpCircle
+                      className="h-3 w-3 text-[var(--color-fg-muted)] hover:text-[var(--color-fg-secondary)] cursor-help transition-colors"
+                      aria-label="More info"
+                    />
+                  </HoverHint>
                 </span>
               </th>
               <SortableHeader
@@ -471,35 +483,15 @@ export function CitedDomainsTable({ results }: CitedDomainsTableProps) {
                 sortDir={sortDir}
                 onSort={toggleSort}
                 align="right"
+                hint="Listed = your business appears on this domain. Gap = it doesn't yet."
               />
-              <th
-                className="py-3 px-4 text-right"
-                style={{
-                  position: "sticky",
-                  top: 0,
-                  zIndex: 20,
-                  backgroundColor: "var(--color-surface)",
-                  boxShadow: "inset 0 -2px 0 rgba(60,62,60,0.22)",
-                }}
-              >
-                <span
-                  className="inline-flex items-center font-semibold uppercase text-[var(--color-fg-muted)]"
-                  style={{
-                    fontSize: 11,
-                    letterSpacing: "0.08em",
-                    fontFamily: "var(--font-sans)",
-                  }}
-                >
-                  Action
-                </span>
-              </th>
             </tr>
           </thead>
           <tbody>
             {visible.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={6}
                   className="text-center text-[var(--color-fg-muted)] py-10"
                   style={{ fontSize: 13 }}
                 >
@@ -638,23 +630,6 @@ export function CitedDomainsTable({ results }: CitedDomainsTableProps) {
                         {row.listed ? "Listed" : "Gap"}
                       </span>
                     </td>
-                    {/* Action — Compare for listed domains, Get listed for
-                        gap domains. Soft client nav via Link. */}
-                    <td className="py-2.5 px-4 text-right">
-                      <Link
-                        href={
-                          row.listed ? "/competitor-comparison" : "/audit#fix-these-first"
-                        }
-                        className="group inline-flex items-center gap-1 font-semibold whitespace-nowrap hover:opacity-80 transition-opacity"
-                        style={{
-                          fontSize: 12,
-                          color: row.listed ? SAGE : RUST,
-                        }}
-                      >
-                        {row.listed ? "Compare" : "Get listed"}
-                        <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
-                      </Link>
-                    </td>
                   </motion.tr>
                 );
               })
@@ -726,6 +701,7 @@ function SortableHeader({
   sortDir,
   onSort,
   align,
+  hint,
 }: {
   label: string;
   column: SortKey;
@@ -733,6 +709,7 @@ function SortableHeader({
   sortDir: SortDir;
   onSort: (k: SortKey) => void;
   align: "left" | "right" | "center";
+  hint?: string;
 }) {
   const active = sortKey === column;
   const Arrow = active ? (sortDir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
@@ -754,25 +731,40 @@ function SortableHeader({
         boxShadow: "inset 0 -2px 0 rgba(60,62,60,0.22)",
       }}
     >
-      <button
-        onClick={() => onSort(column)}
+      <span
         className={
-          "inline-flex items-center gap-1 uppercase font-semibold transition-colors " +
-          (active
-            ? "text-[var(--color-fg)]"
-            : "text-[var(--color-fg-muted)] hover:text-[var(--color-fg-secondary)]")
+          "inline-flex items-center gap-1 " +
+          (align === "right" ? "justify-end" : align === "center" ? "justify-center" : "justify-start")
         }
-        style={{
-          fontSize: 11,
-          letterSpacing: "0.08em",
-          fontFamily: "var(--font-sans)",
-        }}
       >
-        {label}
-        <Arrow
-          className={"h-3 w-3 " + (active ? "opacity-100" : "opacity-50")}
-        />
-      </button>
+        <button
+          onClick={() => onSort(column)}
+          className={
+            "inline-flex items-center gap-1 uppercase font-semibold transition-colors " +
+            (active
+              ? "text-[var(--color-fg)]"
+              : "text-[var(--color-fg-muted)] hover:text-[var(--color-fg-secondary)]")
+          }
+          style={{
+            fontSize: 11,
+            letterSpacing: "0.08em",
+            fontFamily: "var(--font-sans)",
+          }}
+        >
+          {label}
+          <Arrow
+            className={"h-3 w-3 " + (active ? "opacity-100" : "opacity-50")}
+          />
+        </button>
+        {hint && (
+          <HoverHint hint={hint} placement="top" width={260}>
+            <HelpCircle
+              className="h-3 w-3 text-[var(--color-fg-muted)] hover:text-[var(--color-fg-secondary)] cursor-help transition-colors"
+              aria-label="More info"
+            />
+          </HoverHint>
+        )}
+      </span>
     </th>
   );
 }
@@ -883,6 +875,7 @@ function CategoryFilterHeader({
         boxShadow: "inset 0 -2px 0 rgba(60,62,60,0.22)",
       }}
     >
+      <span className="inline-flex items-center gap-1">
       <button
         ref={triggerRef}
         type="button"
@@ -919,6 +912,17 @@ function CategoryFilterHeader({
           }
         />
       </button>
+        <HoverHint
+          hint="Source type — directory, news, review site, forum, blog, or social."
+          placement="top"
+          width={260}
+        >
+          <HelpCircle
+            className="h-3 w-3 text-[var(--color-fg-muted)] hover:text-[var(--color-fg-secondary)] cursor-help transition-colors"
+            aria-label="More info"
+          />
+        </HoverHint>
+      </span>
 
       {open && mounted && pos &&
         createPortal(

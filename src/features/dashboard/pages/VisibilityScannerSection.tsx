@@ -3127,6 +3127,7 @@ export function ChartCard({
   showInsight = true,
   showModeToggle = true,
   showOptimizationMarkers = true,
+  showPromptChangeMarkers = true,
   delta,
 }: {
   data: ScannerData;
@@ -3141,6 +3142,8 @@ export function ChartCard({
   showModeToggle?: boolean;
   /** When false, drops the inline optimization-event dots on the YOU line. */
   showOptimizationMarkers?: boolean;
+  /** When false, drops the vertical dashed prompt-set-change annotations. */
+  showPromptChangeMarkers?: boolean;
   /** Period-over-period delta pill in the top-right header. */
   delta?: number;
 }) {
@@ -3239,24 +3242,42 @@ export function ChartCard({
           focusMode={focusMode}
           optimizationMarkers={
             showOptimizationMarkers
-              ? [
-                  {
-                    dateIndex: Math.round(data.dates.length * 0.18),
-                    label: "FAQ schema added to top service pages",
-                  },
-                  {
-                    dateIndex: Math.round(data.dates.length * 0.4),
-                    label: "Reddit & BBB listings published",
-                  },
-                  {
-                    dateIndex: Math.round(data.dates.length * 0.62),
-                    label: "Page intros rewritten on 5 weakest pages",
-                  },
-                  {
-                    dateIndex: Math.round(data.dates.length * 0.82),
-                    label: "Pillar page deployed",
-                  },
-                ]
+              ? (() => {
+                  // Anchor mock event dates to real calendar dates derived
+                  // from the data range so the markers stay correlated to
+                  // their actual day even when the user switches time
+                  // range. When a marker's date falls outside the visible
+                  // window the chart skips it. Replace with real per-
+                  // business event timestamps when the optimization log
+                  // schema lands.
+                  const dates = data.dates;
+                  if (dates.length < 2) return [];
+                  const dateAt = (frac: number) =>
+                    dates[Math.min(dates.length - 1, Math.max(0, Math.round(dates.length * frac)))];
+                  return [
+                    { date: dateAt(0.18), label: "FAQ schema added to top service pages" },
+                    { date: dateAt(0.4), label: "Reddit & BBB listings published" },
+                    // Same-week tactic — collapses with the row above into
+                    // a single grouped marker so Joey can see the badge.
+                    { date: dateAt(0.42), label: "Quora topic page seeded" },
+                    { date: dateAt(0.62), label: "Page intros rewritten on 5 weakest pages" },
+                    { date: dateAt(0.82), label: "Pillar page deployed" },
+                  ];
+                })()
+              : []
+          }
+          promptChangeMarkers={
+            showPromptChangeMarkers
+              ? (() => {
+                  const dates = data.dates;
+                  if (dates.length < 2) return [];
+                  const dateAt = (frac: number) =>
+                    dates[Math.min(dates.length - 1, Math.max(0, Math.round(dates.length * frac)))];
+                  return [
+                    { date: dateAt(0.3), delta: 12, detail: "Comparison + Use-case prompts" },
+                    { date: dateAt(0.7), delta: -4, detail: "Stale local-intent prompts" },
+                  ];
+                })()
               : []
           }
         />

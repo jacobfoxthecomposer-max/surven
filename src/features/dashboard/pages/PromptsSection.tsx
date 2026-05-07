@@ -45,6 +45,11 @@ import { BetaFeedbackFooter } from "@/components/organisms/BetaFeedbackFooter";
 import { useActiveBusiness } from "@/features/business/hooks/useActiveBusiness";
 import { COLORS } from "@/utils/constants";
 import {
+  readUserTrackedPrompts,
+  subscribeUserTrackedPrompts,
+  type UserTrackedPrompt,
+} from "@/utils/userTrackedPrompts";
+import {
   PROMPT_CATEGORIES,
   primaryIntent,
 } from "@/utils/promptCategories";
@@ -619,6 +624,14 @@ export interface PromptRow {
   position: number | null; // null = not cited
   sentiment: number; // -1 to 1
   responses: PromptResponse[];
+  /**
+   * Set when this row was added by the user via /prompt-research → Send to
+   * Tracker. Drives a left-edge sage stripe + "Just added" pill so the
+   * user can see at a glance which rows came from their own additions
+   * vs. the auto-tracked baseline. Read from localStorage layer (see
+   * `utils/userTrackedPrompts.ts`).
+   */
+  userAdded?: boolean;
 }
 
 export interface IntentCoverage {
@@ -2124,7 +2137,7 @@ function BrandedCallout({
 
 // ─── PROMPTS TABLE ─────────────────────────────────────────────────────────
 
-type PromptsFilter = "branded" | "unbranded" | "cited" | "uncited";
+type PromptsFilter = "branded" | "unbranded" | "cited" | "uncited" | "added";
 // Kept for the "All" reset button — not a filter itself, just a signal.
 type PromptsTab = "all" | PromptsFilter;
 
@@ -2134,12 +2147,16 @@ const PROMPTS_TAB_HINTS: Record<PromptsTab, string> = {
   unbranded: "Category searches without your name — discovery opportunities.",
   cited: "Prompts where at least one AI engine mentioned you.",
   uncited: "Prompts where no engine cited you — visibility leaks to fix.",
+  added: "Only prompts you added from the Prompt Research page.",
 };
 
 // Each axis is OR within itself, AND across axes. Selecting both branded
 // + unbranded is identical to no type filter (same logic for cited/uncited).
 const TYPE_FILTERS: PromptsFilter[] = ["branded", "unbranded"];
 const STATUS_FILTERS: PromptsFilter[] = ["cited", "uncited"];
+// Source filter — origin of the prompt. Currently single-axis ("added"
+// from Prompt Research), but typed as an array so future sources slot in.
+const SOURCE_FILTERS: PromptsFilter[] = ["added"];
 
 
 function sentimentBucket(s: number): "pos" | "neu" | "neg" {
@@ -3048,6 +3065,9 @@ function PromptsTable({
     const wantCited = selectedFilters.has("cited");
     const wantUncited = selectedFilters.has("uncited");
     const statusActive = wantCited !== wantUncited;
+    // Source axis: only show prompts the user added from /prompt-research
+    // (i.e. carrying the userAdded flag). When off, show all sources.
+    const wantAdded = selectedFilters.has("added");
 
     const base = prompts.filter((p) => {
       if (typeActive) {
@@ -3064,6 +3084,7 @@ function PromptsTable({
         if (wantCited && !linked) return false;
         if (wantUncited && linked) return false;
       }
+      if (wantAdded && !p.userAdded) return false;
       return true;
     });
     // Filter on the SAME source the Intent column displays (primaryIntent
@@ -3303,6 +3324,37 @@ function PromptsTable({
               </HoverHint>
             );
           })}
+          {/* Source axis — currently only "Just added" from Prompt
+              Research. Visually separated from cited/uncited via a thin
+              divider so it reads as its own grouping. */}
+          <span
+            aria-hidden
+            className="self-stretch w-px mx-0.5"
+            style={{ backgroundColor: "var(--color-border)" }}
+          />
+          {SOURCE_FILTERS.map((f) => {
+            const active = selectedFilters.has(f);
+            return (
+              <HoverHint key={f} hint={PROMPTS_TAB_HINTS[f]}>
+                <motion.button
+                  whileTap={{ scale: 0.94 }}
+                  transition={{ duration: 0.15, ease: EASE }}
+                  onClick={() => onToggleFilter(f)}
+                  aria-pressed={active}
+                  className={
+                    "inline-flex items-center gap-1.5 px-3 py-1 rounded-[var(--radius-md)] transition-colors border whitespace-nowrap " +
+                    (active
+                      ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                      : "text-[var(--color-fg-secondary)] border-transparent hover:bg-[var(--color-surface-alt)]")
+                  }
+                  style={{ fontSize: 18, fontFamily: "var(--font-display)", fontWeight: 500, letterSpacing: "0.01em" }}
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Just added
+                </motion.button>
+              </HoverHint>
+            );
+          })}
         </div>
         <div className="justify-self-end inline-flex items-center gap-2">
           {!isDefaultSort && (
@@ -3501,9 +3553,17 @@ function PromptsTable({
                     }
                     style={{
                       borderBottom: rowBorder,
-                      // Branded distinction now lives in the dedicated
-                      // Brand column; rows render with no special tint.
-                      background: isFocused ? "rgba(150,162,131,0.18)" : "transparent",
+                      // User-added rows get a soft sage gradient that fades
+                      // left→right into the page so the tinted block
+                      // doesn't cut off sharply against the cream bg. The
+                      // Sparkles glyph next to the prompt carries the rest
+                      // of the "just added" signal. Focused-flash bg still
+                      // wins on deep-link navigation.
+                      background: isFocused
+                        ? "rgba(150,162,131,0.18)"
+                        : p.userAdded
+                          ? "linear-gradient(to right, rgba(150,162,131,0.13) 0%, rgba(150,162,131,0.04) 60%, rgba(150,162,131,0) 100%)"
+                          : "transparent",
                       transition: "background-color 0.6s ease-out",
                     }}
                     aria-expanded={isOpen}
@@ -3516,14 +3576,31 @@ function PromptsTable({
                         }
                       />
                     </td>
-                    {/* Prompt text — Inter 13, matches Personalized table */}
+                    {/* Prompt text — Inter 13, matches Personalized table.
+                        Recently-added rows are identified by the sage
+                        left-edge stripe + bg tint on the <tr>; no inline
+                        pill needed (it ate the cell width). A small sage
+                        Sparkles glyph sits before the prompt as a quiet
+                        reinforcement, with a hover hint for the source. */}
                     <td className="py-2.5 px-5">
-                      <p
-                        className="text-[var(--color-fg)] leading-snug"
-                        style={{ fontSize: 13 }}
-                      >
-                        &ldquo;{p.text}&rdquo;
-                      </p>
+                      <div className="flex items-center gap-2 min-w-0">
+                        {p.userAdded && (
+                          <Sparkles
+                            className="h-3.5 w-3.5 shrink-0"
+                            style={{ color: "#5E7250" }}
+                            aria-label="Added from Prompt Research"
+                          >
+                            <title>Added from Prompt Research</title>
+                          </Sparkles>
+                        )}
+                        <p
+                          className="text-[var(--color-fg)] leading-snug min-w-0 flex-1 truncate"
+                          style={{ fontSize: 13 }}
+                          title={p.text}
+                        >
+                          &ldquo;{p.text}&rdquo;
+                        </p>
+                      </div>
                     </td>
                     {/* Volume — tabular Inter 12 */}
                     <td className="py-2.5 px-4 text-right">
@@ -3549,13 +3626,19 @@ function PromptsTable({
                         ] as const;
                         const hits = engineIds.map((e) => !!p.engineHits[e]);
                         const cited = hits.filter(Boolean).length;
-                        const allMissed = cited === 0;
-                        const lowCoverage = cited === 1;
-                        const tone = allMissed
-                          ? "rust"
-                          : lowCoverage
-                            ? "amber"
-                            : "ok";
+                        // Unscanned (just-added) prompts have no data yet —
+                        // render in neutral gray rather than rust, so a
+                        // freshly-tracked prompt never reads as failing.
+                        const unscanned = !!p.userAdded;
+                        const allMissed = !unscanned && cited === 0;
+                        const lowCoverage = !unscanned && cited === 1;
+                        const tone = unscanned
+                          ? "neutral"
+                          : allMissed
+                            ? "rust"
+                            : lowCoverage
+                              ? "amber"
+                              : "ok";
                         const TONE = {
                           rust: {
                             bg: "rgba(181,70,49,0.10)",
@@ -3569,6 +3652,12 @@ function PromptsTable({
                             dotMissed: "rgba(107,109,107,0.3)",
                             text: "#A06210",
                           },
+                          neutral: {
+                            bg: "rgba(107,109,107,0.10)",
+                            border: "transparent",
+                            dot: "rgba(107,109,107,0.3)",
+                            text: "var(--color-fg-muted)",
+                          },
                         } as const;
                         return (
                           <div
@@ -3579,20 +3668,19 @@ function PromptsTable({
                                   ? TONE.rust.bg
                                   : tone === "amber"
                                     ? TONE.amber.bg
-                                    : "transparent",
-                              border:
-                                tone === "rust"
-                                  ? `1px solid ${TONE.rust.border}`
-                                  : tone === "amber"
-                                    ? `1px solid ${TONE.amber.border}`
-                                    : "1px solid transparent",
+                                    : tone === "neutral"
+                                      ? TONE.neutral.bg
+                                      : "transparent",
+                              border: "1px solid transparent",
                             }}
                             title={
-                              allMissed
-                                ? "Zero AI engines cited you on this prompt — visibility leak"
-                                : lowCoverage
-                                  ? "Only 1 of 4 AI engines cited you — weak coverage"
-                                  : `Cited by ${cited} of 4 AI engines`
+                              unscanned
+                                ? "Not scanned yet — this prompt was just added. Status will appear after the next scan."
+                                : allMissed
+                                  ? "Zero AI engines cited you on this prompt — visibility leak"
+                                  : lowCoverage
+                                    ? "Only 1 of 4 AI engines cited you — weak coverage"
+                                    : `Cited by ${cited} of 4 AI engines`
                             }
                           >
                             {engineIds.map((e, i) => (
@@ -3602,23 +3690,27 @@ function PromptsTable({
                                 style={{
                                   width: 7,
                                   height: 7,
-                                  backgroundColor: allMissed
-                                    ? "#B54631"
-                                    : hits[i]
-                                      ? "#7D8E6C"
-                                      : "rgba(107,109,107,0.3)",
+                                  backgroundColor: unscanned
+                                    ? "rgba(107,109,107,0.3)"
+                                    : allMissed
+                                      ? "#B54631"
+                                      : hits[i]
+                                        ? "#7D8E6C"
+                                        : "rgba(107,109,107,0.3)",
                                 }}
                               />
                             ))}
-                            {(allMissed || lowCoverage) && (
+                            {(unscanned || allMissed || lowCoverage) && (
                               <span
                                 className="uppercase tracking-wider"
                                 style={{
                                   fontSize: 9.5,
                                   fontWeight: 700,
-                                  color: allMissed
-                                    ? TONE.rust.text
-                                    : TONE.amber.text,
+                                  color: unscanned
+                                    ? TONE.neutral.text
+                                    : allMissed
+                                      ? TONE.rust.text
+                                      : TONE.amber.text,
                                   letterSpacing: "0.08em",
                                   marginLeft: 2,
                                 }}
@@ -3648,25 +3740,32 @@ function PromptsTable({
                           linkHit(p.id, e, !!p.engineHits[e]),
                         );
                         const linked = links.filter(Boolean).length;
-                        const allMissed = linked === 0;
-                        const lowCoverage = linked === 1;
+                        // Unscanned (just-added) prompts: neutral gray, not
+                        // rust — same rule as the Status pill above.
+                        const unscanned = !!p.userAdded;
+                        const allMissed = !unscanned && linked === 0;
+                        const lowCoverage = !unscanned && linked === 1;
                         return (
                           <div
                             className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full"
                             style={{
-                              backgroundColor: allMissed
-                                ? "rgba(181,70,49,0.10)"
-                                : lowCoverage
-                                  ? "rgba(201,123,69,0.10)"
-                                  : "transparent",
+                              backgroundColor: unscanned
+                                ? "rgba(107,109,107,0.10)"
+                                : allMissed
+                                  ? "rgba(181,70,49,0.10)"
+                                  : lowCoverage
+                                    ? "rgba(201,123,69,0.10)"
+                                    : "transparent",
                               border: "1px solid transparent",
                             }}
                             title={
-                              allMissed
-                                ? "Zero AI engines linked to you in their answer"
-                                : lowCoverage
-                                  ? "Only 1 of 4 AI engines linked to you"
-                                  : `Linked by ${linked} of 4 AI engines`
+                              unscanned
+                                ? "Not scanned yet — this prompt was just added. Citation data will appear after the next scan."
+                                : allMissed
+                                  ? "Zero AI engines linked to you in their answer"
+                                  : lowCoverage
+                                    ? "Only 1 of 4 AI engines linked to you"
+                                    : `Linked by ${linked} of 4 AI engines`
                             }
                           >
                             {engineIds.map((e, i) => (
@@ -3680,21 +3779,28 @@ function PromptsTable({
                                   // subconscious cue that the engine LINKED
                                   // (not just mentioned). Rust kept for the
                                   // 0/4 case so leaks still scream visually.
-                                  backgroundColor: allMissed
-                                    ? "#B54631"
-                                    : links[i]
-                                      ? "#2563EB"
-                                      : "rgba(107,109,107,0.3)",
+                                  // Unscanned: all dots neutral gray.
+                                  backgroundColor: unscanned
+                                    ? "rgba(107,109,107,0.3)"
+                                    : allMissed
+                                      ? "#B54631"
+                                      : links[i]
+                                        ? "#2563EB"
+                                        : "rgba(107,109,107,0.3)",
                                 }}
                               />
                             ))}
-                            {(allMissed || lowCoverage) && (
+                            {(unscanned || allMissed || lowCoverage) && (
                               <span
                                 className="uppercase tracking-wider"
                                 style={{
                                   fontSize: 9.5,
                                   fontWeight: 700,
-                                  color: allMissed ? "#B54631" : "#A06210",
+                                  color: unscanned
+                                    ? "var(--color-fg-muted)"
+                                    : allMissed
+                                      ? "#B54631"
+                                      : "#A06210",
                                   letterSpacing: "0.08em",
                                   marginLeft: 2,
                                 }}
@@ -5707,10 +5813,48 @@ export function PromptsSection({ data: dataOverride }: { data?: PromptsData } = 
     () => new Set(),
   );
 
-  const data = useMemo(
-    () => applyFilters(baseData, range, enabledEngines),
-    [baseData, range, enabledEngines],
-  );
+  // User-tracked prompts mirrored from /prompt-research → Send to Tracker.
+  // Lives in localStorage (see utils/userTrackedPrompts.ts) so cross-page
+  // adds show up here without a backend round-trip. Re-renders on
+  // localStorage changes (same-tab + cross-tab via storage event).
+  const [userTracked, setUserTracked] = useState<UserTrackedPrompt[]>([]);
+  useEffect(() => {
+    setUserTracked(readUserTrackedPrompts());
+    const unsub = subscribeUserTrackedPrompts(() =>
+      setUserTracked(readUserTrackedPrompts()),
+    );
+    return unsub;
+  }, []);
+
+  const data = useMemo(() => {
+    const filtered = applyFilters(baseData, range, enabledEngines);
+    if (userTracked.length === 0) return filtered;
+    // Convert each user-added intent into a PromptRow and prepend so
+    // the table opens on the rows the user just added. Skip ids already
+    // present so we don't duplicate when overlap exists. The synthetic
+    // metrics here are placeholders — real data lands when the scan runs
+    // against the new prompt.
+    const existingIds = new Set(filtered.prompts.map((p) => p.id));
+    const synthRows: PromptRow[] = userTracked
+      .filter((u) => !existingIds.has(u.id))
+      .map((u) => ({
+        id: u.id,
+        text: u.canonical,
+        type: "unbranded",
+        intent: u.intentType,
+        volume: 0,
+        engineHits: ENGINES.reduce<Record<string, boolean>>((acc, e) => {
+          acc[e.id] = false;
+          return acc;
+        }, {}),
+        position: null,
+        sentiment: 0,
+        responses: [],
+        userAdded: true,
+      }));
+    if (synthRows.length === 0) return filtered;
+    return { ...filtered, prompts: [...synthRows, ...filtered.prompts] };
+  }, [baseData, range, enabledEngines, userTracked]);
   const highlights = useMemo(
     () => derivePromptHighlights(data.prompts),
     [data.prompts],

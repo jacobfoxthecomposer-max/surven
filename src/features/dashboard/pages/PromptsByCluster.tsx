@@ -241,7 +241,7 @@ function synthSnippet(
   ][cohort];
 }
 
-type PromptsFilter = "branded" | "unbranded" | "cited" | "uncited";
+type PromptsFilter = "branded" | "unbranded" | "cited" | "uncited" | "added";
 
 export function PromptsByCluster({
   selectedFilters = new Set<PromptsFilter>(),

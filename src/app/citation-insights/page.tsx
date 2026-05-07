@@ -540,22 +540,22 @@ export default function CitationInsightsPage() {
 
             </div>
 
-            {/* Citation Gap Analysis — now consolidates the previous
-                "What to watch" + "What's working" diagnostic bands as
-                inline headlines above each panel (gap + listed). */}
-            <motion.div {...reveal}>
-              <CitationGapSection
-                results={results}
-                businessName={business.name}
-              />
-            </motion.div>
-
             <motion.div
               {...reveal}
               className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch"
             >
               <SourceCategoryBreakdown results={results} />
               <CitationsByEngine results={results} />
+            </motion.div>
+
+            {/* Citation Gap Analysis — wins to defend + gaps to claim. Sits
+                under the Source Categories + Citations by AI Engine row so
+                the user reads the breakdowns first, then the action items. */}
+            <motion.div {...reveal}>
+              <CitationGapSection
+                results={results}
+                businessName={business.name}
+              />
             </motion.div>
           </>
         )}
