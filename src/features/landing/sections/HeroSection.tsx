@@ -204,10 +204,7 @@ export function HeroSection() {
                     fontFamily: "var(--font-display)",
                     fontStyle: "italic",
                     color: "var(--color-primary)",
-<<<<<<< HEAD
-=======
                     whiteSpace: "nowrap",
->>>>>>> 8d9d4a6 (fix(hero): fluid typography + cursor wrap fix)
                   }}
                 >
                   {typed}
