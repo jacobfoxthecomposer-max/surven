@@ -11,15 +11,16 @@ import { ScrollReveal } from "@/components/molecules/ScrollReveal";
 
 const SCENE_1_MS = 4800; // typing + cursor moves + click + zoom-in scan
 const SCENE_2_MS = 4200; // engines querying with dramatic checkmarks
-const SCENE_3_MS = 4500; // results populate + hold
-const PAUSE_MS = 900; //   short pause before loop
-const TOTAL_MS = SCENE_1_MS + SCENE_2_MS + SCENE_3_MS + PAUSE_MS;
+// Scene 3 = ~2.1s for the slowest stat animation (chart end-dot) to finish
+// + 2s dwell before the loop restarts.
+const SCENE_3_MS = 4200;
+const TOTAL_MS = SCENE_1_MS + SCENE_2_MS + SCENE_3_MS;
 
 /* -------------------------------------------------------------------------- */
 /*  Mock content                                                               */
 /* -------------------------------------------------------------------------- */
 
-const TYPED_TEXT = "Joe's Pizza, Manchester CT";
+const TYPED_TEXT = "Joe's Pizza, Nashville TN";
 const TYPE_CHAR_MS = 70;
 
 type EnginePhase = "idle" | "loading" | "done";
@@ -33,10 +34,10 @@ const ENGINES: { name: string; finishAt: number; mentions: number; share: number
 
 const PROMPTS: { text: string; mentioned: boolean; engine: string | null }[] = [
   { text: "best pizza near me", mentioned: true, engine: "ChatGPT" },
-  { text: "italian restaurant Manchester CT", mentioned: true, engine: "Gemini" },
+  { text: "italian restaurant Nashville TN", mentioned: true, engine: "Gemini" },
   { text: "late night food downtown", mentioned: false, engine: null },
   { text: "where to take a date for dinner", mentioned: true, engine: "Claude" },
-  { text: "wood-fired pizza connecticut", mentioned: true, engine: "Google AI" },
+  { text: "wood-fired pizza tennessee", mentioned: true, engine: "Google AI" },
 ];
 
 const TARGET_SCORE = 73;
@@ -565,11 +566,16 @@ function EnginesRow({
       setPhases(["done", "done", "done", "done"]);
       return;
     }
-    if (scene < 2) {
+    if (scene === 1) {
       setPhases(["idle", "idle", "idle", "idle"]);
       return;
     }
+    // Scene 3: phases are already "done" from scene 2 — don't re-trigger
+    // the loading→done sequence, which would cause a second wave of
+    // checkmark celebrations.
+    if (scene === 3) return;
 
+    // Scene 2: kick off the loading → done staggered sequence.
     let cancelled = false;
     const guard = (fn: () => void) => () => {
       if (!cancelled) fn();
