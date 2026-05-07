@@ -27,13 +27,21 @@
  * fg/bg, no banned-word copy.
  */
 
-import { Suspense, useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Calendar, Download } from "lucide-react";
+import { Download } from "lucide-react";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Spinner } from "@/components/atoms/Spinner";
 import { AIOverview } from "@/components/atoms/AIOverview";
+import { AISummaryGenerator } from "@/components/atoms/AISummaryGenerator";
+import { NextScanCard } from "@/components/atoms/NextScanCard";
+import {
+  TimeRangeDropdown,
+  type TimeRangeKey,
+} from "@/components/atoms/TimeRangeDropdown";
+import { EngineIcon } from "@/components/atoms/EngineIcon";
+import { HoverHint } from "@/components/atoms/HoverHint";
 import { Button } from "@/components/atoms/Button";
 import { useToast } from "@/components/molecules/Toast";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -51,6 +59,7 @@ import { BetaFeedbackFooter } from "@/components/organisms/BetaFeedbackFooter";
 import { DashboardKpiStrip } from "@/features/dashboard/components/DashboardKpiStrip";
 import { buildDashboardHero } from "@/features/dashboard/utils/heroSentence";
 import { exportScanResultsAsCsv } from "@/utils/csvExport";
+import { AI_MODELS } from "@/utils/constants";
 import type { ScanResult } from "@/types/database";
 
 const MODEL_LABELS: Record<ScanResult["model_name"], string> = {
@@ -123,6 +132,31 @@ function DashboardPageContent() {
   const { toast } = useToast();
   const firstScanTriggered = useRef(false);
 
+  // ── Filter state — mirrors the Tracker hero ────────────────────────
+  // Time range affects the visibility-over-time chart. Engine filter
+  // applies to every results-derived section so toggling an engine off
+  // recomputes KPI / per-engine / sentiment / etc. live.
+  const [timeRange, setTimeRange] = useState<TimeRangeKey>("90d");
+  const [customRange, setCustomRange] = useState<{ from: string; to: string } | null>(
+    null,
+  );
+  const [enabledEngineIds, setEnabledEngineIds] = useState<Set<string>>(
+    () => new Set(AI_MODELS.map((m) => m.id)),
+  );
+
+  function toggleEngine(id: string) {
+    setEnabledEngineIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        if (next.size === 1) return prev; // always keep at least one
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
   function handleExport() {
     if (!latestScan || !business) return;
     exportScanResultsAsCsv(latestScan, business.name);
@@ -159,9 +193,46 @@ function DashboardPageContent() {
 
   // ── Hooks above must run unconditionally; keep auth/loading branches below.
   const score = latestScan?.visibility_score ?? 0;
-  const results = latestScan?.results ?? [];
+  const allResults = latestScan?.results ?? [];
   const competitorList = competitors;
   const competitorNames = competitorList.map((c) => c.name);
+
+  // Apply engine filter — every results-derived section uses this.
+  const results = useMemo(
+    () => allResults.filter((r) => enabledEngineIds.has(r.model_name)),
+    [allResults, enabledEngineIds],
+  );
+
+  // Apply time range to history (chart only). Range cutoffs in days; "ytd"
+  // and "all" handled explicitly. Custom ranges use the from/to ISO pair.
+  const filteredHistory = useMemo(() => {
+    if (history.length === 0) return history;
+    const now = Date.now();
+    const cutoffDays: Partial<Record<TimeRangeKey, number>> = {
+      "14d": 14,
+      "30d": 30,
+      "90d": 90,
+    };
+    if (timeRange === "all") return history;
+    if (timeRange === "ytd") {
+      const startOfYear = new Date(new Date().getFullYear(), 0, 1).getTime();
+      return history.filter(
+        (s) => new Date(s.created_at).getTime() >= startOfYear,
+      );
+    }
+    if (timeRange === "custom" && customRange) {
+      const fromTs = new Date(customRange.from + "T00:00:00").getTime();
+      const toTs = new Date(customRange.to + "T23:59:59").getTime();
+      return history.filter((s) => {
+        const t = new Date(s.created_at).getTime();
+        return t >= fromTs && t <= toTs;
+      });
+    }
+    const days = cutoffDays[timeRange];
+    if (!days) return history;
+    const cutoff = now - days * 24 * 60 * 60 * 1000;
+    return history.filter((s) => new Date(s.created_at).getTime() >= cutoff);
+  }, [history, timeRange, customRange]);
 
   const hero = useMemo(
     () =>
@@ -197,14 +268,42 @@ function DashboardPageContent() {
     [results, business?.name, topMentionedCompetitorMemo],
   );
 
-  const reportDateLabel = useMemo(() => {
-    const d = latestScan?.created_at ? new Date(latestScan.created_at) : new Date();
-    return d.toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
-  }, [latestScan?.created_at]);
+  // AI-summary text for the AISummaryGenerator pill — synthesizes the
+  // page's headline finding in 2 sentences. Same shape the Tracker uses.
+  function buildAiSummaryText(): string {
+    if (results.length === 0) {
+      return `${business?.name ?? "Your business"} hasn't been scanned yet. Run a scan to see how often ChatGPT, Claude, Gemini, and Google AI name you when answering customer questions.`;
+    }
+    const byEngine = new Map<ScanResult["model_name"], { mentioned: number; total: number }>();
+    for (const r of results) {
+      const e = byEngine.get(r.model_name) ?? { mentioned: 0, total: 0 };
+      e.total += 1;
+      if (r.business_mentioned) e.mentioned += 1;
+      byEngine.set(r.model_name, e);
+    }
+    const ranked = [...byEngine.entries()]
+      .map(([model, s]) => ({
+        model,
+        rate: s.total ? s.mentioned / s.total : 0,
+        ...s,
+      }))
+      .sort((a, b) => b.rate - a.rate);
+    const best = ranked[0];
+    const worst = ranked[ranked.length - 1];
+    const tail = topMentionedCompetitorMemo
+      ? ` ${topMentionedCompetitorMemo.name} is the named competitor to watch with ${topMentionedCompetitorMemo.count} mentions across these scans.`
+      : "";
+
+    if (ranked.length === 1) {
+      return `${MODEL_LABELS[best.model]} mentions ${business?.name ?? "you"} in ${best.mentioned} of ${best.total} answers.${tail}`;
+    }
+    return `${MODEL_LABELS[best.model]} mentions ${business?.name ?? "you"} most — ${best.mentioned} of ${best.total} answers (${Math.round(best.rate * 100)}%). ${MODEL_LABELS[worst.model]} is the weak link at ${worst.mentioned} of ${worst.total} (${Math.round(worst.rate * 100)}%).${tail}`;
+  }
+
+  function buildAiSummaryCTA() {
+    if (results.length === 0) return null;
+    return { label: "Open Code Scanner", href: "/site-audit" };
+  }
 
   // Auth protection
   if (!user && !authLoading) {
@@ -233,62 +332,63 @@ function DashboardPageContent() {
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        {/* ─── 1. Eyebrow + Hero ──────────────────────────────────────── */}
+        {/* ─── 1. Hero — canonical Tracker pattern ────────────────────── */}
+        {/* AISummaryGenerator pill at top, headline + NextScanCard side-by-
+            side (no description paragraph), then time-range + engine chips.
+            Visually + structurally identical to /ai-visibility-tracker. */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, ease }}
-          className="flex flex-col sm:flex-row sm:items-end justify-between gap-4"
+          className="space-y-5"
         >
-          <div className="min-w-0">
-            <p
-              className="text-[var(--color-fg-muted)] uppercase flex items-center gap-1.5"
-              style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em" }}
-            >
-              <Calendar className="h-3 w-3" />
-              Visibility report &middot; {reportDateLabel}
-            </p>
-            <h1
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: "clamp(34px, 4.4vw, 52px)",
-                fontWeight: 600,
-                lineHeight: 1.12,
-                letterSpacing: "-0.01em",
-                color: "var(--color-fg)",
-                marginTop: 6,
+          <AISummaryGenerator
+            getSummary={buildAiSummaryText}
+            getCTA={buildAiSummaryCTA}
+          />
+
+          <div className="flex items-start justify-between gap-6 flex-wrap">
+            <div className="space-y-2 min-w-0 flex-1">
+              <h1
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontSize: "clamp(36px, 4.6vw, 60px)",
+                  fontWeight: 600,
+                  lineHeight: 1.12,
+                  letterSpacing: "-0.01em",
+                  color: "var(--color-fg)",
+                }}
+              >
+                Your AI visibility is{" "}
+                <span style={{ color: hero.color, fontStyle: "italic" }}>
+                  {hero.word}
+                </span>
+                .
+              </h1>
+            </div>
+            <div className="shrink-0 mt-1">
+              <NextScanCard />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <TimeRangeDropdown
+              value={timeRange}
+              customFrom={customRange?.from}
+              customTo={customRange?.to}
+              onChange={(key, fromISO, toISO) => {
+                if (key === "custom" && fromISO && toISO) {
+                  setCustomRange({ from: fromISO, to: toISO });
+                  setTimeRange("custom");
+                } else {
+                  setTimeRange(key);
+                }
               }}
-            >
-              {business.name}&rsquo;s AI visibility is{" "}
-              <span style={{ color: hero.color, fontStyle: "italic" }}>{hero.word}</span>.
-            </h1>
-            <p
-              className="text-[var(--color-fg-secondary)]"
-              style={{ fontSize: 14.5, lineHeight: 1.55, marginTop: 8, maxWidth: 720 }}
-            >
-              {hasScan && hero.total > 0 ? (
-                <>
-                  Named in{" "}
-                  <span className="tabular-nums font-semibold text-[var(--color-fg)]">
-                    {hero.mentioned} of {hero.total}
-                  </span>{" "}
-                  AI answers about {hero.industryPhrase}
-                  {hero.locationPhrase ? ` ${hero.locationPhrase}` : ""}.
-                  {hero.lastScanLabel && (
-                    <span className="text-[var(--color-fg-muted)]">
-                      {" "}
-                      Last scan {hero.lastScanLabel}.
-                    </span>
-                  )}
-                </>
-              ) : (
-                <>
-                  We test 4 AI tools (ChatGPT, Claude, Gemini, Google AI) against the
-                  questions your customers actually ask. Run a scan to see who AI
-                  recommends — you, or your competitors.
-                </>
-              )}
-            </p>
+            />
+            <DashboardEngineChips
+              enabledIds={enabledEngineIds}
+              onToggle={toggleEngine}
+            />
           </div>
         </motion.div>
 
@@ -359,9 +459,9 @@ function DashboardPageContent() {
         )}
 
         {/* ─── 9. Visibility over time ─────────────────────────────────── */}
-        {history.length > 0 && (
+        {filteredHistory.length > 0 && (
           <motion.div {...reveal}>
-            <HistorySection scans={history} />
+            <HistorySection scans={filteredHistory} />
           </motion.div>
         )}
 
@@ -418,5 +518,55 @@ function DashboardPageContent() {
         <BetaFeedbackFooter />
       </div>
     </DashboardLayout>
+  );
+}
+
+/* ── Inline EngineChips ───────────────────────────────────────────────── */
+/**
+ * Mirrors the EngineChips render inside VisibilityScannerSection — sage
+ * filled when active, transparent + warm-grey border when not, hover hint
+ * on each. Kept inline (not exported) since the chip behaviour is locked
+ * to the dashboard's engine-filter set.
+ */
+function DashboardEngineChips({
+  enabledIds,
+  onToggle,
+}: {
+  enabledIds: Set<string>;
+  onToggle: (id: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span
+        className="text-[var(--color-fg-muted)] mr-1"
+        style={{ fontSize: 14 }}
+      >
+        AI engines:
+      </span>
+      {AI_MODELS.map((m) => {
+        const active = enabledIds.has(m.id);
+        return (
+          <HoverHint
+            key={m.id}
+            hint={`${active ? "Hide" : "Show"} ${m.name} data in the dashboard.`}
+          >
+            <button
+              type="button"
+              onClick={() => onToggle(m.id)}
+              className={
+                "inline-flex items-center gap-2 px-4 py-2 rounded-[var(--radius-full)] border transition-colors " +
+                (active
+                  ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                  : "bg-transparent text-[var(--color-fg-muted)] border-[var(--color-border)] hover:border-[var(--color-border-hover)] hover:text-[var(--color-fg-secondary)]")
+              }
+              style={{ fontSize: 13 }}
+            >
+              <EngineIcon id={m.id} size={15} />
+              {m.name}
+            </button>
+          </HoverHint>
+        );
+      })}
+    </div>
   );
 }
