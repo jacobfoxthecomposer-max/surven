@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, X } from "lucide-react";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { AuthLayout } from "@/components/layouts/AuthLayout";
 import { Input } from "@/components/atoms/Input";
 import { Button } from "@/components/atoms/Button";
@@ -14,6 +15,8 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { signUpSchema, type SignUpInput } from "@/types/auth";
 import { humanizeAuthError } from "@/utils/authErrors";
 import { cn } from "@/utils/cn";
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 interface RuleProps {
   met: boolean;
