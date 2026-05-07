@@ -51,7 +51,7 @@ const duplicated = [...features, ...features];
 export function ValuePropsSection() {
   return (
     <section className="py-24 px-4 bg-[var(--color-bg)] overflow-hidden">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <ScrollReveal className="text-center mb-12">
           <h2
             className="text-3xl sm:text-4xl font-light"
