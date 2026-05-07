@@ -12,15 +12,35 @@ import { Footer } from "@/features/landing/sections/Footer";
 
 import type { Metadata } from "next";
 export const metadata: Metadata = {
+  title: "Surven — Track Your Visibility Across ChatGPT, Claude, Gemini & Google AI",
+  description:
+    "Surven shows you how often AI engines recommend your business — and where you're losing visibility to competitors. Run your first scan in 60 seconds.",
   alternates: {
     canonical: "https://surven.ai/",
   },
-
-  openGraph: { url: "https://surven.ai/", type: "website" },
-
-  title: "AI Visibility Tracking Features | Surven",
-
-  description: "Track your AI visibility across multiple platforms with Surven's generative engine optimization tools. Sign up for free today.",
+  openGraph: {
+    url: "https://surven.ai/",
+    type: "website",
+    siteName: "Surven",
+    title: "Surven — Track Your Visibility Across ChatGPT, Claude, Gemini & Google AI",
+    description:
+      "Surven shows you how often AI engines recommend your business — and where you're losing visibility to competitors. Run your first scan in 60 seconds.",
+    images: [
+      {
+        url: "https://surven.ai/surven-logo.png",
+        width: 1200,
+        height: 630,
+        alt: "Surven — AI Visibility Tracker",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Surven — Track Your Visibility Across ChatGPT, Claude, Gemini & Google AI",
+    description:
+      "See how often AI engines recommend your business — and where you're losing to competitors. First scan in 60 seconds.",
+    images: ["https://surven.ai/surven-logo.png"],
+  },
 };
 export default function LandingPage() {
   return (
