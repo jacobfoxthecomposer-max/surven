@@ -31,6 +31,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Download } from "lucide-react";
+import { summarizeSentiment } from "@/features/dashboard/utils/heroSentence";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Spinner } from "@/components/atoms/Spinner";
 import { AISummaryGenerator } from "@/components/atoms/AISummaryGenerator";
@@ -64,9 +65,10 @@ import { CitationGapSection } from "@/features/dashboard/pages/CitationGapSectio
 import { WhatsNextCard } from "@/components/organisms/WhatsNextCard";
 import { BetaFeedbackFooter } from "@/components/organisms/BetaFeedbackFooter";
 import {
-  SentimentSlimCard,
-  ShareOfVoiceSlimCard,
-} from "@/features/dashboard/components/DashboardSidecards";
+  CleanStatCard,
+  type CleanStatCardSpec,
+} from "@/features/dashboard/pages/PromptsSection";
+import { MessageSquare, Users } from "lucide-react";
 import { buildDashboardHero } from "@/features/dashboard/utils/heroSentence";
 import { exportScanResultsAsCsv } from "@/utils/csvExport";
 import { AI_MODELS } from "@/utils/constants";
@@ -506,42 +508,44 @@ function DashboardPageContent() {
             <NextScanCard />
           </div>
 
-          {/* 2-col visibility section: LEFT = gauge atom + over-time
-              chart card (the "visibility tracker" stack); RIGHT = slim
-              Sentiment + Share-of-voice cards stacked vertically.
-              Right-column cards are vertically compressed so two of them
-              fit alongside the left column's chart height. */}
+          {/* Visibility gauge centered above the over-time chart. */}
           {hasScan && (
-            <div className="mt-5 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,360px)] gap-4 items-stretch">
-              {/* LEFT — gauge + chart */}
-              <div className="flex flex-col gap-4 min-w-0">
-                <div className="flex justify-center">
-                  <VisibilityScoreGauge
-                    score={scannerData.youToday}
-                    delta={scannerData.youDelta}
-                  />
-                </div>
-                <ChartCard
-                  data={scannerData}
-                  treatment={TREATMENT_STANDARD_LABEL}
-                  enabledBrandIds={enabledBrandIds}
-                  chartHeight={300}
-                  showInsight={false}
-                  showOptimizationMarkers={false}
-                  showPromptChangeMarkers={false}
-                  delta={scannerData.youDelta}
-                />
-              </div>
+            <div className="mt-5 flex justify-center">
+              <VisibilityScoreGauge
+                score={scannerData.youToday}
+                delta={scannerData.youDelta}
+              />
+            </div>
+          )}
 
-              {/* RIGHT — sentiment + share of voice, stacked */}
-              <div className="grid grid-rows-[1fr_1fr] gap-4 min-w-0">
-                <SentimentSlimCard results={results} />
-                <ShareOfVoiceSlimCard
-                  brands={sovBrands}
-                  youDelta={scannerData.youDelta}
-                  youShare={scannerData.sharePct}
-                />
-              </div>
+          {hasScan && (
+            <div className="mt-4">
+              <ChartCard
+                data={scannerData}
+                treatment={TREATMENT_STANDARD_LABEL}
+                enabledBrandIds={enabledBrandIds}
+                chartHeight={300}
+                showInsight={false}
+                showOptimizationMarkers={false}
+                showPromptChangeMarkers={false}
+                delta={scannerData.youDelta}
+              />
+            </div>
+          )}
+
+          {/* Side-by-side stat cards under the chart — same uniform
+              CleanStatCard chrome that the Tracked Prompts page uses for
+              its 4-card row. Equal width, equal height, single visual
+              rhythm. */}
+          {hasScan && (
+            <div className="mt-4">
+              <DashboardStatStrip
+                results={results}
+                competitors={competitorList}
+                sovDelta={scannerData.youDelta}
+                sovShare={scannerData.sharePct}
+                sovBrands={sovBrands}
+              />
             </div>
           )}
         </motion.div>
@@ -650,6 +654,87 @@ function DashboardPageContent() {
         <BetaFeedbackFooter />
       </div>
     </DashboardLayout>
+  );
+}
+
+/* ── Dashboard stat strip — Sentiment + Share of voice ──────────────── */
+/**
+ * Two CleanStatCards in a side-by-side grid using the canonical
+ * Tracked-Prompts-page row pattern. Equal width / equal height. Sits
+ * directly below the visibility chart card.
+ */
+function DashboardStatStrip({
+  results,
+  competitors,
+  sovDelta,
+  sovShare,
+  sovBrands,
+}: {
+  results: ScanResult[];
+  competitors: { name: string }[];
+  sovDelta: number;
+  sovShare: number;
+  sovBrands: { name: string; isYou: boolean; current: number }[];
+}) {
+  const sentiment = summarizeSentiment(results);
+
+  // Top-mentioned competitor for the SoV subline.
+  const topCompetitor = (() => {
+    if (results.length === 0 || competitors.length === 0) return null;
+    const counts = new Map<string, number>();
+    for (const c of competitors) counts.set(c.name, 0);
+    for (const r of results) {
+      for (const [name, present] of Object.entries(r.competitor_mentions ?? {})) {
+        if (!present) continue;
+        if (!counts.has(name)) continue;
+        counts.set(name, (counts.get(name) ?? 0) + 1);
+      }
+    }
+    const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    if (ranked.length === 0 || ranked[0][1] === 0) return null;
+    return { name: ranked[0][0], count: ranked[0][1] };
+  })();
+
+  // Top brand by current share for the SoV subline (for when no real
+  // competitor mention beats yours we still surface the leader).
+  const topSovBrand = [...sovBrands].sort((a, b) => b.current - a.current)[0];
+
+  const sentimentSpec: CleanStatCardSpec = {
+    icon: MessageSquare,
+    label: "Sentiment",
+    hint: "When AI describes you, the dominant tone across all mentions in the latest scan. Strong = mostly positive; Concerning = negatives outweigh positives.",
+    value: sentiment.verdict === "No data" ? "—" : sentiment.verdict,
+    sub:
+      sentiment.total > 0
+        ? `${sentiment.positive} positive · ${sentiment.neutral} neutral · ${sentiment.negative} negative`
+        : "No sentiment data yet",
+  };
+
+  const sovSubline = topCompetitor
+    ? `${topCompetitor.name} leads competitors with ${topCompetitor.count} mentions`
+    : topSovBrand && !topSovBrand.isYou
+      ? `${topSovBrand.name} leads at ${topSovBrand.current.toFixed(1)}%`
+      : competitors.length === 0
+        ? "Add competitors to compare"
+        : "You're leading the field";
+
+  const sovSpec: CleanStatCardSpec = {
+    icon: Users,
+    label: "Share of voice",
+    hint: "Your share of every brand mention across the prompts we tracked. Higher = AI names you more often than competitors.",
+    value: `${Math.round(sovShare)}%`,
+    sub: sovSubline,
+    delta: {
+      direction: sovDelta > 0.04 ? "up" : sovDelta < -0.04 ? "down" : "flat",
+      pct: sovDelta,
+    },
+  };
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <CleanStatCard spec={sentimentSpec} />
+      <CleanStatCard spec={sovSpec} />
+    </div>
   );
 }
 
