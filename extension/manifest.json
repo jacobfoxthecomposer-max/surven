@@ -2,7 +2,15 @@
   "manifest_version": 3,
   "name": "Surven Auditor",
   "version": "1.0.0",
-  "description": "Audit your website for GEO (Generative Engine Optimization) visibility issues",
+  "description": "Audit any site for AI-search visibility (GEO) issues — see what ChatGPT, Claude, and Gemini can read.",
+  "homepage_url": "https://surven.ai",
+  "author": "Surven",
+  "icons": {
+    "16": "public/icons/icon-16.png",
+    "32": "public/icons/icon-32.png",
+    "48": "public/icons/icon-48.png",
+    "128": "public/icons/icon-128.png"
+  },
   "permissions": ["sidePanel", "activeTab", "scripting", "storage"],
   "host_permissions": ["<all_urls>"],
   "background": {
@@ -20,6 +28,12 @@
     "default_path": "src/sidepanel/index.html"
   },
   "action": {
-    "default_title": "Surven Auditor"
+    "default_title": "Surven Auditor",
+    "default_icon": {
+      "16": "public/icons/icon-16.png",
+      "32": "public/icons/icon-32.png",
+      "48": "public/icons/icon-48.png",
+      "128": "public/icons/icon-128.png"
+    }
   }
 }
