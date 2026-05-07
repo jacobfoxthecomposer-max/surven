@@ -341,65 +341,68 @@ function DashboardPageContent() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, ease }}
         >
-          {/* Top row: AISummaryGenerator (left) + NextScanCard (right).
-              Pulling NextScanCard out of the headline's flex row was the
-              actual fix for the "still a gap" — NextScanCard is ~110px
-              tall, headline is ~50px. With them in the same row + items-
-              start, the row stretched to NextScanCard's height and ~60px
-              of empty space lived inside the row, below the headline,
-              before the filter could even start. Now NextScanCard sits up
-              top, headline gets its own clean row, filter sits flush. */}
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <AISummaryGenerator
-              getSummary={buildAiSummaryText}
-              getCTA={buildAiSummaryCTA}
-            />
-            <div className="shrink-0">
+          {/* Two-column layout: LEFT owns the whole vertical stack
+              (AISummaryGenerator → headline → filter row), RIGHT is just
+              NextScanCard. Pulling NextScanCard into its OWN column (not
+              sharing a flex row with AISummaryGenerator or the headline)
+              is the only way to avoid the stretch-to-tallest gap that
+              was creating empty cream above the headline. The left
+              column's children flow with explicit mt-* values, so the
+              filter row lands flush under the headline. */}
+          <div className="flex items-start gap-6">
+            <div className="flex-1 min-w-0">
+              <AISummaryGenerator
+                getSummary={buildAiSummaryText}
+                getCTA={buildAiSummaryCTA}
+              />
+              <h1
+                className="mt-5"
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontSize: "clamp(36px, 4.6vw, 60px)",
+                  fontWeight: 600,
+                  // Tight line-height (1.0) trims the descender slack below
+                  // the period so the filter row sits visually flush.
+                  lineHeight: 1.0,
+                  letterSpacing: "-0.01em",
+                  color: "var(--color-fg)",
+                }}
+              >
+                Your AI visibility is{" "}
+                <span style={{ color: hero.color, fontStyle: "italic" }}>
+                  {hero.word}
+                </span>
+                .
+              </h1>
+              <div className="flex flex-wrap items-center gap-3 mt-2">
+                <TimeRangeDropdown
+                  value={timeRange}
+                  customFrom={customRange?.from}
+                  customTo={customRange?.to}
+                  onChange={(key, fromISO, toISO) => {
+                    if (key === "custom" && fromISO && toISO) {
+                      setCustomRange({ from: fromISO, to: toISO });
+                      setTimeRange("custom");
+                    } else {
+                      setTimeRange(key);
+                    }
+                  }}
+                />
+                <DashboardEngineChips
+                  enabledIds={enabledEngineIds}
+                  onToggle={toggleEngine}
+                />
+              </div>
+            </div>
+            <div className="shrink-0 hidden lg:block">
               <NextScanCard />
             </div>
           </div>
 
-          <h1
-            className="mt-5"
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: "clamp(36px, 4.6vw, 60px)",
-              fontWeight: 600,
-              // Tight line-height (1.0) trims the descender slack below
-              // the period so the filter row sits visually flush.
-              lineHeight: 1.0,
-              letterSpacing: "-0.01em",
-              color: "var(--color-fg)",
-            }}
-          >
-            Your AI visibility is{" "}
-            <span style={{ color: hero.color, fontStyle: "italic" }}>
-              {hero.word}
-            </span>
-            .
-          </h1>
-
-          {/* Filter row sits directly under the title. mt-2 (8px) +
-              line-height 1.0 above = chips read as "directly underneath"
-              with no decorative cream gap. */}
-          <div className="flex flex-wrap items-center gap-3 mt-2">
-            <TimeRangeDropdown
-              value={timeRange}
-              customFrom={customRange?.from}
-              customTo={customRange?.to}
-              onChange={(key, fromISO, toISO) => {
-                if (key === "custom" && fromISO && toISO) {
-                  setCustomRange({ from: fromISO, to: toISO });
-                  setTimeRange("custom");
-                } else {
-                  setTimeRange(key);
-                }
-              }}
-            />
-            <DashboardEngineChips
-              enabledIds={enabledEngineIds}
-              onToggle={toggleEngine}
-            />
+          {/* On mobile / narrow widths NextScanCard drops below the hero
+              left-column instead of overflowing it. */}
+          <div className="lg:hidden mt-4">
+            <NextScanCard />
           </div>
 
           {/* ─── KPI strip + page-level AIOverview live INSIDE the hero
