@@ -22,7 +22,7 @@ export default function PrivacyPage() {
           Privacy Policy
         </h1>
         <p className="text-sm text-[var(--color-fg-muted)] mb-10">
-          Last updated: 2026-05-04
+          Last updated: 2026-05-06
         </p>
 
         <div
