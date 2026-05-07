@@ -5,13 +5,13 @@ import { LoginForm } from "./LoginForm";
 
 import type { Metadata } from "next";
 export const metadata: Metadata = {
-  openGraph: { url: "https://surven.ai/login", type: "website" },
+  openGraph: { url: "https://surven.vercel.app/login", type: "website" },
 
   alternates: {
-    canonical: "https://surven.ai/login",
+    canonical: "https://surven.vercel.app/login",
   },
 
-  title: "Access Your Surven Account | Surven",
+  title: "Login to Your Surven Account | Surven",
 
   description: "Log in to your Surven account to manage your AI visibility tracking and access your dashboard.",
 };
