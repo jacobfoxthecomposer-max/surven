@@ -48,11 +48,12 @@ export default function LandingPage() {
     <>
       <LandingNav />
       <HeroSection />
+      <ProductPreviewSection />
       <FeaturesSection />
       <ValuePropsSection />
       <HowItWorksSection />
-      <PricingSection />
       <StatsSection />
+      <PricingSection />
       <FaqSection />
       <CtaSection />
       <Footer />
