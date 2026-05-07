@@ -340,15 +340,14 @@ function DashboardPageContent() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, ease }}
-          className="space-y-5"
         >
           <AISummaryGenerator
             getSummary={buildAiSummaryText}
             getCTA={buildAiSummaryCTA}
           />
 
-          <div className="flex items-start justify-between gap-6 flex-wrap">
-            <div className="space-y-2 min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-6 flex-wrap mt-5">
+            <div className="min-w-0 flex-1">
               <h1
                 style={{
                   fontFamily: "var(--font-display)",
@@ -371,7 +370,10 @@ function DashboardPageContent() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          {/* Filter row sits TIGHT to the title (mt-3 = 12px) — the
+              title-to-filter gap was the empty cream Joey called out;
+              other vertical gaps stay at 20px (mt-5). */}
+          <div className="flex flex-wrap items-center gap-3 mt-3">
             <TimeRangeDropdown
               value={timeRange}
               customFrom={customRange?.from}
@@ -396,10 +398,16 @@ function DashboardPageContent() {
               empty gap (Tracker-pattern equivalent of the trio that
               follows the filter row there). */}
           {hasScan && (
-            <DashboardKpiStrip results={results} competitors={competitorList} />
+            <div className="mt-5">
+              <DashboardKpiStrip results={results} competitors={competitorList} />
+            </div>
           )}
 
-          {insight && <AIOverview text={insight} size="md" />}
+          {insight && (
+            <div className="mt-5">
+              <AIOverview text={insight} size="md" />
+            </div>
+          )}
         </motion.div>
 
         {/* ─── 4. Trio: Gauge + What's Next ───────────────────────────── */}
