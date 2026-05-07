@@ -6,12 +6,16 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Calendar,
-  Info,
+  HelpCircle,
   Link2,
   Database,
   ShieldCheck,
   ArrowRight,
+  CheckCircle2,
+  TrendingUp,
+  AlertTriangle,
 } from "lucide-react";
+import { CleanStatCard, type CleanStatCardSpec } from "@/features/dashboard/pages/PromptsSection";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Spinner } from "@/components/atoms/Spinner";
 import { Card } from "@/components/atoms/Card";
@@ -30,9 +34,6 @@ import { AuthorityBreakdown } from "@/features/citation-insights/AuthorityBreakd
 import { SourceCategoryBreakdown } from "@/features/citation-insights/SourceCategoryBreakdown";
 import { CitationsByEngine } from "@/features/citation-insights/CitationsByEngine";
 import { CitedDomainsTable } from "@/features/citation-insights/CitedDomainsTable";
-import { CitationDiagnosticBand } from "@/features/citation-insights/CitationDiagnosticBand";
-import { CitationFixActions } from "@/features/citation-insights/CitationFixActions";
-import { CitationFooterDiagnostic } from "@/features/citation-insights/CitationFooterDiagnostic";
 import { AI_MODELS } from "@/utils/constants";
 import { getAuthority } from "@/utils/citationAuthority";
 import { colorForValue, SURVEN_THRESHOLDS } from "@/utils/brandColors";
@@ -111,8 +112,13 @@ export default function CitationInsightsPage() {
     let totalCitations = 0;
     const authorityCounts = { high: 0, medium: 0, low: 0 };
     const domainFreq = new Map<string, number>();
+    // Per-engine unique source counts — used by the mini bar chart in
+    // the Unique Sources card right slot.
+    const perEngineSources = new Map<string, Set<string>>();
+    for (const m of AI_MODELS) perEngineSources.set(m.id, new Set());
     for (const r of results) {
       if (!r.citations) continue;
+      const engineSet = perEngineSources.get(r.model_name);
       for (const d of r.citations) {
         if (!uniqueDomains.has(d)) {
           uniqueDomains.add(d);
@@ -120,8 +126,14 @@ export default function CitationInsightsPage() {
         }
         totalCitations++;
         domainFreq.set(d, (domainFreq.get(d) ?? 0) + 1);
+        if (engineSet) engineSet.add(d);
       }
     }
+    const enginesSourceCounts = AI_MODELS.map((m) => ({
+      id: m.id,
+      name: m.name,
+      count: perEngineSources.get(m.id)?.size ?? 0,
+    }));
 
     const totalUnique = uniqueDomains.size;
     const highAuthorityPct =
@@ -140,6 +152,7 @@ export default function CitationInsightsPage() {
       highAuthorityPct,
       topDomain: topDomain ? { domain: topDomain[0], count: topDomain[1] } : null,
       engineCount: enginesWithCitations.size,
+      enginesSourceCounts,
     };
   }, [results]);
 
@@ -187,24 +200,34 @@ export default function CitationInsightsPage() {
       return `No citation data yet for ${business.name}. Run a scan from the Dashboard to see which sources AI engines are pulling from when they answer questions about you.`;
     }
     const top = insights.topDomain;
+    // Sandwich structure: GOOD → BAD → GOOD. Lead with the strongest
+    // citation source or footprint, middle with the highest-leverage
+    // weakness (authority mix or engine spread), close with another
+    // positive (full engine coverage or healthy authority %).
     const s1 = top
-      ? `${top.domain} is doing the heavy lifting — ${top.count} of ${insights.totalCitations} citations across ${insights.engineCount} AI engine${insights.engineCount === 1 ? "" : "s"}, but ${insights.uniqueDomains} total cited domain${insights.uniqueDomains === 1 ? "" : "s"} means your authority footprint is ${profileWord}.`
-      : `AI engines aren't citing any sources for ${business.name} yet — getting listed on high-authority directories is the fastest way to start showing up.`;
-    const s2 = `High-authority sources make up ${insights.highAuthorityPct}% of your citation mix${insights.highAuthorityPct < 40 ? " — that's the lever to pull, since AI weights citations from trusted domains far more heavily" : " — keep that pressure on, since AI weights trusted domains far more heavily"}.`;
-    const s3 = insights.engineCount < 4
-      ? `Watch your engine spread: only ${insights.engineCount} of 4 engines are citing any source for you, which means ${4 - insights.engineCount} engine${4 - insights.engineCount === 1 ? " is" : "s are"} answering without naming you at all.`
-      : `One bright spot: every tracked AI engine is pulling at least one citation for you — coverage is intact across the board.`;
+      ? `${top.domain} is doing the heavy lifting — ${top.count} of ${insights.totalCitations} citations across ${insights.engineCount} AI engine${insights.engineCount === 1 ? "" : "s"}, an anchor source that's already proven it can land you in answers.`
+      : `Your scan returned ${insights.totalCitations} total citations across ${insights.uniqueDomains} domain${insights.uniqueDomains === 1 ? "" : "s"} — the foundation is in place to start naming the authority sources AI weights highest.`;
+    const s2 = insights.highAuthorityPct < 40
+      ? `High-authority sources, however, only make up ${insights.highAuthorityPct}% of your citation mix — that's the lever to pull, since AI weights trusted domains far more heavily than long-tail blog mentions.`
+      : insights.engineCount < 4
+        ? `Only ${insights.engineCount} of 4 engines are citing any source for you, which means ${4 - insights.engineCount} engine${4 - insights.engineCount === 1 ? " is" : "s are"} answering questions about ${business.name} without naming you at all.`
+        : `${insights.uniqueDomains} cited domain${insights.uniqueDomains === 1 ? "" : "s"} is a ${profileWord} authority footprint — broaden the source mix so a single domain change can't tank your visibility.`;
+    const s3 = insights.engineCount === 4
+      ? `Every tracked AI engine is pulling at least one citation for you, so coverage is intact across the board — the work from here is depth, not breadth.`
+      : insights.highAuthorityPct >= 50
+        ? `High-authority sources still make up ${insights.highAuthorityPct}% of your mix, and that signal alone gives AI strong evidence to keep citing you over competitors.`
+        : `You're earning citations on ${insights.uniqueDomains} distinct domain${insights.uniqueDomains === 1 ? "" : "s"} — every additional source compounds, since AI weights cross-source corroboration.`;
     return `${s1} ${s2} ${s3}`;
   };
 
   const buildAICTA = (): { label: string; href: string } => {
     if (!insights || !insights.topDomain) {
-      return { label: "Run a site audit to start earning citations", href: "/site-audit" };
+      return { label: "Open Website Audit to start earning citations", href: "/audit" };
     }
     if (insights.highAuthorityPct < 40) {
-      return { label: "Run a site audit to earn high-authority citations", href: "/site-audit" };
+      return { label: "Open Website Audit to earn high-authority citations", href: "/audit" };
     }
-    return { label: "Run a site audit to broaden your citation footprint", href: "/site-audit" };
+    return { label: "Open Website Audit to broaden your citation footprint", href: "/audit" };
   };
 
   return (
@@ -340,11 +363,16 @@ export default function CitationInsightsPage() {
             {/* Divider line — sits between control row and the data row below */}
             <div className="border-t border-[var(--color-border)]" />
 
-            {/* Data row — left col-span-2 stacks KPIs + AIOverview + WhatToWatch.
-                Right col-span-1 holds FixActions, h-full to match the combined left-col height. */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-              <div className="lg:col-span-2 flex flex-col gap-4 min-w-0">
-                {/* KPI cards */}
+            {/* All Cited Domains table — moved above the KPI cards so the
+                full domain list is the first thing the user sees, with
+                the summary metrics framing it below. */}
+            <motion.div {...reveal}>
+              <CitedDomainsTable results={results} />
+            </motion.div>
+
+            {/* KPI cards — full width now that the FixActions side panel
+                ("4 ways to strengthen your sources") was removed. */}
+            <div className="flex flex-col gap-4 min-w-0">
                 {insights && (
                   <motion.div
                     initial={{ opacity: 0, y: 8 }}
@@ -353,206 +381,182 @@ export default function CitationInsightsPage() {
                     className="grid grid-cols-1 sm:grid-cols-3 gap-3"
                   >
                     {(() => {
-                      const rateColor = colorForValue(
-                        insights.citationRate,
-                        SURVEN_THRESHOLDS.citationRate,
+                      // Stat strip layout — Citation Rate | Authority
+                      // Breakdown (compact donut) | Unique Sources. The
+                      // middle card replaces the previous "Authority Mix"
+                      // CleanStatCard with the full AuthorityBreakdown
+                      // donut visualization, restyled to match the
+                      // CleanStatCard chrome so all three slots share the
+                      // same height and rhythm.
+                      const citationCard: CleanStatCardSpec = {
+                        icon: Link2,
+                        label: "Citation Rate",
+                        hint:
+                          "Share of AI responses about you that include a cited source. 50%+ is strong; under 25% means AI engines are answering without grounding their claims.",
+                        value: `${insights.citationRate}%`,
+                        sub: `${insights.totalCitations} total citations`,
+                        gauge: { type: "citation", pct: insights.citationRate, size: "lg" },
+                        bottomLine:
+                          insights.citationRate >= 45
+                            ? { icon: CheckCircle2, text: "Strong grounding — AI is backing claims about you with named sources", tone: "good" }
+                            : insights.citationRate >= 20
+                              ? { icon: TrendingUp, text: "Push high-authority sources to lift this past 45% — fastest credibility gain", tone: "warn" }
+                              : { icon: AlertTriangle, text: "Below 20% — AI is answering without sources, hurting trust signals", tone: "warn" },
+                        cta: { label: "See prompts", href: "/prompts#prompts-table" },
+                      };
+                      // Per-engine source mini bar chart — fills the
+                      // right slot of the Unique Sources card so the
+                      // "Across N engines" subline gets a visual
+                      // breakdown. Bars are colored with each engine's
+                      // brand hue + scaled to the leader engine.
+                      const engineMax = Math.max(
+                        1,
+                        ...insights.enginesSourceCounts.map((e) => e.count),
                       );
-                      return (
-                        <Card className="flex flex-col gap-3 p-4">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                              style={{ backgroundColor: `${rateColor}1A` }}
-                            >
-                              <Link2
-                                className="h-5 w-5"
-                                style={{ color: rateColor }}
-                              />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-1 mb-0.5">
-                                <p className="text-xs text-[var(--color-fg-muted)]">
-                                  Citation Rate
-                                </p>
-                                <HoverHint hint="Share of AI responses about you that include a cited source. 50%+ is strong; under 25% means AI engines are answering without grounding their claims.">
-                                  <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
-                                </HoverHint>
-                              </div>
-                              <p
-                                style={{
-                                  fontFamily: "var(--font-display)",
-                                  fontSize: 22,
-                                  fontWeight: 600,
-                                  lineHeight: 1.2,
-                                  color: "var(--color-fg)",
-                                }}
-                              >
-                                {insights.citationRate}%
-                              </p>
-                              <p className="text-[11px] text-[var(--color-fg-muted)] mt-0.5 opacity-70 leading-tight">
-                                {insights.totalCitations} total citations
-                              </p>
-                            </div>
-                          </div>
-                          <Link
-                            href="/prompts"
-                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors mt-auto"
+                      // On-brand palette — pulled from SURVEN_CATEGORICAL
+                      // (citationAuthority.ts) so engines slot into the
+                      // same earthy sage/rust/slate/gold tones every
+                      // other chart on the site uses, instead of the
+                      // engines' loud OEM brand colors.
+                      const ENGINE_COLOR: Record<string, string> = {
+                        chatgpt: "#7D8E6C",
+                        claude: "#B54631",
+                        gemini: "#5B7BAB",
+                        google_ai: "#C9A95B",
+                      };
+                      const sourcesCard: CleanStatCardSpec = {
+                        icon: Database,
+                        label: "Unique Sources",
+                        hint:
+                          "How many different sources AI engines pulled from when describing you. More variety means broader trust — under 5 sources signals a thin authority footprint.",
+                        value: `${insights.uniqueDomains}`,
+                        sub: `Across ${insights.engineCount} ${insights.engineCount === 1 ? "engine" : "engines"}`,
+                        rightSlot: (
+                          <div
+                            className="flex flex-col gap-2"
+                            style={{ width: 230 }}
+                            aria-label="Unique sources per engine"
                           >
-                            See prompts <ArrowRight className="h-3 w-3" />
-                          </Link>
-                        </Card>
+                            <p
+                              className="uppercase tracking-wider text-[var(--color-fg-muted)] font-semibold"
+                              style={{
+                                fontSize: 10,
+                                letterSpacing: "0.08em",
+                              }}
+                            >
+                              Sources per engine
+                            </p>
+                            <div className="flex items-end justify-between gap-2">
+                              {insights.enginesSourceCounts.map((e) => {
+                                const color = ENGINE_COLOR[e.id] ?? "#5E7250";
+                                const MAX_BAR = 92;
+                                const MIN_BAR = 18;
+                                // Fixed pixel height so the bar renders
+                                // reliably — percentage heights collapse
+                                // to 0 inside flex-col children whose
+                                // parent uses items-end (no stretch).
+                                const heightPx = Math.max(
+                                  MIN_BAR,
+                                  Math.round((e.count / engineMax) * MAX_BAR),
+                                );
+                                return (
+                                  <div
+                                    key={e.id}
+                                    className="flex flex-col items-center gap-2"
+                                    title={`${e.name}: ${e.count} unique sources`}
+                                  >
+                                    <span
+                                      className="tabular-nums font-bold"
+                                      style={{
+                                        fontSize: 15,
+                                        lineHeight: 1,
+                                        color,
+                                        letterSpacing: "-0.02em",
+                                      }}
+                                    >
+                                      {e.count}
+                                    </span>
+                                    <div
+                                      className="rounded-lg transition-all"
+                                      style={{
+                                        width: 36,
+                                        height: heightPx,
+                                        backgroundColor: color,
+                                        boxShadow: `0 2px 8px ${color}40`,
+                                      }}
+                                    />
+                                    <div
+                                      className="rounded-full flex items-center justify-center"
+                                      style={{
+                                        width: 30,
+                                        height: 30,
+                                        backgroundColor: `${color}26`,
+                                      }}
+                                    >
+                                      <EngineIcon id={e.id} size={16} />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {/* Overlap explainer — bars sum higher than
+                                the unique total because the same domain
+                                cited by multiple engines counts in each
+                                engine's bar but only once in the total. */}
+                            <p
+                              className="text-[var(--color-fg-muted)] italic"
+                              style={{
+                                fontSize: 10.5,
+                                lineHeight: 1.4,
+                              }}
+                            >
+                              Bars sum higher than {insights.uniqueDomains} —
+                              engines often cite the same source, so a shared
+                              domain counts once in the total but in each
+                              engine's bar.
+                            </p>
+                          </div>
+                        ),
+                        bottomLine:
+                          insights.uniqueDomains >= 8
+                            ? { icon: CheckCircle2, text: "Diverse footprint — no single source can tank visibility", tone: "good" }
+                            : insights.uniqueDomains >= 5
+                              ? { icon: TrendingUp, text: "Broaden the source mix — earn 3+ more domain placements", tone: "warn" }
+                              : { icon: AlertTriangle, text: "Thin footprint — get listed on directories + earn editorial mentions", tone: "warn" },
+                      };
+                      return (
+                        <>
+                          <CleanStatCard spec={citationCard} />
+                          <AuthorityBreakdown
+                            results={results}
+                            variant="compact"
+                          />
+                          <CleanStatCard spec={sourcesCard} />
+                        </>
                       );
                     })()}
-
-                    <Card className="flex flex-col gap-3 p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center flex-shrink-0">
-                          <Database className="h-5 w-5 text-[var(--color-primary)]" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1 mb-0.5">
-                            <p className="text-xs text-[var(--color-fg-muted)]">
-                              Unique Sources
-                            </p>
-                            <HoverHint hint="How many different sources AI engines pulled from when describing you. More variety means broader trust — under 5 sources signals a thin authority footprint.">
-                              <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
-                            </HoverHint>
-                          </div>
-                          <p
-                            style={{
-                              fontFamily: "var(--font-display)",
-                              fontSize: 22,
-                              fontWeight: 600,
-                              lineHeight: 1.2,
-                              color: "var(--color-fg)",
-                            }}
-                          >
-                            {insights.uniqueDomains}
-                          </p>
-                          <p className="text-[11px] text-[var(--color-fg-muted)] mt-0.5 opacity-70 leading-tight">
-                            Across {insights.engineCount}{" "}
-                            {insights.engineCount === 1 ? "engine" : "engines"}
-                          </p>
-                        </div>
-                      </div>
-                      <Link
-                        href="/ai-visibility-tracker"
-                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors mt-auto"
-                      >
-                        Engine breakdown <ArrowRight className="h-3 w-3" />
-                      </Link>
-                    </Card>
-
-                    <Card className="flex flex-col gap-3 p-4">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                            insights.highAuthorityPct >= 60
-                              ? "bg-[#96A283]/10"
-                              : insights.highAuthorityPct < 30
-                              ? "bg-[#B54631]/10"
-                              : "bg-[var(--color-primary)]/10"
-                          }`}
-                        >
-                          <ShieldCheck
-                            className={`h-5 w-5 ${
-                              insights.highAuthorityPct >= 60
-                                ? "text-[#96A283]"
-                                : insights.highAuthorityPct < 30
-                                ? "text-[#B54631]"
-                                : "text-[var(--color-primary)]"
-                            }`}
-                          />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1 mb-0.5">
-                            <p className="text-xs text-[var(--color-fg-muted)]">
-                              Authority Mix
-                            </p>
-                            <HoverHint hint="Share of citations from heavyweight sources (Yelp, Google, BBB, major news). Above 50% is strong; under 25% means AI is leaning on weak sources to describe you.">
-                              <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
-                            </HoverHint>
-                          </div>
-                          <p
-                            style={{
-                              fontFamily: "var(--font-display)",
-                              fontSize: 22,
-                              fontWeight: 600,
-                              lineHeight: 1.2,
-                              color: "var(--color-fg)",
-                            }}
-                          >
-                            {insights.highAuthorityPct}%
-                          </p>
-                          <p className="text-[11px] text-[var(--color-fg-muted)] mt-0.5 opacity-70 leading-tight">
-                            {insights.authorityCounts.high} high ·{" "}
-                            {insights.authorityCounts.medium} med ·{" "}
-                            {insights.authorityCounts.low} low
-                          </p>
-                        </div>
-                      </div>
-                      <Link
-                        href="/audit"
-                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors mt-auto"
-                      >
-                        Run audit <ArrowRight className="h-3 w-3" />
-                      </Link>
-                    </Card>
                   </motion.div>
                 )}
 
-                {/* What to watch only — its bottom aligns with FixActions bottom via items-stretch */}
-                <CitationDiagnosticBand
-                  results={results}
-                  businessName={business.name}
-                  mode="watch"
-                />
-              </div>
-
-              <div className="flex flex-col">
-                <CitationFixActions
-                  results={results}
-                  businessName={business.name}
-                />
-              </div>
             </div>
 
-            {/* Full-width What's working */}
-            <CitationDiagnosticBand
-              results={results}
-              businessName={business.name}
-              mode="working"
-            />
+            <motion.div
+              {...reveal}
+              className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch"
+            >
+              <SourceCategoryBreakdown results={results} />
+              <CitationsByEngine results={results} />
+            </motion.div>
 
-            {/* Sections */}
+            {/* Citation Gap Analysis — wins to defend + gaps to claim. Sits
+                under the Source Categories + Citations by AI Engine row so
+                the user reads the breakdowns first, then the action items. */}
             <motion.div {...reveal}>
               <CitationGapSection
                 results={results}
                 businessName={business.name}
               />
             </motion.div>
-
-            <motion.div
-              {...reveal}
-              className="grid grid-cols-1 lg:grid-cols-2 gap-4"
-            >
-              <AuthorityBreakdown results={results} />
-              <SourceCategoryBreakdown results={results} />
-            </motion.div>
-
-            <motion.div {...reveal}>
-              <CitationsByEngine results={results} />
-            </motion.div>
-
-            <motion.div {...reveal}>
-              <CitedDomainsTable results={results} />
-            </motion.div>
-
-            {/* Footer 3-column diagnostic strip */}
-            <CitationFooterDiagnostic
-              results={results}
-              businessName={business.name}
-            />
           </>
         )}
 

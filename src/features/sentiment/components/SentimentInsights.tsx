@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { TrendingUp, AlertTriangle, Cpu, Info } from "lucide-react";
+import { TrendingUp, AlertTriangle, Cpu, HelpCircle } from "lucide-react";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { BadgeDelta } from "@/components/atoms/BadgeDelta";
@@ -123,7 +123,7 @@ export function SentimentInsights({ results, sentimentHistory }: Props) {
               <div className="flex items-center gap-1 mb-0.5">
                 <p className="text-xs text-[var(--color-fg-muted)]">{c.label}</p>
                 <HoverHint hint={CARD_HINTS[c.label]} placement="top">
-                  <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+                  <HelpCircle className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
                 </HoverHint>
               </div>
               <div className="flex items-center gap-2 flex-wrap">

@@ -11,7 +11,7 @@ import {
   Lock,
   AlertTriangle,
   AlertCircle,
-  Info,
+  HelpCircle,
   Crown,
   ArrowRight,
   Link2,
@@ -396,14 +396,14 @@ export function CrawlabilityAuditPage({
                 label="Medium"
                 value={counts.medium}
                 color="#6BA3F5"
-                icon={Info}
+                icon={HelpCircle}
                 hint="Improvements that will meaningfully strengthen your AI presence."
               />
               <KpiCard
                 label="Low"
                 value={counts.low}
                 color="#96A283"
-                icon={Info}
+                icon={HelpCircle}
                 hint="Minor optimizations to consider once critical issues are resolved."
               />
             </div>

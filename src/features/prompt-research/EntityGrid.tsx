@@ -3,7 +3,7 @@
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { ChartExplainer } from "@/components/atoms/ChartExplainer";
-import { Building2, Swords, Compass, Users, Info } from "lucide-react";
+import { Building2, Swords, Compass, Users, HelpCircle } from "lucide-react";
 import type { EntityGridData } from "./types";
 
 interface EntityGridProps {
@@ -47,7 +47,7 @@ export function EntityGrid({ data }: EntityGridProps) {
       <div className="flex items-center gap-1.5 mb-4">
         <h3 className="text-sm font-semibold text-[var(--color-fg)]">Entity grid</h3>
         <HoverHint hint="The four pieces every prompt is built from: your brand, your competitors, adjacent categories, and the audience. These shape which questions we test.">
-          <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+          <HelpCircle className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
         </HoverHint>
       </div>
 
@@ -74,7 +74,7 @@ export function EntityGrid({ data }: EntityGridProps) {
                   {label}
                 </p>
                 <HoverHint hint={hint}>
-                  <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+                  <HelpCircle className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
                 </HoverHint>
               </div>
               <div className="space-y-1">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Info, BarChart3 } from "lucide-react";
+import { HelpCircle, BarChart3 } from "lucide-react";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { ChartExplainer } from "@/components/atoms/ChartExplainer";
@@ -53,7 +53,7 @@ export function ComparisonSection({
             </div>
             <h3 className="text-sm font-semibold text-[var(--color-fg)]">Visibility Score by Platform</h3>
             <HoverHint hint="Your AI visibility score next to each competitor's. Aim to lead the field — being mentioned more often than rivals signals authority to AI engines.">
-              <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+              <HelpCircle className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
             </HoverHint>
           </div>
         </div>

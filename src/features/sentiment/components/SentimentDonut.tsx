@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Info } from "lucide-react";
+import { HelpCircle } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
@@ -67,7 +67,7 @@ export function SentimentDonut({ results }: Props) {
       <div className="flex items-center gap-1.5 mb-4">
         <h3 className="text-sm font-semibold text-[var(--color-fg)]">Overall Sentiment</h3>
         <HoverHint hint="The breakdown of all AI mentions by tone — positive means favorable descriptions, neutral means factual/balanced, negative means critical language.">
-          <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+          <HelpCircle className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
         </HoverHint>
       </div>
 

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Info } from "lucide-react";
+import { HelpCircle } from "lucide-react";
 import { HoverHint } from "@/components/atoms/HoverHint";
 
 interface SectionHeadingProps {
@@ -34,7 +34,7 @@ export function SectionHeading({ text, className = "", info }: SectionHeadingPro
     <div className={`flex items-center gap-2 ${className}`}>
       {heading}
       <HoverHint hint={info} placement="top" width={260}>
-        <Info
+        <HelpCircle
           className="h-4 w-4 text-[var(--color-fg-muted)] hover:text-[var(--color-fg-secondary)] cursor-help transition-colors"
           aria-label="More info"
         />

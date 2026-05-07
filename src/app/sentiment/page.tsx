@@ -165,28 +165,31 @@ export default function SentimentPage() {
     }
     const negPct = Math.round((negativeCount / totalMentions) * 100);
     const posPct = Math.round((positiveCount / totalMentions) * 100);
-    const s1 = warning
-      ? `Sentiment reads ${sentimentWord.toLowerCase()} overall (${posPct}% positive across ${totalMentions} mention${totalMentions === 1 ? "" : "s"}), but ${MODEL_LABELS[warning.engine]} is bleeding — ${warning.negPct}% of its mentions of you use critical or dismissive language.`
-      : `Sentiment reads ${sentimentWord.toLowerCase()} overall — ${posPct}% positive across ${totalMentions} mention${totalMentions === 1 ? "" : "s"}, with no single engine showing a critical negative spike.`;
-    const s2 = negativeCount > 0
-      ? `${negativeCount} mention${negativeCount === 1 ? "" : "s"} contain negative framing — these are what's steering AI to recommend competitors before customers even click your site.`
-      : `Zero negative mentions across the board — your brand framing is clean, which compounds in your favor every time AI cites you.`;
-    const s3 = warning
-      ? `Watch ${MODEL_LABELS[warning.engine]} closely: every prompt routed there inherits that negative framing until you fix the source content AI is reading.`
-      : posPct > 70
-        ? `One bright spot: positive framing dominates — keep publishing the case studies and testimonials AI is already pulling from.`
-        : `One thing to watch: neutral mentions are where competitors win the comparison — push richer specifics in your cited content.`;
+    // Sandwich structure: GOOD → BAD → GOOD. Open with positive sentiment
+    // share, middle with the worst engine spike or negative count, close
+    // with a forward positive (clean overall framing or coverage strength).
+    const s1 = `${posPct}% positive across ${totalMentions} mention${totalMentions === 1 ? "" : "s"} — sentiment reads ${sentimentWord.toLowerCase()}.`;
+    const s2 = warning
+      ? `${MODEL_LABELS[warning.engine]}: ${warning.negPct}% negative — bleeding worst.`
+      : negativeCount > 0
+        ? `${negativeCount} negative mention${negativeCount === 1 ? "" : "s"} (${negPct}% of total) steering AI toward competitors.`
+        : `Neutral mentions still leak comparisons — push specifics into cited pages.`;
+    const s3 = negativeCount === 0
+      ? `Zero negative mentions — defensible base to widen.`
+      : posPct > 60
+        ? `${posPct}% positive still dominates — replicate that template on weaker pages.`
+        : `${totalMentions} tracked mention${totalMentions === 1 ? "" : "s"} — real surface area to optimize.`;
     return `${s1} ${s2} ${s3}`;
   };
 
   const buildAICTA = (): { label: string; href: string } => {
     if (warning) {
-      return { label: `Run a site audit to fix the negative framing on ${MODEL_LABELS[warning.engine]}`, href: "/site-audit" };
+      return { label: `Optimize to fix the negative framing on ${MODEL_LABELS[warning.engine]}`, href: "/site-audit" };
     }
     if (negativeCount > 0) {
-      return { label: "Run a site audit to flip the negative framing", href: "/site-audit" };
+      return { label: "Optimize to flip the negative framing", href: "/site-audit" };
     }
-    return { label: "Run a site audit to defend your sentiment lead", href: "/site-audit" };
+    return { label: "Optimize to defend your sentiment lead", href: "/site-audit" };
   };
 
   return (

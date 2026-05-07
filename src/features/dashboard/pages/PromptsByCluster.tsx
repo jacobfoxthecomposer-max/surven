@@ -241,7 +241,7 @@ function synthSnippet(
   ][cohort];
 }
 
-type PromptsFilter = "branded" | "unbranded" | "cited" | "uncited";
+type PromptsFilter = "branded" | "unbranded" | "cited" | "uncited" | "added";
 
 export function PromptsByCluster({
   selectedFilters = new Set<PromptsFilter>(),
@@ -513,7 +513,7 @@ export function PromptsByCluster({
                   the left-edge stripe and the Hash icon. */}
               <header
                 onClick={() => toggleCluster(clusterSlug)}
-                className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[var(--color-border)] cursor-pointer select-none"
+                className="flex items-center justify-between gap-3 px-5 py-1.5 border-b border-[var(--color-border)] cursor-pointer select-none"
                 style={{
                   background: `linear-gradient(90deg, ${accent}1F 0%, ${accent}08 60%, transparent 100%)`,
                 }}
@@ -529,9 +529,10 @@ export function PromptsByCluster({
                     className="truncate"
                     style={{
                       fontFamily: "var(--font-display)",
-                      fontSize: 22,
+                      fontSize: 19,
                       fontWeight: 600,
-                      color: accent,
+                      color: "var(--color-fg)",
+                      lineHeight: 1.2,
                     }}
                   >
                     {g.label}
@@ -927,10 +928,14 @@ export function PromptsByCluster({
                                         style={{
                                           width: 7,
                                           height: 7,
+                                          // Cited dots use link-blue (matches
+                                          // /prompts main + highlights tables)
+                                          // — subconscious "this is linked"
+                                          // cue. Rust stays for the 0/4 leak.
                                           backgroundColor: allMissed
                                             ? "#B54631"
                                             : m.links[e]
-                                              ? "#7D8E6C"
+                                              ? "#2563EB"
                                               : "rgba(107,109,107,0.3)",
                                         }}
                                       />

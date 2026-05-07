@@ -25,6 +25,9 @@ export interface GapPlaybook {
   /** Primary "go fix it" CTA shown above the managed-plans nudge.
    *  Defaults to "Open Website Audit" → /audit. Pass `null` to suppress. */
   actionCta?: { label: string; href: string } | null;
+  /** Color of the primary CTA button. "rust" for gaps/concerns (default,
+   *  back-compat), "sage" for wins/positive playbooks. */
+  tone?: "rust" | "sage";
 }
 
 interface Props {
@@ -35,7 +38,6 @@ interface Props {
 
 const SAGE = "#5E7250";
 const SAGE_BG = "rgba(150,162,131,0.15)";
-const RUST = "#B54631";
 
 export function GapPlaybookModal({ open, onClose, playbook }: Props) {
   const [mounted, setMounted] = useState(false);
@@ -125,12 +127,21 @@ export function GapPlaybookModal({ open, onClose, playbook }: Props) {
 
             {/* Primary "go fix it" CTA. Defaults to the Website Audit
                 page; per-playbook callers can override or set null to
-                suppress (e.g. when there's no fix surface yet). */}
+                suppress (e.g. when there's no fix surface yet). Always
+                renders sage so the CTA reads as "go take this action"
+                regardless of whether the parent card is a win or a gap.
+                The card chrome (rust/sage borderTop, header banner)
+                already carries the good-vs-bad story; the action
+                button just signals "click me to act". */}
             {playbook.actionCta !== null && (
               <Link
                 href={playbook.actionCta?.href ?? "/audit"}
+                onClick={onClose}
                 className="mt-5 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] font-semibold text-white transition-opacity hover:opacity-90"
-                style={{ backgroundColor: RUST, fontSize: 13.5 }}
+                style={{
+                  backgroundColor: SAGE,
+                  fontSize: 13.5,
+                }}
               >
                 {playbook.actionCta?.label ?? "Open Website Audit to make the fixes"}
                 <ArrowRight className="h-3.5 w-3.5" />

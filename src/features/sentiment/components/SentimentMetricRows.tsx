@@ -2,7 +2,7 @@
 
 import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRight, Info } from "lucide-react";
+import { ArrowRight, HelpCircle } from "lucide-react";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { BadgeDelta } from "@/components/atoms/BadgeDelta";
@@ -258,7 +258,7 @@ export function SentimentMetricRows({ results, history }: Props) {
               {row.icon && <EngineIcon id={row.icon} size={13} />}
               <span className="text-sm font-medium text-[var(--color-fg)]">{row.label}</span>
               <HoverHint hint={row.hint} placement="top">
-                <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+                <HelpCircle className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
               </HoverHint>
             </div>
             <span

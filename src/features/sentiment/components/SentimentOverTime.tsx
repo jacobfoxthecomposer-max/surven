@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Info } from "lucide-react";
+import { HelpCircle } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer,
@@ -82,7 +82,7 @@ export function SentimentOverTime({ data, isLoading }: Props) {
         <div className="flex items-center gap-1.5">
           <h3 className="text-sm font-semibold text-[var(--color-fg)]">Favorable Sentiment Over Time</h3>
           <HoverHint hint="Tracks how your brand's positive sentiment rate changes across scans. Each point is one scan's overall positive mention rate.">
-            <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+            <HelpCircle className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
           </HoverHint>
         </div>
         <span className="text-xs text-[var(--color-fg-muted)] shrink-0">
@@ -121,14 +121,24 @@ export function SentimentOverTime({ data, isLoading }: Props) {
                   tickFormatter={(v) => `${v}%`}
                 />
                 <Tooltip
-                  contentStyle={{
-                    background: "var(--color-surface)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "8px",
-                    fontSize: "12px",
-                    color: "var(--color-fg)",
-                  }}
-                  formatter={(value, name) => [`${Number(value)}%`, String(name)]}
+                  wrapperStyle={{ zIndex: 1000, pointerEvents: "none" }}
+                  cursor={{ stroke: "var(--color-fg-muted)", strokeDasharray: "3 3", strokeOpacity: 0.5 }}
+                  offset={0}
+                  allowEscapeViewBox={{ x: true }}
+                  content={(p) => (
+                    <SentimentTooltip
+                      active={p.active as boolean}
+                      label={p.label as string}
+                      payload={
+                        p.payload as unknown as Array<{
+                          name?: string;
+                          value?: number | string;
+                          color?: string;
+                        }>
+                      }
+                      coordinate={p.coordinate as { x: number; y: number }}
+                    />
+                  )}
                 />
                 {LINES.map(({ key, color }) => (
                   <Line
@@ -193,5 +203,85 @@ export function SentimentOverTime({ data, isLoading }: Props) {
         </>
       )}
     </Card>
+  );
+}
+
+/**
+ * Sentiment chart tooltip — defaults to the LEFT side of the cursor and
+ * tracks it. Mirrors the VisibilityScannerChart treatment: subtract the
+ * tooltip width + a small margin from the cursor's x. Falls back to the
+ * right when the cursor is too close to the chart's left edge so the
+ * tooltip never gets pushed off-screen. Width capped so multi-series
+ * rows wrap predictably.
+ */
+function SentimentTooltip({
+  active,
+  label,
+  payload,
+  coordinate,
+}: {
+  active: boolean;
+  label: string;
+  payload: Array<{ name?: string; value?: number | string; color?: string }>;
+  coordinate?: { x: number; y: number };
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+  const W = 160;
+  const margin = 14;
+  const cursorX = coordinate?.x ?? 0;
+  // Always default to LEFT of cursor; only fall back to RIGHT when the
+  // cursor is so close to the left edge that a left tooltip would clip
+  // off-screen. Threshold lowered (was W + margin = 174) so the tooltip
+  // doesn't keep flipping right just because the cursor sits in the
+  // chart's left half.
+  const placeLeft = cursorX > 60;
+  const transform = placeLeft
+    ? `translateX(calc(-100% - ${margin}px))`
+    : `translateX(${margin}px)`;
+  return (
+    <div
+      style={{
+        transform,
+        background: "var(--color-surface)",
+        border: "1px solid var(--color-border)",
+        borderRadius: 8,
+        padding: "6px 10px",
+        boxShadow: "var(--shadow-sm)",
+        fontSize: 12,
+        color: "var(--color-fg)",
+        width: W,
+        pointerEvents: "none",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          color: "var(--color-fg-secondary)",
+          marginBottom: 3,
+          fontWeight: 600,
+        }}
+      >
+        {label}
+      </div>
+      {payload.map((item, i) => (
+        <div
+          key={i}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+            lineHeight: 1.5,
+          }}
+        >
+          <span style={{ color: item.color, fontWeight: 600 }}>
+            {String(item.name ?? "")}
+          </span>
+          <span className="tabular-nums" style={{ fontWeight: 700 }}>
+            {Number(item.value ?? 0)}%
+          </span>
+        </div>
+      ))}
+    </div>
   );
 }

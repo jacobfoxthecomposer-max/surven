@@ -19,7 +19,7 @@ import {
   Gauge,
   ListChecks,
   Puzzle,
-  Info,
+  HelpCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { HoverHint } from "@/components/atoms/HoverHint";
@@ -465,11 +465,19 @@ export function AeoAuditSection({
     }
     const { good, fix } = buildPageSummaryParts(result);
     const tier = scoreWord ? scoreWord.toLowerCase() : "scoring";
-    const s1 = `Your site lands ${result.score}/100 — ${tier} territory across the four readability pillars AI engines use to decide whether to cite you.`;
-    const s2 = good;
-    const s3 = fix
+    // Sandwich structure: GOOD → BAD → GOOD. The pillar-level "good" line
+    // first, the most-pressing fix in the middle, and a forward-looking
+    // positive frame (recoverability / score tier) to close.
+    const s1 = good;
+    const s2 = fix
       ? fix
-      : `One thing to watch: AI models update their crawlers quietly — keep an eye on monthly scans so a future change doesn't quietly knock you down a tier.`;
+      : `Crawlers update quietly between scans — keep monitoring monthly.`;
+    const recoverable = result.checks
+      .filter((c) => c.status !== "pass")
+      .reduce((sum, c) => sum + (c.max - c.earned), 0);
+    const s3 = recoverable > 0
+      ? `${Math.round(recoverable)} points recoverable on Fix-These-First — score lands ${result.score}/100 (${tier}).`
+      : `${result.score}/100 (${tier}) — fundamentals locked, focus on freshness.`;
     return `${s1} ${s2} ${s3}`;
   };
 
@@ -725,8 +733,10 @@ function ResultStatStrip({ result }: { result: ScanResult }) {
   const partialCount = result.checks.filter((c) => c.status === "partial").length;
   const criticalCount = result.checks.filter((c) => c.status === "critical").length;
 
-  // Half-circle gauge math
-  const gaugeWidth = 240;
+  // Half-circle gauge math — gaugeWidth must match the SVG viewBox width
+  // (260) so the gauge renders 1:1 with no CSS downscale; otherwise the
+  // strokes anti-alias and edges look soft.
+  const gaugeWidth = 260;
   const cx = 130;
   const cy = 130;
   const r = 100;
@@ -750,7 +760,7 @@ function ResultStatStrip({ result }: { result: ScanResult }) {
     >
       {/* Half-circle gauge */}
       <div className="relative shrink-0" style={{ width: gaugeWidth }}>
-        <svg viewBox="0 0 260 150" width="100%" style={{ display: "block" }}>
+        <svg viewBox="0 0 260 150" width="100%" shapeRendering="geometricPrecision" style={{ display: "block" }}>
           <defs>
             {/*
               Both gradients anchored to user-space coordinates spanning the
@@ -844,7 +854,7 @@ function ResultStatStrip({ result }: { result: ScanResult }) {
           >
             {tierLabel}
           </span>
-          <Info
+          <HelpCircle
             className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help group-hover:text-[var(--color-fg-secondary)] transition-colors"
             aria-label="How readability is scored"
             tabIndex={0}
@@ -964,13 +974,6 @@ function ResultStatStrip({ result }: { result: ScanResult }) {
             ·
           </span>
           <span>
-            Next scan{" "}
-            <span className="font-semibold text-[var(--color-fg)]">in 7 days</span>
-          </span>
-          <span className="text-[var(--color-fg-muted)]" style={{ fontSize: 13 }}>
-            ·
-          </span>
-          <span>
             Scan time{" "}
             <span className="font-semibold text-[var(--color-fg)] tabular-nums">
               {(result.durationMs / 1000).toFixed(1)}s
@@ -1076,16 +1079,6 @@ function PriorityFixCards({ checks }: { checks: CheckResult[] }) {
               +{Math.round(gain)} pts
             </span>
             <span
-              className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-semibold tabular-nums"
-              style={{
-                fontSize: 12,
-                backgroundColor: "rgba(60,62,60,0.06)",
-                color: "var(--color-fg-secondary)",
-              }}
-            >
-              {formatEffort(check.effortMin)}
-            </span>
-            <span
               className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-semibold uppercase"
               style={{
                 fontSize: 11,
@@ -1114,12 +1107,35 @@ function PriorityFixCards({ checks }: { checks: CheckResult[] }) {
         </div>
       ),
       actionCta: { label: "Open the fix in Chrome extension", href: CHROME_EXT_URL },
+      // Same managed-plans nudge that GapsToFillCard / WinsToWidenCard
+      // playbooks render — frames Surven's premium tiers as the
+      // "done-for-you" alternative when the user doesn't want to ship
+      // the fix themselves. Wording tailored to AEO check fixes (schema
+      // deployments, content rewrites, link-graph cleanup).
+      managedPlansCopy:
+        "deploy the schema, rewrite the cited content, and ship the fix on your site without you touching a line of code.",
     };
   }
 
+  // Hash anchor for cross-page deep-links (e.g. CTAs on /prompts that
+  // route here say "Open Website Audit" and should land directly on
+  // this section). The useEffect below honors `#fix-these-first` and
+  // scrolls into view after mount.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== "#fix-these-first") return;
+    const t = setTimeout(() => {
+      document
+        .getElementById("fix-these-first")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
     <div
-      className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col h-full"
+      id="fix-these-first"
+      className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col h-full scroll-mt-24"
       style={{ borderTop: `4px solid ${RUST}` }}
     >
       {/* Red banner — same gradient + rounded corners as GapsToFillCard
@@ -1259,6 +1275,14 @@ function PriorityFixCards({ checks }: { checks: CheckResult[] }) {
             </button>
           </div>
         )}
+        {fixable.length > 0 && (
+          <p
+            className="text-[var(--color-fg-secondary)] text-center mt-1 italic font-semibold"
+            style={{ fontSize: 12.5, lineHeight: 1.4 }}
+          >
+            Click any row to see how to fix it
+          </p>
+        )}
       </div>
 
       <GapPlaybookModal
@@ -1373,14 +1397,20 @@ function PillarBarRow({
             >
               {PILLAR_LABELS[score.pillar]}
             </p>
-            <Info
+            <HelpCircle
               className="h-3.5 w-3.5 text-[var(--color-fg-muted)]"
               aria-label={`What ${PILLAR_LABELS[score.pillar]} measures`}
             />
           </div>
           <span
-            className="font-semibold uppercase"
-            style={{ fontSize: 11.5, letterSpacing: "0.12em", color: tok.color }}
+            className="inline-flex items-center font-semibold uppercase rounded-full px-2.5 py-1 whitespace-nowrap"
+            style={{
+              fontSize: 11.5,
+              letterSpacing: "0.12em",
+              color: tok.color,
+              backgroundColor: `${tok.color}1F`,
+              border: `1px solid ${tok.color}55`,
+            }}
           >
             {tok.label}
           </span>
@@ -1481,22 +1511,79 @@ function PillarBarRow({
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
           className={
-            "w-full inline-flex items-center justify-between gap-2 px-3 py-2 border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 hover:bg-[var(--color-surface-alt)] transition-colors " +
+            "group w-full inline-flex items-center justify-between gap-2.5 px-4 py-2.5 border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 hover:bg-[var(--color-surface-alt)] hover:border-[var(--color-border-hover)] hover:shadow-sm transition-all " +
             (open
               ? "rounded-t-[var(--radius-md)] rounded-b-none border-b-0"
               : "rounded-[var(--radius-md)]")
           }
-          style={{ fontSize: 13, fontWeight: 600, color: "var(--color-fg-secondary)" }}
+          style={{ fontSize: 14, fontWeight: 600, color: "var(--color-fg-secondary)" }}
         >
-          <span className="inline-flex items-center gap-2">
-            <ListChecks className="h-3.5 w-3.5 text-[var(--color-fg-muted)]" />
-            {open ? "Hide" : "View"} {checks.length} check
-            {checks.length === 1 ? "" : "s"}
+          <span className="inline-flex items-center gap-2.5">
+            {/* Subtle icon tile — adds visual weight without color-coding */}
+            <span
+              className="inline-flex items-center justify-center h-6 w-6 rounded-md bg-[var(--color-surface-alt)]"
+              aria-hidden
+            >
+              <ListChecks className="h-3.5 w-3.5 text-[var(--color-fg-secondary)]" />
+            </span>
+            <span>
+              {open ? "Hide" : "View"} {checks.length} check
+              {checks.length === 1 ? "" : "s"}
+            </span>
+            {/* Inline neutral count badge */}
+            <span
+              className="inline-flex items-center justify-center rounded-full px-2 py-0.5 tabular-nums text-[var(--color-fg-secondary)] bg-[var(--color-bg)] border border-[var(--color-border)]"
+              style={{ fontSize: 11, fontWeight: 700, minWidth: 22 }}
+            >
+              {checks.length}
+            </span>
+            {/* Per-status dot row — sage / amber / rust filled circles
+                showing which buckets this pillar has, mirroring the
+                legend dots above the toggle. Each dot only renders when
+                its count > 0. */}
+            <span className="inline-flex items-center gap-1">
+              {passCount > 0 && (
+                <span
+                  className="inline-block rounded-full shrink-0"
+                  style={{
+                    width: 7,
+                    height: 7,
+                    backgroundColor: STATUS_TOK.pass.color,
+                  }}
+                  title={`${passCount} pass`}
+                  aria-label={`${passCount} pass`}
+                />
+              )}
+              {partialCount > 0 && (
+                <span
+                  className="inline-block rounded-full shrink-0"
+                  style={{
+                    width: 7,
+                    height: 7,
+                    backgroundColor: STATUS_TOK.partial.color,
+                  }}
+                  title={`${partialCount} partial`}
+                  aria-label={`${partialCount} partial`}
+                />
+              )}
+              {failCount > 0 && (
+                <span
+                  className="inline-block rounded-full shrink-0"
+                  style={{
+                    width: 7,
+                    height: 7,
+                    backgroundColor: STATUS_TOK.critical.color,
+                  }}
+                  title={`${failCount} critical`}
+                  aria-label={`${failCount} critical`}
+                />
+              )}
+            </span>
           </span>
           <ChevronDown
             className={
-              "h-5 w-5 text-[var(--color-fg-muted)] transition-transform " +
-              (open ? "rotate-180" : "")
+              "h-5 w-5 text-[var(--color-fg-muted)] transition-transform duration-200 " +
+              (open ? "rotate-180" : "group-hover:translate-y-0.5")
             }
           />
         </button>

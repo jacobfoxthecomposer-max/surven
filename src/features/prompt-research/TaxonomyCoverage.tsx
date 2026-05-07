@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { ChartExplainer } from "@/components/atoms/ChartExplainer";
-import { Info, Layers } from "lucide-react";
+import { HelpCircle, Layers } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -123,7 +123,7 @@ export function TaxonomyCoverage({ intents }: TaxonomyCoverageProps) {
             Coverage by prompt type
           </h3>
           <HoverHint hint="How well your brand surfaces across each prompt taxonomy — defensive, category, comparative, validation, and so on. Low bars are gaps to attack.">
-            <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+            <HelpCircle className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
           </HoverHint>
         </div>
       </div>
