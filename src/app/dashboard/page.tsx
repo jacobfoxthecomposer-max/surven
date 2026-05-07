@@ -63,7 +63,10 @@ import { SentimentSection } from "@/features/dashboard/pages/SentimentSection";
 import { CitationGapSection } from "@/features/dashboard/pages/CitationGapSection";
 import { WhatsNextCard } from "@/components/organisms/WhatsNextCard";
 import { BetaFeedbackFooter } from "@/components/organisms/BetaFeedbackFooter";
-import { DashboardKpiStrip } from "@/features/dashboard/components/DashboardKpiStrip";
+import {
+  SentimentSlimCard,
+  ShareOfVoiceSlimCard,
+} from "@/features/dashboard/components/DashboardSidecards";
 import { buildDashboardHero } from "@/features/dashboard/utils/heroSentence";
 import { exportScanResultsAsCsv } from "@/utils/csvExport";
 import { AI_MODELS } from "@/utils/constants";
@@ -379,6 +382,25 @@ function DashboardPageContent() {
     [],
   );
 
+  // SoV brands derived from the same scannerData powering the chart, so
+  // the slim card's leaderboard + delta pills match the chart visually.
+  const sovBrands = useMemo(
+    () =>
+      scannerData.scaledBrands.map((b) => {
+        const current = b.data[b.data.length - 1] ?? 0;
+        const previous = b.data[0] ?? 0;
+        return {
+          id: b.id,
+          name: b.name,
+          isYou: b.isYou,
+          color: b.color,
+          current,
+          delta: Math.round((current - previous) * 10) / 10,
+        };
+      }),
+    [scannerData.scaledBrands],
+  );
+
   // Auth protection — early returns must come AFTER all hooks have
   // executed for this render so the hook order stays stable across
   // mounts (React's Rules of Hooks).
@@ -484,48 +506,42 @@ function DashboardPageContent() {
             <NextScanCard />
           </div>
 
-          {/* Visibility gauge sits directly above the over-time chart so
-              the at-a-glance number lives next to the trend line. Atom is
-              used directly (no wrapping section card) — that's the chrome
-              the user wanted gone. */}
+          {/* 2-col visibility section: LEFT = gauge atom + over-time
+              chart card (the "visibility tracker" stack); RIGHT = slim
+              Sentiment + Share-of-voice cards stacked vertically.
+              Right-column cards are vertically compressed so two of them
+              fit alongside the left column's chart height. */}
           {hasScan && (
-            <div className="mt-5 flex justify-center">
-              <VisibilityScoreGauge
-                score={scannerData.youToday}
-                delta={scannerData.youDelta}
-              />
-            </div>
-          )}
+            <div className="mt-5 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,360px)] gap-4 items-stretch">
+              {/* LEFT — gauge + chart */}
+              <div className="flex flex-col gap-4 min-w-0">
+                <div className="flex justify-center">
+                  <VisibilityScoreGauge
+                    score={scannerData.youToday}
+                    delta={scannerData.youDelta}
+                  />
+                </div>
+                <ChartCard
+                  data={scannerData}
+                  treatment={TREATMENT_STANDARD_LABEL}
+                  enabledBrandIds={enabledBrandIds}
+                  chartHeight={300}
+                  showInsight={false}
+                  showOptimizationMarkers={false}
+                  showPromptChangeMarkers={false}
+                  delta={scannerData.youDelta}
+                />
+              </div>
 
-          {/* Tracker-style visibility chart card. Same chrome as
-              /ai-visibility-tracker — glowing YOU line, end-of-line dual
-              pill, hover-to-highlight, Focus / Full toggle, period-over-
-              period delta pill in the header. Shorter (chartHeight=300)
-              so it fits the dashboard hero's shape. */}
-          {hasScan && (
-            <div className="mt-4">
-              <ChartCard
-                data={scannerData}
-                treatment={TREATMENT_STANDARD_LABEL}
-                enabledBrandIds={enabledBrandIds}
-                chartHeight={300}
-                showInsight={false}
-                showOptimizationMarkers={false}
-                showPromptChangeMarkers={false}
-                delta={scannerData.youDelta}
-              />
-            </div>
-          )}
-
-          {/* The other two KPI tiles (Share of voice, Sentiment) flow
-              below — Visibility is owned by the chart above. */}
-          {hasScan && (
-            <div className="mt-4">
-              <DashboardKpiStrip
-                results={results}
-                competitors={competitorList}
-                showVisibility={false}
-              />
+              {/* RIGHT — sentiment + share of voice, stacked */}
+              <div className="grid grid-rows-[1fr_1fr] gap-4 min-w-0">
+                <SentimentSlimCard results={results} />
+                <ShareOfVoiceSlimCard
+                  brands={sovBrands}
+                  youDelta={scannerData.youDelta}
+                  youShare={scannerData.sharePct}
+                />
+              </div>
             </div>
           )}
         </motion.div>
