@@ -71,7 +71,7 @@ export function PricingSection() {
   const { isFirstTime } = useIsFirstTimeUser();
 
   return (
-    <section className="py-24 px-6">
+    <section id="pricing" className="scroll-mt-20 py-24 px-6">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="flex flex-col items-center gap-4 text-center mb-12">
