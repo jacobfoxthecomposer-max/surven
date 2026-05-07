@@ -68,7 +68,7 @@ import {
   CleanStatCard,
   type CleanStatCardSpec,
 } from "@/features/dashboard/pages/PromptsSection";
-import { MessageSquare, Users } from "lucide-react";
+import { MessageSquare, Users, Link2, Cpu } from "lucide-react";
 import { buildDashboardHero } from "@/features/dashboard/utils/heroSentence";
 import { exportScanResultsAsCsv } from "@/utils/csvExport";
 import { AI_MODELS } from "@/utils/constants";
@@ -508,12 +508,15 @@ function DashboardPageContent() {
             <NextScanCard />
           </div>
 
-          {/* Visibility gauge centered above the over-time chart. */}
+          {/* Visibility gauge centered above the over-time chart. Width
+              clamped at 320 — the atom's default w-full would stretch it
+              across the entire content column, way too tall. */}
           {hasScan && (
             <div className="mt-5 flex justify-center">
               <VisibilityScoreGauge
                 score={scannerData.youToday}
                 delta={scannerData.youDelta}
+                width={320}
               />
             </div>
           )}
@@ -657,11 +660,12 @@ function DashboardPageContent() {
   );
 }
 
-/* ── Dashboard stat strip — Sentiment + Share of voice ──────────────── */
+/* ── Dashboard stat strip — 4 cards same chrome as Tracked Prompts row */
 /**
- * Two CleanStatCards in a side-by-side grid using the canonical
- * Tracked-Prompts-page row pattern. Equal width / equal height. Sits
- * directly below the visibility chart card.
+ * 4-card CleanStatCard row, identical chrome / sizing to the strip on
+ * the Tracked Prompts page (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`).
+ * Equal width, equal height, single visual rhythm. Cards: Sentiment,
+ * Share of voice, Citation rate, Engines covered.
  */
 function DashboardStatStrip({
   results,
@@ -677,6 +681,8 @@ function DashboardStatStrip({
   sovBrands: { name: string; isYou: boolean; current: number }[];
 }) {
   const sentiment = summarizeSentiment(results);
+  const total = results.length;
+  const mentioned = results.filter((r) => r.business_mentioned).length;
 
   // Top-mentioned competitor for the SoV subline.
   const topCompetitor = (() => {
@@ -694,10 +700,22 @@ function DashboardStatStrip({
     if (ranked.length === 0 || ranked[0][1] === 0) return null;
     return { name: ranked[0][0], count: ranked[0][1] };
   })();
-
-  // Top brand by current share for the SoV subline (for when no real
-  // competitor mention beats yours we still surface the leader).
   const topSovBrand = [...sovBrands].sort((a, b) => b.current - a.current)[0];
+
+  // Citation rate = % of mentioned results that have at least one citation.
+  const mentionedResults = results.filter((r) => r.business_mentioned);
+  const cited = mentionedResults.filter(
+    (r) => Array.isArray(r.citations) && r.citations.length > 0,
+  ).length;
+  const citationRate =
+    mentionedResults.length > 0
+      ? Math.round((cited / mentionedResults.length) * 100)
+      : 0;
+
+  // Engines covered = engines where at least one mention happened.
+  const engineSet = new Set<string>();
+  for (const r of results) if (r.business_mentioned) engineSet.add(r.model_name);
+  const enginesCovered = engineSet.size;
 
   const sentimentSpec: CleanStatCardSpec = {
     icon: MessageSquare,
@@ -730,10 +748,34 @@ function DashboardStatStrip({
     },
   };
 
+  const citationSpec: CleanStatCardSpec = {
+    icon: Link2,
+    label: "Citation rate",
+    hint: "Share of your AI mentions that include a clickable URL. Higher means AI is sending real traffic, not just name-checks.",
+    value: total > 0 ? `${citationRate}%` : "—",
+    sub:
+      mentionedResults.length > 0
+        ? `${cited} of ${mentionedResults.length} mentions include a link`
+        : "No mentions to cite yet",
+  };
+
+  const enginesSpec: CleanStatCardSpec = {
+    icon: Cpu,
+    label: "Engines covered",
+    hint: "How many of the 4 AI tools (ChatGPT, Claude, Gemini, Google AI) named your business at least once in this scan.",
+    value: total > 0 ? `${enginesCovered} of 4` : "—",
+    sub:
+      mentioned > 0
+        ? `${mentioned} mention${mentioned === 1 ? "" : "s"} across ${enginesCovered} engine${enginesCovered === 1 ? "" : "s"}`
+        : "No engines mentioned you yet",
+  };
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <CleanStatCard spec={sentimentSpec} />
       <CleanStatCard spec={sovSpec} />
+      <CleanStatCard spec={citationSpec} />
+      <CleanStatCard spec={enginesSpec} />
     </div>
   );
 }
