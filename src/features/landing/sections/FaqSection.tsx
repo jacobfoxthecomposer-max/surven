@@ -11,6 +11,10 @@ const FAQS = [
     a: "Surven tracks your visibility across ChatGPT, Claude, Gemini, and Google AI, showing you how often your business is recommended.",
   },
   {
+    q: "How is Surven different from regular SEO?",
+    a: "SEO is about ranking on Google's classic blue-link search results. Surven tracks something newer: whether ChatGPT, Claude, Gemini, and Google AI actually mention your business when people ask them for recommendations. AI tools weight different signals than Google search, pull from different directories, and increasingly answer questions before people ever click through to a search engine. SEO and AI visibility (GEO) overlap, but they aren't the same — Surven is built specifically for the AI side.",
+  },
+  {
     q: "How does Surven help improve AI visibility?",
     a: "Surven provides a visibility score and identifies where you're missing out compared to competitors, helping you understand and improve your AI presence.",
   },
