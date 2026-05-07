@@ -12,7 +12,7 @@ const stats = [
 export function StatsSection() {
   return (
     <section className="py-20 px-4 bg-[var(--color-bg)]">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <ScrollReveal className="text-center mb-10">
           <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-fg-muted)] mb-3 block">
             Why it matters
