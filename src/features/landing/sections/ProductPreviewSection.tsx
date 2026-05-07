@@ -130,8 +130,10 @@ function PreviewBrowserFrame() {
   const [paused, setPaused] = useState(false);
   const [iteration, setIteration] = useState(0);
 
-  // Single, race-free scene driver. Each effect run owns its own `cancelled`
-  // flag so any in-flight timeouts that fire AFTER cleanup are ignored.
+  // Self-cycling loop. The effect only re-runs when paused/reduced toggle,
+  // never when iteration changes — that would cause races on every loop.
+  // A `cancelled` flag short-circuits any in-flight timer that fires after
+  // unmount or pause, so state can never desync.
   useEffect(() => {
     if (reduced) {
       setScene(3);
@@ -140,29 +142,34 @@ function PreviewBrowserFrame() {
     if (paused) return;
 
     let cancelled = false;
-    const guard = (fn: () => void) => () => {
-      if (!cancelled) fn();
+    const timers: number[] = [];
+
+    const schedule = (fn: () => void, delay: number) => {
+      const id = window.setTimeout(() => {
+        if (cancelled) return;
+        fn();
+      }, delay);
+      timers.push(id);
     };
 
-    setScene(1);
+    function runCycle() {
+      if (cancelled) return;
+      setScene(1);
+      schedule(() => setScene(2), SCENE_1_MS);
+      schedule(() => setScene(3), SCENE_1_MS + SCENE_2_MS);
+      schedule(() => {
+        setIteration((n) => n + 1);
+        runCycle();
+      }, TOTAL_MS);
+    }
 
-    const t1 = window.setTimeout(guard(() => setScene(2)), SCENE_1_MS);
-    const t2 = window.setTimeout(
-      guard(() => setScene(3)),
-      SCENE_1_MS + SCENE_2_MS,
-    );
-    const t3 = window.setTimeout(
-      guard(() => setIteration((n) => n + 1)),
-      TOTAL_MS,
-    );
+    runCycle();
 
     return () => {
       cancelled = true;
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
+      timers.forEach(clearTimeout);
     };
-  }, [iteration, paused, reduced]);
+  }, [paused, reduced]);
 
   return (
     <div
@@ -210,38 +217,49 @@ function DashboardCanvas({
 }) {
   return (
     <div className="absolute inset-0 px-6 sm:px-8 py-6 flex flex-col">
-      {/* Scan bar — morphs between large-centered (scene 1) and small-top (scenes 2/3) */}
+      {/* Animated top spacer — pushes the scan bar to the vertical center
+          of the box during scene 1, then collapses so scan bar sits at top
+          for scenes 2/3. Keeps the box height fixed without faded UI. */}
+      <motion.div
+        aria-hidden
+        animate={{ height: scene === 1 ? 220 : 0 }}
+        transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+        className="shrink-0"
+      />
+
       <ScanBar scene={scene} iteration={iteration} reduced={reduced} />
 
-      {/* Engines row — appears in scene 2 onward */}
-      <motion.div
-        animate={{
-          opacity: scene >= 2 ? 1 : 0,
-          y: scene >= 2 ? 0 : 8,
-          height: scene >= 2 ? "auto" : 0,
-          marginTop: scene >= 2 ? 24 : 0,
-        }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="overflow-hidden"
-      >
-        <EnginesRow scene={scene} iteration={iteration} reduced={reduced} />
-      </motion.div>
+      {/* Engines row — appears scene 2 onward, exits cleanly when looping */}
+      <AnimatePresence>
+        {scene >= 2 && (
+          <motion.div
+            key="engines"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, transition: { duration: 0.18 } }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-6 pt-1"
+          >
+            <EnginesRow scene={scene} iteration={iteration} reduced={reduced} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Results grid — always rendered, content morphs in at scene 3 */}
-      <motion.div
-        animate={{
-          opacity: scene === 3 ? 1 : 0.18,
-          y: scene === 3 ? 0 : 6,
-        }}
-        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="mt-6 flex-1"
-      >
-        <ResultsGrid
-          active={scene === 3}
-          iteration={iteration}
-          reduced={reduced}
-        />
-      </motion.div>
+      {/* Results grid — only mounts in scene 3 */}
+      <AnimatePresence>
+        {scene === 3 && (
+          <motion.div
+            key="results"
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, transition: { duration: 0.18 } }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-6 flex-1"
+          >
+            <ResultsGrid iteration={iteration} reduced={reduced} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -736,11 +754,9 @@ function EngineDot({ phase }: { phase: EnginePhase }) {
 /* -------------------------------------------------------------------------- */
 
 function ResultsGrid({
-  active,
   iteration,
   reduced,
 }: {
-  active: boolean;
   iteration: number;
   reduced: boolean;
 }) {
@@ -752,24 +768,17 @@ function ResultsGrid({
           <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-fg-muted)]">
             Visibility score
           </p>
-          {active && (
-            <motion.span
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.7, duration: 0.3 }}
-              className="text-[10px] font-semibold text-[var(--color-primary-hover)] bg-[var(--color-primary)]/10 px-2 py-0.5 rounded-full"
-            >
-              +{TARGET_SCORE_DELTA} vs last
-            </motion.span>
-          )}
+          <motion.span
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.7, duration: 0.3 }}
+            className="text-[10px] font-semibold text-[var(--color-primary-hover)] bg-[var(--color-primary)]/10 px-2 py-0.5 rounded-full"
+          >
+            +{TARGET_SCORE_DELTA} vs last
+          </motion.span>
         </div>
         <div className="flex-1 flex items-center justify-center">
-          <ScoreGauge
-            target={TARGET_SCORE}
-            active={active}
-            iteration={iteration}
-            reduced={reduced}
-          />
+          <ScoreGauge target={TARGET_SCORE} iteration={iteration} reduced={reduced} />
         </div>
       </div>
 
@@ -779,19 +788,17 @@ function ResultsGrid({
           <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-fg-muted)]">
             30-day trend
           </p>
-          {active && (
-            <motion.span
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              className="text-[10px] text-[var(--color-fg-muted)]"
-            >
-              150 prompts · 4 engines
-            </motion.span>
-          )}
+          <motion.span
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="text-[10px] text-[var(--color-fg-muted)]"
+          >
+            150 prompts · 4 engines
+          </motion.span>
         </div>
         <div className="flex-1 flex items-center">
-          <TrendChart active={active} iteration={iteration} reduced={reduced} />
+          <TrendChart iteration={iteration} reduced={reduced} />
         </div>
       </div>
 
@@ -800,7 +807,7 @@ function ResultsGrid({
         <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-fg-muted)] mb-3">
           Top prompts
         </p>
-        <PromptsList active={active} iteration={iteration} reduced={reduced} />
+        <PromptsList iteration={iteration} reduced={reduced} />
       </div>
 
       {/* Engine share bars */}
@@ -808,7 +815,7 @@ function ResultsGrid({
         <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-fg-muted)] mb-3">
           Coverage by engine
         </p>
-        <EngineBars active={active} iteration={iteration} reduced={reduced} />
+        <EngineBars iteration={iteration} reduced={reduced} />
       </div>
     </div>
   );
@@ -818,12 +825,10 @@ function ResultsGrid({
 
 function ScoreGauge({
   target,
-  active,
   iteration,
   reduced,
 }: {
   target: number;
-  active: boolean;
   iteration: number;
   reduced: boolean;
 }) {
@@ -832,10 +837,6 @@ function ScoreGauge({
   useEffect(() => {
     if (reduced) {
       setScore(target);
-      return;
-    }
-    if (!active) {
-      setScore(0);
       return;
     }
 
@@ -855,7 +856,7 @@ function ScoreGauge({
       cancelled = true;
       cancelAnimationFrame(raf);
     };
-  }, [active, iteration, target, reduced]);
+  }, [iteration, target, reduced]);
 
   const RADIUS = 60;
   const CIRC = Math.PI * RADIUS;
@@ -888,7 +889,7 @@ function ScoreGauge({
           className="text-4xl sm:text-5xl font-light text-[var(--color-fg)] leading-none"
           style={{ fontFamily: "var(--font-display)" }}
         >
-          {active ? score : "—"}
+          {score}
         </span>
         <span className="text-[10px] text-[var(--color-fg-muted)] mt-1">
           out of 100
@@ -901,11 +902,9 @@ function ScoreGauge({
 /* ---- Trend chart ---- */
 
 function TrendChart({
-  active,
   iteration,
   reduced,
 }: {
-  active: boolean;
   iteration: number;
   reduced: boolean;
 }) {
@@ -931,54 +930,38 @@ function TrendChart({
           </linearGradient>
         </defs>
 
-        {active && (
-          <>
-            <motion.path
-              key={`area-${iteration}`}
-              d={areaPath}
-              fill="url(#surven-trend-gradient)"
-              initial={reduced ? { opacity: 1 } : { opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 1.2, delay: 0.6 }}
-            />
-            <motion.path
-              key={`line-${iteration}`}
-              d={linePath}
-              fill="none"
-              stroke="var(--color-primary)"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              initial={reduced ? { pathLength: 1 } : { pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{ duration: 1.6, ease: "easeOut" }}
-            />
-            <motion.circle
-              key={`dot-${iteration}`}
-              cx={W}
-              cy={lastY}
-              r="3.5"
-              fill="var(--color-primary)"
-              stroke="var(--color-bg)"
-              strokeWidth="2"
-              initial={reduced ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, delay: 1.7 }}
-            />
-          </>
-        )}
-
-        {!active && (
-          <line
-            x1="0"
-            y1={H - 12}
-            x2={W}
-            y2={H - 12}
-            stroke="var(--color-border)"
-            strokeWidth="1"
-            strokeDasharray="3,5"
-          />
-        )}
+        <motion.path
+          key={`area-${iteration}`}
+          d={areaPath}
+          fill="url(#surven-trend-gradient)"
+          initial={reduced ? { opacity: 1 } : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1.2, delay: 0.6 }}
+        />
+        <motion.path
+          key={`line-${iteration}`}
+          d={linePath}
+          fill="none"
+          stroke="var(--color-primary)"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          initial={reduced ? { pathLength: 1 } : { pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 1.6, ease: "easeOut" }}
+        />
+        <motion.circle
+          key={`dot-${iteration}`}
+          cx={W}
+          cy={lastY}
+          r="3.5"
+          fill="var(--color-primary)"
+          stroke="var(--color-bg)"
+          strokeWidth="2"
+          initial={reduced ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, delay: 1.7 }}
+        />
       </svg>
     </div>
   );
@@ -987,11 +970,9 @@ function TrendChart({
 /* ---- Prompts list ---- */
 
 function PromptsList({
-  active,
   iteration,
   reduced,
 }: {
-  active: boolean;
   iteration: number;
   reduced: boolean;
 }) {
@@ -1001,36 +982,28 @@ function PromptsList({
         <motion.li
           key={`${iteration}-${p.text}`}
           initial={reduced ? { opacity: 1, x: 0 } : { opacity: 0, x: -6 }}
-          animate={{
-            opacity: active ? 1 : 0.35,
-            x: 0,
-          }}
-          transition={{ duration: 0.35, delay: active ? 0.4 + i * 0.15 : 0 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.35, delay: 0.4 + i * 0.15 }}
           className="flex items-center gap-3 py-2 first:pt-0 last:pb-0"
         >
           <span
             className={
               "h-5 w-5 rounded-full flex items-center justify-center shrink-0 " +
-              (active && p.mentioned
+              (p.mentioned
                 ? "bg-[var(--color-primary)]/15 text-[var(--color-primary-hover)]"
-                : active
-                  ? "bg-[var(--color-danger)]/15 text-[var(--color-danger)]"
-                  : "bg-[var(--color-border)] text-[var(--color-fg-muted)]")
+                : "bg-[var(--color-danger)]/15 text-[var(--color-danger)]")
             }
           >
-            {active ? (
-              p.mentioned ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />
-            ) : null}
+            {p.mentioned ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
           </span>
           <span className="text-[13px] text-[var(--color-fg)] flex-1 truncate">
             {p.text}
           </span>
-          {active && p.engine && (
+          {p.engine ? (
             <span className="text-[10px] font-medium text-[var(--color-fg-muted)] uppercase tracking-wider shrink-0">
               {p.engine}
             </span>
-          )}
-          {active && !p.engine && (
+          ) : (
             <span className="text-[10px] font-medium text-[var(--color-danger)] uppercase tracking-wider shrink-0">
               No mention
             </span>
@@ -1044,11 +1017,9 @@ function PromptsList({
 /* ---- Engine share bars ---- */
 
 function EngineBars({
-  active,
   iteration,
   reduced,
 }: {
-  active: boolean;
   iteration: number;
   reduced: boolean;
 }) {
@@ -1061,15 +1032,15 @@ function EngineBars({
               {eng.name}
             </span>
             <span className="text-[11px] font-semibold text-[var(--color-fg-muted)]">
-              {active ? `${eng.share}%` : "—"}
+              {eng.share}%
             </span>
           </div>
           <div className="relative h-1.5 rounded-full bg-[var(--color-border)] overflow-hidden">
             <motion.div
               key={`${iteration}-${eng.name}`}
               initial={reduced ? { width: `${eng.share}%` } : { width: 0 }}
-              animate={{ width: active ? `${eng.share}%` : 0 }}
-              transition={{ duration: 0.9, delay: active ? 0.5 + i * 0.12 : 0, ease: [0.16, 1, 0.3, 1] }}
+              animate={{ width: `${eng.share}%` }}
+              transition={{ duration: 0.9, delay: 0.5 + i * 0.12, ease: [0.16, 1, 0.3, 1] }}
               className="absolute inset-y-0 left-0 bg-[var(--color-primary)] rounded-full"
             />
           </div>

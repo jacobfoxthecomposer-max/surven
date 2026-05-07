@@ -1,1 +1,72 @@
+# Surven — robots.txt
+# Welcoming AI engine crawlers explicitly so they have a clear signal.
+# Blocking auth-gated and API routes from all bots.
+
+# OpenAI — GPTBot trains models, ChatGPT-User handles ChatGPT browsing,
+# OAI-SearchBot powers ChatGPT Search.
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+# Anthropic — ClaudeBot trains Claude, anthropic-ai is the public agent,
+# Claude-User handles Claude browsing.
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+# Google — Google-Extended controls Gemini/Bard training (separate from
+# Googlebot, which is for Search and shouldn't be blocked either).
+User-agent: Google-Extended
+Allow: /
+
+User-agent: GoogleOther
+Allow: /
+
+# Perplexity — PerplexityBot indexes content, Perplexity-User runs
+# user-initiated fetches.
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+# Apple Intelligence
+User-agent: Applebot-Extended
+Allow: /
+
+# Common Crawl — feeds the training corpora of many open and closed models.
+User-agent: CCBot
+Allow: /
+
+# Meta AI
+User-agent: meta-externalagent
+Allow: /
+
+# DuckDuckGo Assist
+User-agent: DuckAssistBot
+Allow: /
+
+# ByteDance / Doubao
+User-agent: Bytespider
+Allow: /
+
+# Default — everyone else allowed, with auth + API paths blocked.
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dashboard/
+Disallow: /settings/
+Disallow: /onboarding/
+Disallow: /site-audit-preview/
+
 Sitemap: https://surven.ai/sitemap.xml
