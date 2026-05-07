@@ -390,21 +390,17 @@ function DashboardPageContent() {
               onToggle={toggleEngine}
             />
           </div>
-        </motion.div>
 
-        {/* ─── 2. KPI strip ────────────────────────────────────────────── */}
-        {hasScan && (
-          <motion.div {...reveal}>
+          {/* ─── KPI strip + page-level AIOverview live INSIDE the hero
+              block so the filter row flows straight into content with no
+              empty gap (Tracker-pattern equivalent of the trio that
+              follows the filter row there). */}
+          {hasScan && (
             <DashboardKpiStrip results={results} competitors={competitorList} />
-          </motion.div>
-        )}
+          )}
 
-        {/* ─── 3. Page-level AIOverview ────────────────────────────────── */}
-        {insight && (
-          <motion.div {...reveal}>
-            <AIOverview text={insight} size="md" />
-          </motion.div>
-        )}
+          {insight && <AIOverview text={insight} size="md" />}
+        </motion.div>
 
         {/* ─── 4. Trio: Gauge + What's Next ───────────────────────────── */}
         <motion.div
