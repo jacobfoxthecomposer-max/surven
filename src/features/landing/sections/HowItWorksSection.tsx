@@ -31,7 +31,7 @@ const steps = [
 export function HowItWorksSection() {
   return (
     <section id="how-it-works" className="scroll-mt-20 py-24 px-4 bg-[var(--color-surface)]">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <ScrollReveal className="text-center mb-16">
           <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-fg-muted)] mb-3 block">
             How it works
