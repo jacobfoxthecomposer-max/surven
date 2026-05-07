@@ -182,21 +182,6 @@ function safeHostname(url: string): string {
 }
 
 /**
- * Compile-time exhaustiveness assertion. Used at the end of fix-state render
- * branches so any future addition to FixState that isn't handled becomes a
- * TypeScript build error rather than silently falling through to a default
- * "Fix" button (which is what the audit caught us on).
- *
- * Usage:
- *   if (state.status === "applying" || state.status === "preview" || …) return …;
- *   return assertHandled(state);  // TS error if any FixState variant unmatched
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function assertHandled(_unhandled: never): null {
-  return null;
-}
-
-/**
  * Guard against tab navigation between audit and fix. If the user audited site
  * A and then navigated to site B, applying a fix would send context from B to
  * A's repo. We refuse with a clear message instead.
