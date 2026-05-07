@@ -180,6 +180,19 @@ export function SignupForm() {
           )}
         </div>
 
+        {TURNSTILE_SITE_KEY && (
+          <div className="flex justify-center">
+            <Turnstile
+              ref={turnstileRef}
+              siteKey={TURNSTILE_SITE_KEY}
+              onSuccess={(token) => setTurnstileToken(token)}
+              onExpire={() => setTurnstileToken(null)}
+              onError={() => setTurnstileToken(null)}
+              options={{ theme: "light", size: "normal" }}
+            />
+          </div>
+        )}
+
         <Button type="submit" loading={loading} fullWidth size="lg">
           Create Account
         </Button>
