@@ -47,6 +47,14 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
 import { useScan } from "@/features/dashboard/hooks/useScan";
 import { GaugeSection } from "@/features/dashboard/pages/GaugeSection";
+import {
+  ChartCard,
+  MOCK_BRANDS,
+  MOCK_DATES,
+  MOCK_N,
+  TREATMENT_STANDARD_LABEL,
+  useScannerData,
+} from "@/features/dashboard/pages/VisibilityScannerSection";
 import { ModelBreakdownSection } from "@/features/dashboard/pages/ModelBreakdownSection";
 import { PromptResultsSection } from "@/features/dashboard/pages/PromptResultsSection";
 import { ComparisonSection } from "@/features/dashboard/pages/ComparisonSection";
@@ -365,6 +373,36 @@ function DashboardPageContent() {
   const hasScan = !!effectiveLatestScan;
   const noResults = results.length === 0 && !scanLoading;
 
+  // ── Tracker-style visibility chart data ─────────────────────────────
+  // Same data shape + hook the AI Visibility Tracker uses, so the
+  // ChartCard rendered on the dashboard is byte-identical to the Tracker
+  // (gauge, glowing YOU line, end-of-line dual pill, hover-to-highlight,
+  // delta pill in the header). RangeN translates the dashboard's
+  // TimeRangeKey to a day count using the same map MOCK_BRANDS does.
+  const rangeN = useMemo(() => {
+    const map: Record<string, number> = { "14d": 14, "30d": 30, "90d": 90 };
+    if (timeRange === "all") return MOCK_N;
+    if (timeRange === "ytd") {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), 0, 1);
+      const days = Math.ceil((now.getTime() - start.getTime()) / 86400000);
+      return Math.max(2, Math.min(MOCK_N, days));
+    }
+    if (timeRange === "custom" && customRange) {
+      const from = new Date(customRange.from + "T00:00:00").getTime();
+      const to = new Date(customRange.to + "T23:59:59").getTime();
+      const days = Math.ceil((to - from) / 86400000);
+      return Math.max(2, Math.min(MOCK_N, days));
+    }
+    return map[timeRange] ?? MOCK_N;
+  }, [timeRange, customRange]);
+
+  const scannerData = useScannerData(MOCK_BRANDS, MOCK_DATES, rangeN, enabledEngineIds);
+  const enabledBrandIds = useMemo<Set<string>>(
+    () => new Set(MOCK_BRANDS.map((b) => b.id)),
+    [],
+  );
+
   return (
     <DashboardLayout>
       <div className="space-y-8">
@@ -441,11 +479,37 @@ function DashboardPageContent() {
             <NextScanCard />
           </div>
 
-          {/* KPI strip lives INSIDE the hero block so the filter row
-              flows straight into content with no empty gap. */}
+          {/* Tracker-style visibility chart card lives INSIDE the hero
+              block at the top of the data area. Identical chrome to the
+              one on /ai-visibility-tracker — glowing YOU line, end-of-
+              line dual pill, hover-to-highlight, Focus / Full toggle, and
+              the period-over-period delta pill in the header — but
+              shorter (chartHeight=300) so it fits the dashboard hero's
+              shape. */}
           {hasScan && (
             <div className="mt-5">
-              <DashboardKpiStrip results={results} competitors={competitorList} />
+              <ChartCard
+                data={scannerData}
+                treatment={TREATMENT_STANDARD_LABEL}
+                enabledBrandIds={enabledBrandIds}
+                chartHeight={300}
+                showInsight={false}
+                showOptimizationMarkers={false}
+                showPromptChangeMarkers={false}
+                delta={scannerData.youDelta}
+              />
+            </div>
+          )}
+
+          {/* The other two KPI tiles (Share of voice, Sentiment) flow
+              below — Visibility is owned by the chart above. */}
+          {hasScan && (
+            <div className="mt-4">
+              <DashboardKpiStrip
+                results={results}
+                competitors={competitorList}
+                showVisibility={false}
+              />
             </div>
           )}
         </motion.div>

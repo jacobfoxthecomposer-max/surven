@@ -23,6 +23,9 @@ interface DashboardKpiStripProps {
   competitors: { name: string }[];
   /** Optional — if provided, deltas render against the previous scan. */
   previousResults?: ScanResult[] | null;
+  /** When false, the Visibility card is omitted (dashboard hero shows the
+   *  full Tracker-style ChartCard in its place). */
+  showVisibility?: boolean;
 }
 
 interface CardProps {
@@ -94,6 +97,7 @@ export function DashboardKpiStrip({
   results,
   competitors,
   previousResults = null,
+  showVisibility = true,
 }: DashboardKpiStripProps) {
   // ── Card 1: Visibility ───────────────────────────────────────────────
   const total = results.length;
@@ -121,34 +125,38 @@ export function DashboardKpiStrip({
   // ── Card 3: Sentiment ───────────────────────────────────────────────
   const sentiment = summarizeSentiment(results);
 
+  const gridCols = showVisibility ? "sm:grid-cols-3" : "sm:grid-cols-2";
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <KpiCard
-        label="Visibility"
-        hint="Share of AI answers — across ChatGPT, Claude, Gemini, Google AI — that name your business."
-        Icon={Eye}
-        iconColor={SURVEN_SEMANTIC.good}
-        iconBg={`${SURVEN_SEMANTIC.good}1A`}
-        primary={
-          <span
-            className="font-semibold tabular-nums"
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: 32,
-              lineHeight: 1,
-              color: "var(--color-fg)",
-            }}
-          >
-            {rate}%
-          </span>
-        }
-        delta={visibilityDelta}
-        sub={
-          total > 0
-            ? `Named in ${mentioned} of ${total} AI answers`
-            : "Run a scan to measure visibility"
-        }
-      />
+    <div className={`grid grid-cols-1 ${gridCols} gap-4`}>
+      {showVisibility && (
+        <KpiCard
+          label="Visibility"
+          hint="Share of AI answers — across ChatGPT, Claude, Gemini, Google AI — that name your business."
+          Icon={Eye}
+          iconColor={SURVEN_SEMANTIC.good}
+          iconBg={`${SURVEN_SEMANTIC.good}1A`}
+          primary={
+            <span
+              className="font-semibold tabular-nums"
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 32,
+                lineHeight: 1,
+                color: "var(--color-fg)",
+              }}
+            >
+              {rate}%
+            </span>
+          }
+          delta={visibilityDelta}
+          sub={
+            total > 0
+              ? `Named in ${mentioned} of ${total} AI answers`
+              : "Run a scan to measure visibility"
+          }
+        />
+      )}
 
       <KpiCard
         label="Share of voice"
