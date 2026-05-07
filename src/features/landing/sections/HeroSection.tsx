@@ -209,15 +209,9 @@ export function HeroSection() {
                 >
                   {typed}
                   <span
-<<<<<<< HEAD
-                    className={`inline-block w-[2px] ml-1 align-middle ${isResting ? "" : "animate-pulse"}`}
-                    style={{
-                      height: "0.85em",
-=======
                     className={`inline-block w-[2px] ml-1 align-baseline ${isResting ? "" : "animate-pulse"}`}
                     style={{
                       height: "0.75em",
->>>>>>> 8d9d4a6 (fix(hero): fluid typography + cursor wrap fix)
                       backgroundColor: "var(--color-primary)",
                       opacity: isResting ? 0.85 : 0.7,
                     }}
