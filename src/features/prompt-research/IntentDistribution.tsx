@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { ChartExplainer } from "@/components/atoms/ChartExplainer";
-import { Info, PieChart as PieIcon } from "lucide-react";
+import { HelpCircle, PieChart as PieIcon } from "lucide-react";
 import {
   PieChart,
   Pie,
@@ -60,7 +60,7 @@ export function IntentDistribution({ intents }: IntentDistributionProps) {
           </div>
           <h3 className="text-sm font-semibold text-[var(--color-fg)]">Intent mix</h3>
           <HoverHint hint="What kind of work each prompt is doing — buying, learning, validating trust, asking how-to. Lopsided mixes mean blind spots.">
-            <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+            <HelpCircle className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
           </HoverHint>
         </div>
       </div>

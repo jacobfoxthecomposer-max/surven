@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, AlertTriangle, Sparkles } from "lucide-react";
+import { ArrowRight, AlertTriangle, HelpCircle, Sparkles } from "lucide-react";
 import { GapPlaybookModal, type GapPlaybook } from "@/components/molecules/GapPlaybookModal";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 import { Card } from "@/components/atoms/Card";
 import { BadgeDelta } from "@/components/atoms/BadgeDelta";
 import { EngineIcon } from "@/components/atoms/EngineIcon";
+import { HoverHint } from "@/components/atoms/HoverHint";
 import { SectionHeading } from "@/components/atoms/SectionHeading";
 import { SURVEN_SEMANTIC } from "@/utils/brandColors";
 import type { ScanResult, ModelName } from "@/types/database";
@@ -116,11 +117,20 @@ export function SentimentHero({ results, history, businessName }: Props) {
       {/* LEFT — Sentiment ring */}
       <Card className="lg:col-span-3 flex flex-col">
         <div className="flex items-center justify-between gap-2">
-          <h3
-            style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, color: "var(--color-fg)" }}
-          >
-            Sentiment
-          </h3>
+          <div className="flex items-center gap-1.5">
+            <h3
+              style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, color: "var(--color-fg)" }}
+            >
+              Sentiment
+            </h3>
+            <HoverHint
+              hint={`AI sentiment breakdown for this scan — share of positive vs neutral vs negative mentions of ${businessName}. The verdict pill (Strong / Mixed / Concerning) reflects whether negatives are tipping the balance: Concerning needs negative ≥ 20% (or negative > positive), Strong needs ≥ 70% positive with low negatives, otherwise Mixed.`}
+              placement="top"
+              width={280}
+            >
+              <HelpCircle className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+            </HoverHint>
+          </div>
           <span
             className="inline-flex items-center text-xs font-semibold rounded-md px-2 py-0.5 whitespace-nowrap capitalize"
             style={{
@@ -231,11 +241,20 @@ export function SentimentHero({ results, history, businessName }: Props) {
       {/* CENTER — Trend chart */}
       <Card className="lg:col-span-6 flex flex-col">
         <div className="flex items-center justify-between gap-3 mb-3">
-          <h3
-            style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, color: "var(--color-fg)" }}
-          >
-            Sentiment over time
-          </h3>
+          <div className="flex items-center gap-1.5">
+            <h3
+              style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, color: "var(--color-fg)" }}
+            >
+              Sentiment over time
+            </h3>
+            <HoverHint
+              hint="Trend across all your scans — positive, neutral, and negative AI mention shares plotted over time. Diverging lines show sentiment improving (positive climbing, negative dropping) or degrading (the opposite). Hover any point on the chart for that scan's exact breakdown."
+              placement="top"
+              width={280}
+            >
+              <HelpCircle className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+            </HoverHint>
+          </div>
           <div className="flex items-center gap-3 shrink-0">
             {/* Three-series legend — same compact pattern as the AI Visibility
                 "over time" chart (color dot + tiny label per series). */}
@@ -491,6 +510,14 @@ function SentimentAttentionCard({
               />
             </button>
           ))
+        )}
+        {issues.length > 0 && (
+          <p
+            className="text-[var(--color-fg-secondary)] text-center mt-1 italic font-semibold"
+            style={{ fontSize: 12.5, lineHeight: 1.4 }}
+          >
+            Click any row to see how to fix it
+          </p>
         )}
       </div>
       <GapPlaybookModal

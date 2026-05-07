@@ -653,13 +653,22 @@ export function generatePromptsData(
     google_ai: "Google AI",
   };
 
+  // Each wins CTA deep-links into /prompts with the right query param so
+  // the Tracked Prompts table opens already-filtered + scrolled into
+  // view. Intent-themed wins use ?intent=<Label> (matches the filter
+  // contract: capitalized labels like "Informational"). The "Inspect
+  // prompt" CTA uses ?focus=<text> which the table parses to auto-expand
+  // + scroll to + flash the matching row.
   const wins: InsightItemData[] = [];
   if (strongest && strongest.coveragePct >= 50) {
     wins.push({
       iconKey: "crown",
       title: `${strongest.intent} prompts are home turf`,
       description: `${strongest.coveragePct}% coverage on ${strongest.intent.toLowerCase()} searches with #${strongest.avgPosition || "—"} average position. Customers asking these find ${business.name}.`,
-      cta: { label: `See ${strongest.intent.toLowerCase()} prompts`, href: "/prompts" },
+      cta: {
+        label: `See ${strongest.intent.toLowerCase()} prompts`,
+        href: `/prompts?intent=${encodeURIComponent(strongest.intent)}#prompts-table`,
+      },
     });
   }
   if (biggestRiser && biggestRiser.coverageDelta > 4) {
@@ -667,7 +676,10 @@ export function generatePromptsData(
       iconKey: "trend-up",
       title: `${biggestRiser.intent} coverage jumped +${biggestRiser.coverageDelta.toFixed(1)}%`,
       description: `Largest gain across all intents this period — your ${biggestRiser.intent.toLowerCase()} content is paying off. Keep doubling down.`,
-      cta: { label: `View ${biggestRiser.intent.toLowerCase()} prompts`, href: "/prompts" },
+      cta: {
+        label: `View ${biggestRiser.intent.toLowerCase()} prompts`,
+        href: `/prompts?intent=${encodeURIComponent(biggestRiser.intent)}#prompts-table`,
+      },
     });
   }
   if (topBrandedAllEngines) {
@@ -675,7 +687,10 @@ export function generatePromptsData(
       iconKey: "check",
       title: `'${topBrandedAllEngines.text}' on all 4 engines`,
       description: `Your top branded prompt (${(topBrandedAllEngines.volume / 1000).toFixed(1)}K/mo) is hitting 100% coverage with positive sentiment. Brand pages are doing real work.`,
-      cta: { label: "Inspect prompt", href: "/prompts" },
+      cta: {
+        label: "Inspect this prompt",
+        href: `/prompts?focus=${encodeURIComponent(topBrandedAllEngines.text)}#prompts-table`,
+      },
     });
   }
   while (wins.length < 3) {
@@ -683,7 +698,9 @@ export function generatePromptsData(
       iconKey: "check",
       title: `${branded.length} branded prompts tracked`,
       description: `Brand-name searches cover ${brandedVisibility}% of engine slots — solid foundation for direct-intent traffic.`,
-      cta: { label: "See branded prompts", href: "/prompts" },
+      // No URL filter for branded-only currently, so fall back to scroll
+      // to the prompts table — at least the user lands on the table.
+      cta: { label: "See branded prompts", href: "/prompts#prompts-table" },
     });
   }
 

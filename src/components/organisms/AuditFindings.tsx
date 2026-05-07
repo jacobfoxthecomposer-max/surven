@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertTriangle, AlertCircle, Info, ChevronDown } from "lucide-react";
+import { AlertTriangle, AlertCircle, HelpCircle, ChevronDown } from "lucide-react";
 import { cn } from "@/utils/cn";
 import type { AuditFinding, AuditSeverity } from "@/types/audit";
 
@@ -32,14 +32,14 @@ const SEVERITY_CONFIG: Record<
   },
   medium: {
     label: "Medium",
-    icon: Info,
+    icon: HelpCircle,
     rowBg: "bg-[#6BA3F5]/8",
     badgeBg: "bg-[#6BA3F5]/15 text-[#5B8FD8]",
     iconColor: "text-[#6BA3F5]",
   },
   low: {
     label: "Low",
-    icon: Info,
+    icon: HelpCircle,
     rowBg: "bg-[#96A283]/8",
     badgeBg: "bg-[#96A283]/15 text-[#566A47]",
     iconColor: "text-[#96A283]",

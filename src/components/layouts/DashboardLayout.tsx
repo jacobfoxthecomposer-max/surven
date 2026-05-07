@@ -15,7 +15,7 @@ import { PostPurchaseIntegrationsModal } from "@/features/onboarding/PostPurchas
 import { cn } from "@/utils/cn";
 
 const navItems = [
-  { href: "/audit", label: "Audit", icon: FileSearch },
+  { href: "/audit", label: "Optimize", icon: FileSearch },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

@@ -202,21 +202,25 @@ export default function CompetitorComparisonPage() {
     }
     const gap = avgCompetitorScore - score;
     const leading = score >= avgCompetitorScore;
+    // Sandwich structure: GOOD → BAD → GOOD. Lead with your visibility
+    // position vs the field, middle with the publishing-pace concern or
+    // gap pressure, close with another positive (no rival dominant
+    // everywhere / leadership defense / targeted-fix optionality).
     const s1 = leading
-      ? `You're ahead at ${score}% visibility — ${Math.abs(gap)}% above the ${competitorNames.length}-competitor average. Defend that lead by keeping fresh content flowing on the prompts where rivals are starting to creep up.`
-      : `You sit at ${score}% visibility, ${Math.abs(gap)}% behind the ${competitorNames.length}-competitor average — that's a closeable gap if you focus on the intent categories where one rival owns disproportionate share.`;
-    const s2 = `Across ${competitorNames.length} tracked competitor${competitorNames.length === 1 ? "" : "s"}, the brands publishing more frequently on high-volume prompts are quietly compounding mention share — every week they're cited and you're not is a lead they take from you.`;
-    const s3 = leading
-      ? `One thing to watch: the runner-up is closer than they look on engines where you're weakest — defend by widening your citation footprint on those models.`
-      : `One bright spot: no rival is dominant across every engine, so the gap closes quickly when you ship targeted fixes.`;
+      ? `You're ahead at ${score}% visibility — ${Math.abs(gap)}% above the ${competitorNames.length}-competitor average. The lead is real, and every week you defend it compounds AI's preference for citing you.`
+      : `You sit at ${score}% visibility with ${competitorNames.length} tracked competitor${competitorNames.length === 1 ? "" : "s"} — meaningful presence in the answer set, and a base to build from on the intents where you're already getting cited.`;
+    const s2 = leading
+      ? `The runner-up, however, is closer than they look on engines where you're weakest — they could erode the lead in a single content cycle if you stop publishing on your top prompts.`
+      : `You sit ${Math.abs(gap)}% behind the average across ${competitorNames.length} rival${competitorNames.length === 1 ? "" : "s"} — the brands publishing more frequently on high-volume prompts are quietly compounding mention share. Every week they're cited and you're not is a lead they take from you.`;
+    const s3 = `No rival is dominant across every engine, so the gap closes quickly when you ship targeted fixes — pick the intent category where one specific competitor owns disproportionate share and ship a single deeper page to start the takeback.`;
     return `${s1} ${s2} ${s3}`;
   };
 
   const buildAICTA = (): { label: string; href: string } => {
     if (!hasResults) {
-      return { label: "Run a site audit to start tracking competitors", href: "/site-audit" };
+      return { label: "Optimize to start tracking competitors", href: "/site-audit" };
     }
-    return { label: "Run a site audit to close the biggest competitive gap", href: "/site-audit" };
+    return { label: "Optimize to close the biggest competitive gap", href: "/site-audit" };
   };
 
   return (

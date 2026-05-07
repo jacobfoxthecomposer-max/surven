@@ -17,7 +17,7 @@
  */
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { AlertTriangle, ArrowRight, MessageSquare, Sparkles, Target, Trophy } from "lucide-react";
+import { AlertTriangle, ArrowRight, HelpCircle, MessageSquare, Sparkles, Target, Trophy } from "lucide-react";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { SectionHeading } from "@/components/atoms/SectionHeading";
 import { COMPETITOR_PALETTE } from "@/utils/constants";
@@ -96,6 +96,15 @@ const INTENT_LABEL_COLORS: Record<string, string> = Object.values(
   PROMPT_CATEGORIES,
 ).reduce<Record<string, string>>((acc, cat) => {
   acc[cat.label] = cat.color;
+  return acc;
+}, {});
+
+// Reverse-lookup from intent label → its canonical description, used by
+// the per-intent question-mark hover hint next to each cluster pill.
+const INTENT_LABEL_DESCRIPTIONS: Record<string, string> = Object.values(
+  PROMPT_CATEGORIES,
+).reduce<Record<string, string>>((acc, cat) => {
+  acc[cat.label] = cat.description;
   return acc;
 }, {});
 
@@ -537,26 +546,37 @@ export function PromptClusterDominance({
                     <Trophy className="h-3.5 w-3.5 text-[#B54631] shrink-0" />
                   )}
                   {INTENT_LABEL_COLORS[c.label] ? (
-                    <span
-                      className="inline-flex items-center gap-1.5 truncate rounded-full px-2 py-0.5"
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: INTENT_LABEL_COLORS[c.label],
-                        backgroundColor: `${INTENT_LABEL_COLORS[c.label]}22`,
-                        border: `1px solid ${INTENT_LABEL_COLORS[c.label]}55`,
-                      }}
-                      title={c.label}
-                    >
+                    <>
                       <span
-                        className="h-1.5 w-1.5 rounded-full shrink-0"
+                        className="inline-flex items-center gap-1.5 truncate rounded-full px-2 py-0.5"
                         style={{
-                          backgroundColor: INTENT_LABEL_COLORS[c.label],
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: INTENT_LABEL_COLORS[c.label],
+                          backgroundColor: `${INTENT_LABEL_COLORS[c.label]}22`,
+                          border: `1px solid ${INTENT_LABEL_COLORS[c.label]}55`,
                         }}
-                        aria-hidden
-                      />
-                      {c.label}
-                    </span>
+                        title={c.label}
+                      >
+                        <span
+                          className="h-1.5 w-1.5 rounded-full shrink-0"
+                          style={{
+                            backgroundColor: INTENT_LABEL_COLORS[c.label],
+                          }}
+                          aria-hidden
+                        />
+                        {c.label}
+                      </span>
+                      {INTENT_LABEL_DESCRIPTIONS[c.label] && (
+                        <HoverHint
+                          hint={INTENT_LABEL_DESCRIPTIONS[c.label]}
+                          placement="top"
+                          width={260}
+                        >
+                          <HelpCircle className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60 shrink-0" />
+                        </HoverHint>
+                      )}
+                    </>
                   ) : (
                     <span
                       className="truncate"

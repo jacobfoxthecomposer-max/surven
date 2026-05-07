@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import {
@@ -16,7 +17,6 @@ import {
   ArrowUp,
   ArrowDown,
   Crown,
-  Info,
   Calendar,
   Smile,
   Meh,
@@ -30,6 +30,7 @@ import {
   HelpCircle,
   Plus,
   FilterX,
+  Trophy,
 } from "lucide-react";
 import { Card } from "@/components/atoms/Card";
 import { BadgeDelta } from "@/components/atoms/BadgeDelta";
@@ -38,6 +39,7 @@ import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { SectionHeading } from "@/components/atoms/SectionHeading";
 import { NextScanCard } from "@/components/atoms/NextScanCard";
 import { TimeRangeDropdown, type TimeRangeKey } from "@/components/atoms/TimeRangeDropdown";
+import { GapPlaybookModal, type GapPlaybook } from "@/components/molecules/GapPlaybookModal";
 import { PromptsByCluster } from "@/features/dashboard/pages/PromptsByCluster";
 import { BetaFeedbackFooter } from "@/components/organisms/BetaFeedbackFooter";
 import { useActiveBusiness } from "@/features/business/hooks/useActiveBusiness";
@@ -187,33 +189,60 @@ function CtaLink({
   label,
   href,
   className = "",
+  tone = "amber",
 }: {
   icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   label: string;
   href: string;
   className?: string;
+  /** Color tone — amber (default canonical), sage (positive/wins), rust (negative/concerns). */
+  tone?: "amber" | "sage" | "rust";
 }) {
-  return (
-    <a
-      href={href}
-      className={`group flex items-center justify-between gap-3 ${className}`}
-    >
+  const TONE = {
+    amber: { icon: "#C97B45", text: TOK.amberFg },
+    sage: { icon: "#5E7250", text: "#5E7250" },
+    rust: { icon: "#B54631", text: "#8C3522" },
+  } as const;
+  const t = TONE[tone];
+  // Next.js Link triggers client-side navigation for internal routes
+  // (anything starting with /), which preserves history, scroll position,
+  // and the React tree of the originating page so the browser back button
+  // restores correctly instead of forcing a full reload. External URLs
+  // fall back to a plain anchor with security attrs.
+  const isInternal = href.startsWith("/");
+  const sharedClass = `group flex items-center justify-between gap-3 ${className}`;
+  const inner = (
+    <>
       <div className="flex items-start gap-1.5 min-w-0">
         <Icon
           className="h-3.5 w-3.5 shrink-0 mt-0.5"
-          style={{ color: "#C97B45" }}
+          style={{ color: t.icon }}
         />
         <span
           className="leading-snug"
-          style={{ fontSize: 13, color: TOK.amberFg, fontWeight: 600 }}
+          style={{ fontSize: 13, color: t.text, fontWeight: 600 }}
         >
           {label}
         </span>
       </div>
       <ArrowRight
         className="h-3.5 w-3.5 shrink-0 transition-transform duration-150 group-hover:translate-x-0.5"
-        style={{ color: "#C97B45" }}
+        style={{ color: t.icon }}
       />
+    </>
+  );
+  return isInternal ? (
+    <Link href={href} className={sharedClass}>
+      {inner}
+    </Link>
+  ) : (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={sharedClass}
+    >
+      {inner}
     </a>
   );
 }
@@ -224,12 +253,16 @@ function CtaLink({
 // type-specific thresholds — branded is much steeper because anything below
 // 100% on a branded query is a credibility leak.
 
-function VisibilityGauge({
+export function VisibilityGauge({
   pct,
   type,
+  size = "sm",
 }: {
   pct: number;
   type: "branded" | "unbranded" | "citation" | "position";
+  /** "sm" (default, ~88px wide) is the prompts-strip default; "lg" (~150px)
+   *  is used by /citation-insights cards to fill the wider right slot. */
+  size?: "sm" | "lg";
 }) {
   const gradientId = useId();
 
@@ -319,9 +352,14 @@ function VisibilityGauge({
   // Suppress unused-var on gradientId — kept for future hover/focus states.
   void gradientId;
 
+  const dims =
+    size === "lg"
+      ? { wrap: 150, svg: 140, height: 78, label: 13, labelGap: -2 }
+      : { wrap: 88, svg: 80, height: 44, label: 10, labelGap: -2 };
+
   return (
-    <div className="flex flex-col items-center" style={{ width: 88 }}>
-      <svg viewBox="0 0 100 56" width={80} height={44} aria-hidden>
+    <div className="flex flex-col items-center" style={{ width: dims.wrap }}>
+      <svg viewBox="0 0 100 56" width={dims.svg} height={dims.height} aria-hidden>
         {/* Track — soft cream ring matching the brand sentiment donut */}
         <path
           d={trackPath}
@@ -348,11 +386,11 @@ function VisibilityGauge({
           />
         )}
       </svg>
-      <div className="flex items-center gap-1 -mt-0.5">
+      <div className="flex items-center gap-1" style={{ marginTop: dims.labelGap }}>
         <span
           className="uppercase tabular-nums"
           style={{
-            fontSize: 10,
+            fontSize: dims.label,
             fontWeight: 700,
             letterSpacing: "0.06em",
             color: tier.color,
@@ -1047,35 +1085,36 @@ function EngineChips({
   enabled: Set<string>;
   onToggle: (id: string) => void;
 }) {
+  // Visual + behavioral parity with the engine chips on
+  // /competitor-comparison: plain button (no motion wrapper, no
+  // HoverHint), inline-flex pill with px-3 py-1.5, EngineIcon size 13,
+  // active = solid sage bg + white text + sage border, inactive =
+  // transparent + muted-grey text + standard border with hover-on-border.
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-[var(--color-fg-muted)] mr-1" style={{ fontSize: 15 }}>
+      <span className="text-[var(--color-fg-muted)] mr-1" style={{ fontSize: 14 }}>
         AI engines:
       </span>
-      {ENGINES.map((e) => {
-        const active = enabled.has(e.id);
-        return (
-          <HoverHint key={e.id} hint={`${active ? "Hide" : "Show"} ${e.label} data on this page.`}>
-            <motion.button
-              whileTap={{ scale: 0.93 }}
-              whileHover={{ y: -1 }}
-              transition={{ duration: 0.15, ease: EASE }}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {ENGINES.map((e) => {
+          const active = enabled.has(e.id);
+          return (
+            <button
+              key={e.id}
               onClick={() => onToggle(e.id)}
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-[var(--radius-full)] border transition-all"
-              style={{
-                fontSize: 14,
-                backgroundColor: active ? "rgba(150,162,131,0.16)" : "transparent",
-                color: active ? "#5E7250" : "var(--color-fg-muted)",
-                borderColor: active ? "rgba(150,162,131,0.45)" : "var(--color-border)",
-                fontWeight: active ? 500 : 400,
-              }}
+              className={
+                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-full)] border font-medium transition-colors " +
+                (active
+                  ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                  : "bg-transparent text-[var(--color-fg-muted)] border-[var(--color-border)] hover:border-[var(--color-border-hover)] hover:text-[var(--color-fg-secondary)]")
+              }
+              style={{ fontSize: 14 }}
             >
-              <EngineIcon id={e.id} size={14} />
-              {e.label}
-            </motion.button>
-          </HoverHint>
-        );
-      })}
+              <EngineIcon id={e.id} size={13} /> {e.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -1200,7 +1239,7 @@ function StatCard({
             {label}
           </p>
           <HoverHint hint={hint}>
-            <Info
+            <HelpCircle
               className="h-3.5 w-3.5 text-[var(--color-fg-muted)] hover:text-[var(--color-fg-secondary)] cursor-help transition-colors"
               aria-label="More info"
             />
@@ -1424,7 +1463,7 @@ function InfoTooltip({ hint }: { hint: string }) {
   // table card) and renders on top of everything else.
   return (
     <HoverHint hint={hint}>
-      <Info
+      <HelpCircle
         className="h-3.5 w-3.5 text-[var(--color-fg-muted)] hover:text-[var(--color-fg-secondary)] cursor-help transition-colors"
         aria-label="More info"
       />
@@ -1540,7 +1579,7 @@ function PromptsLedger({ rows }: { rows: LedgerRowSpec[] }) {
 // Brand-sentiment-style 4-card strip — minimal, equal weight, no gauges.
 // Each card: icon tile + label + info icon + Cormorant value + delta + sub.
 
-interface CleanStatCardSpec {
+export interface CleanStatCardSpec {
   icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   label: string;
   hint: string;
@@ -1548,7 +1587,12 @@ interface CleanStatCardSpec {
   sub: string;
   delta?: { direction: "up" | "down" | "flat"; pct: number; suffix?: string };
   /** When set, renders a half-circle gauge to the right of the content. */
-  gauge?: { type: "branded" | "unbranded" | "citation" | "position"; pct: number };
+  gauge?: { type: "branded" | "unbranded" | "citation" | "position"; pct: number; size?: "sm" | "lg" };
+  /** Custom node rendered in the right-side slot (where gauge would
+   *  normally live) — used by /citation-insights to show a per-engine
+   *  source mini bar chart on the Unique Sources card. Ignored when
+   *  `gauge` is also set. */
+  rightSlot?: React.ReactNode;
   /** Bigger value type — used by the Prompts Tracked anchor card. */
   featured?: boolean;
   /** Plan-tier comparison rendered to the right of the content. */
@@ -1559,6 +1603,15 @@ interface CleanStatCardSpec {
     upgradePrompts: number;
     href: string;
   };
+  /** Per-engine hit map ({chatgpt: true, claude: false, ...}) — when
+   *  set, renders a 4-dot engine breakdown row at the bottom of the card. */
+  engineHits?: Record<string, boolean>;
+  /** Bottom-of-card descriptor line for cards that don't have per-engine
+   *  data (e.g. Link Citation Rate). Keeps every card the same height. */
+  bottomLine?: { icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>; text: string; tone: "good" | "warn" | "neutral" };
+  /** Single CTA link rendered at the very bottom of the card. Uses Next.js
+   *  Link for internal routes (preserves history + scroll). */
+  cta?: { label: string; href: string };
   /** Applies the same sage row tint used on branded prompt rows. */
   branded?: boolean;
 }
@@ -1596,6 +1649,7 @@ function CleanStatStrip({ data }: { data: PromptsData }) {
         pct: data.brandedVisibilityDelta,
       },
       gauge: { type: "branded", pct: data.brandedVisibility },
+      engineHits: data.brandedEngineHits,
       branded: true,
     },
     {
@@ -1614,6 +1668,7 @@ function CleanStatStrip({ data }: { data: PromptsData }) {
         pct: data.unbrandedVisibilityDelta,
       },
       gauge: { type: "unbranded", pct: data.unbrandedVisibility },
+      engineHits: data.unbrandedEngineHits,
     },
     {
       icon: Link2,
@@ -1631,67 +1686,92 @@ function CleanStatStrip({ data }: { data: PromptsData }) {
         pct: data.linkCitationDelta,
       },
       gauge: { type: "citation", pct: data.linkCitationRate },
+      // No per-engine link data exists yet, so use a contextual descriptor
+      // line so this card matches the height + visual rhythm of its
+      // neighbors instead of looking sparse.
+      bottomLine: data.linkCitationRate >= 40
+        ? { icon: CheckCircle2, text: "Trusted source signal — AI weights linked citations 3× over name-only mentions", tone: "good" }
+        : data.linkCitationRate >= 20
+          ? { icon: TrendingUp, text: "Push answer-capsule formats on top prompts to lift this past 40%", tone: "warn" }
+          : { icon: AlertTriangle, text: "Below 20% — answer-capsule rewrites on highest-volume prompts move this fastest", tone: "warn" },
     },
   ];
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {cards.map((c) => {
-        const Icon = c.icon;
-        const deltaType =
-          c.delta == null
-            ? null
-            : c.delta.direction === "up"
-            ? "increase"
-            : c.delta.direction === "down"
-            ? "decrease"
-            : "neutral";
-        return (
-          <Card key={c.label} className="flex flex-col p-5" style={c.branded ? { backgroundColor: "rgba(140,165,118,0.13)" } : undefined}>
-            <div className="flex items-start gap-3 flex-1">
+      {cards.map((c) => (
+        <CleanStatCard key={c.label} spec={c} />
+      ))}
+    </div>
+  );
+}
+
+// Reusable card for the "stat strip" pattern. Used by CleanStatStrip on
+// /prompts and now by /citation-insights so the visual chrome stays
+// consistent across pages: icon tile + label + ⓘ + delta-pill-top-right
+// + big value + sub line + optional gauge + optional bottom row
+// (engine breakdown / descriptor / plan-tier / CTA).
+export function CleanStatCard({ spec: c }: { spec: CleanStatCardSpec }) {
+  const Icon = c.icon;
+  const deltaType =
+    c.delta == null
+      ? null
+      : c.delta.direction === "up"
+        ? "increase"
+        : c.delta.direction === "down"
+          ? "decrease"
+          : "neutral";
+  return (
+        <Card className="flex flex-col p-5" style={c.branded ? { backgroundColor: "rgba(140,165,118,0.13)" } : undefined}>
+            {/* Top row: icon tile + label + ⓘ + delta pill (top-right corner) */}
+            <div className="flex items-start gap-3">
               <div
                 className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0"
                 style={{ backgroundColor: "rgba(150,162,131,0.16)" }}
               >
                 <Icon className="h-5 w-5" style={{ color: "#5E7250" }} />
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1 mb-0.5">
-                  <p
-                    className="text-[var(--color-fg-muted)]"
-                    style={{ fontSize: 12 }}
-                  >
-                    {c.label}
-                  </p>
-                  <HoverHint hint={c.hint} placement="top">
-                    <Info className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
-                  </HoverHint>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: c.featured ? 48 : 34,
-                      fontWeight: 600,
-                      lineHeight: 1.05,
-                      color: "var(--color-fg)",
-                      letterSpacing: "-0.02em",
-                    }}
-                  >
-                    {c.value}
-                  </p>
-                  {deltaType && c.delta && c.delta.direction !== "flat" && (
-                    <BadgeDelta
-                      deltaType={deltaType}
-                      value={`${c.delta.pct > 0 ? "+" : ""}${c.delta.pct.toFixed(
-                        1,
-                      )}%`}
-                      variant="solid"
-                    />
-                  )}
-                </div>
+              <div className="min-w-0 flex-1 flex items-center gap-1">
                 <p
-                  className="text-[var(--color-fg-muted)] mt-0.5"
+                  className="text-[var(--color-fg-muted)]"
+                  style={{ fontSize: 12 }}
+                >
+                  {c.label}
+                </p>
+                <HoverHint hint={c.hint} placement="top">
+                  <HelpCircle className="h-3 w-3 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+                </HoverHint>
+              </div>
+              {deltaType && c.delta && c.delta.direction !== "flat" && (
+                <div className="shrink-0">
+                  <BadgeDelta
+                    deltaType={deltaType}
+                    value={`${c.delta.pct > 0 ? "+" : ""}${c.delta.pct.toFixed(
+                      1,
+                    )}%`}
+                    variant="solid"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Middle row: big value + subline (left), gauge (right) */}
+            <div className="flex items-center gap-3 mt-3 flex-1">
+              <div className="min-w-0 flex-1">
+                <p
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: c.featured ? 48 : 34,
+                    fontWeight: 600,
+                    lineHeight: 1.05,
+                    color: "var(--color-fg)",
+                    letterSpacing: "-0.02em",
+                  }}
+                >
+                  {c.value}
+                </p>
+                <p
+                  className="text-[var(--color-fg-muted)] mt-1"
                   style={{ fontSize: 12, lineHeight: 1.4 }}
                 >
                   {c.sub}
@@ -1699,10 +1779,80 @@ function CleanStatStrip({ data }: { data: PromptsData }) {
               </div>
               {c.gauge && (
                 <div className="shrink-0 self-center">
-                  <VisibilityGauge type={c.gauge.type} pct={c.gauge.pct} />
+                  <VisibilityGauge type={c.gauge.type} pct={c.gauge.pct} size={c.gauge.size} />
                 </div>
               )}
+              {!c.gauge && c.rightSlot && (
+                <div className="shrink-0 self-center">{c.rightSlot}</div>
+              )}
             </div>
+
+            {/* Bottom row: per-engine breakdown OR contextual descriptor.
+                Fills the dead space below the value/gauge so cards don't
+                read sparse, and gives every visibility card a useful
+                second data dimension. */}
+            {c.engineHits && (
+              <div
+                className="mt-3 pt-3 border-t flex items-center justify-between gap-2"
+                style={{ borderColor: "rgba(150,162,131,0.25)" }}
+              >
+                <span
+                  className="uppercase tracking-wider text-[var(--color-fg-muted)] font-semibold"
+                  style={{ fontSize: 10, letterSpacing: "0.08em" }}
+                >
+                  By engine
+                </span>
+                <div className="flex items-center gap-2">
+                  {(["chatgpt", "claude", "gemini", "google_ai"] as const).map(
+                    (id) => {
+                      const hit = !!c.engineHits?.[id];
+                      return (
+                        <span
+                          key={id}
+                          className="inline-flex items-center gap-1"
+                          style={{ opacity: hit ? 1 : 0.35 }}
+                        >
+                          <EngineIcon id={id} size={12} />
+                          <span
+                            className="inline-block rounded-full"
+                            style={{
+                              width: 6,
+                              height: 6,
+                              backgroundColor: hit ? "#5E7250" : "var(--color-border)",
+                            }}
+                            aria-hidden
+                          />
+                        </span>
+                      );
+                    },
+                  )}
+                </div>
+              </div>
+            )}
+            {!c.engineHits && c.bottomLine && (
+              <div
+                className="mt-3 pt-3 border-t flex items-start gap-2"
+                style={{ borderColor: "rgba(150,162,131,0.25)" }}
+              >
+                <c.bottomLine.icon
+                  className="h-3.5 w-3.5 shrink-0 mt-0.5"
+                  style={{
+                    color:
+                      c.bottomLine.tone === "good"
+                        ? "#5E7250"
+                        : c.bottomLine.tone === "warn"
+                          ? "#A06210"
+                          : "var(--color-fg-muted)",
+                  }}
+                />
+                <p
+                  className="text-[var(--color-fg-secondary)]"
+                  style={{ fontSize: 11.5, lineHeight: 1.4 }}
+                >
+                  {c.bottomLine.text}
+                </p>
+              </div>
+            )}
 
             {c.planTier && (
               <div
@@ -1761,10 +1911,24 @@ function CleanStatStrip({ data }: { data: PromptsData }) {
                 </a>
               </div>
             )}
+
+            {/* CTA — at the very bottom. Used by /citation-insights cards
+                ("See prompts", "Engine breakdown", "Run audit"). Soft client
+                nav via Next.js Link so back-button restores the prior page. */}
+            {c.cta && (
+              <Link
+                href={c.cta.href}
+                className="group mt-3 pt-3 border-t inline-flex items-center gap-1 font-semibold text-[var(--color-fg-secondary)] hover:text-[var(--color-fg)] transition-colors"
+                style={{
+                  fontSize: 12,
+                  borderColor: "rgba(150,162,131,0.25)",
+                }}
+              >
+                {c.cta.label}
+                <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            )}
           </Card>
-        );
-      })}
-    </div>
   );
 }
 
@@ -2751,7 +2915,7 @@ function PromptsTable({
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
-  const [pageSize, setPageSize] = useState<number | "all">(20);
+  const [pageSize, setPageSize] = useState<number | "all">(10);
 
   // Deep-link target row from `?focus=<text>`. When set, the row is
   // briefly tinted to draw the eye after the scroll completes; then the
@@ -3512,10 +3676,14 @@ function PromptsTable({
                                 style={{
                                   width: 7,
                                   height: 7,
+                                  // Cited dots use link-blue when present —
+                                  // subconscious cue that the engine LINKED
+                                  // (not just mentioned). Rust kept for the
+                                  // 0/4 case so leaks still scream visually.
                                   backgroundColor: allMissed
                                     ? "#B54631"
                                     : links[i]
-                                      ? "#7D8E6C"
+                                      ? "#2563EB"
                                       : "rgba(107,109,107,0.3)",
                                 }}
                               />
@@ -3850,7 +4018,7 @@ function PromptsTable({
             Show
           </span>
           <div className="inline-flex items-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] p-0.5 gap-0.5">
-            {([20, 50, 100, "all"] as const).map((opt) => {
+            {([10, 20, 50, 100, "all"] as const).map((opt) => {
               const active = pageSize === opt;
               const label = opt === "all" ? "All" : String(opt);
               return (
@@ -4424,17 +4592,44 @@ function HighlightsTable({
           tagBorder: "rgba(150,162,131,0.45)",
         }
       : {
-          tagBg: "rgba(201,123,69,0.16)",
-          tagFg: TOK.amberFg,
-          tagBorder: "rgba(201,123,69,0.4)",
+          // Reason chips (BRANDED MISS / HIGH-VOLUME MISS / WEAK SENTIMENT)
+          // use the dark rust palette so they read as urgent — matches the
+          // rust accent on the card header + the "Improve negative sentiment"
+          // CTA below.
+          tagBg: "rgba(181,70,49,0.14)",
+          tagFg: "#8C3522",
+          tagBorder: "rgba(181,70,49,0.45)",
         };
+
+  // Card-level color treatment mirrors the canonical "What needs attention"
+  // chrome used elsewhere on the page — 4px borderTop in the variant accent
+  // (sage for best / rust for flagged) + matching gradient banner header
+  // with a header icon, so the box reads as good vs bad at a glance.
+  const SAGE = "#5E7250";
+  const RUST = "#B54631";
+  const accent = variant === "best" ? SAGE : RUST;
+  const HeaderIcon = variant === "best" ? CheckCircle2 : AlertTriangle;
+  const headerGradient =
+    variant === "best"
+      ? "linear-gradient(135deg, rgba(150,162,131,0.22) 0%, rgba(150,162,131,0.04) 100%)"
+      : "linear-gradient(135deg, rgba(181,70,49,0.18) 0%, rgba(181,70,49,0.04) 100%)";
+  const ctaTone: "sage" | "rust" = variant === "best" ? "sage" : "rust";
 
   const rowBorder = "1.5px solid rgba(60,62,60,0.18)";
 
   return (
-    <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col h-full">
-      {/* Header — mirrors PromptsTable header style */}
-      <div className="flex items-center px-5 py-4 border-b border-[var(--color-border)]">
+    <section
+      className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col h-full overflow-hidden"
+    >
+      {/* Tinted banner header — keeps the variant accent on the icon
+          and gradient backdrop, but the solid 4px borderTop accent has
+          been removed per Joey's preference. The color story now reads
+          entirely through the header treatment. */}
+      <div
+        className="flex items-center gap-2 px-5 py-3 border-b border-[var(--color-border)]"
+        style={{ background: headerGradient }}
+      >
+        <HeaderIcon className="h-4 w-4 shrink-0" style={{ color: accent }} />
         <SectionHeading text={title} info={info} />
       </div>
 
@@ -4648,10 +4843,13 @@ function HighlightsTable({
                                   style={{
                                     width: 5,
                                     height: 5,
+                                    // Same link-blue cue as the main Tracked
+                                    // Prompts table Cited column. Rust stays
+                                    // on the 0/4 leak case.
                                     backgroundColor: allMissed
                                       ? "#B54631"
                                       : links[i]
-                                        ? "#7D8E6C"
+                                        ? "#2563EB"
                                         : "rgba(107,109,107,0.3)",
                                   }}
                                 />
@@ -4903,12 +5101,15 @@ function HighlightsTable({
         )}
       </div>
 
-      {/* Footer — CTA on left, SHOW cluster on right */}
+      {/* Footer — CTA on left, SHOW cluster on right. CTA tone matches the
+          card's variant: sage for best (positive/replicate), rust for
+          flagged (negative/diagnose). */}
       <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-[var(--color-border)]">
         <CtaLink
           icon={footerCta.icon}
           label={footerCta.label}
           href={footerCta.href}
+          tone={ctaTone}
         />
         <div className="flex items-center gap-1.5 shrink-0">
           <span
@@ -5154,8 +5355,9 @@ function SentimentByTypeCard({ items }: { items: SentimentByType[] }) {
       <div className="mt-4 pt-3 border-t border-[var(--color-border)]">
         <CtaLink
           icon={Smile}
-          label="Improve negative sentiment with rewrites"
+          label="Improve negative sentiment"
           href="/audit"
+          tone="rust"
         />
       </div>
     </section>
@@ -5176,182 +5378,227 @@ const INSIGHT_ICON: Record<
   alert: AlertTriangle,
 };
 
-interface InsightCardProps {
-  variant: "wins" | "concerns";
-  tag: string;
-  title: string;
-  summary: string;
-  items: InsightItemData[];
-}
-
-const INSIGHT_PAGE_SIZE = 3;
-
-function InsightNavArrow({
-  dir,
-  onClick,
-  disabled,
+// Replaces the previous InsightCard / InsightNavArrow / InsightCardProps
+// trio with a card that mirrors the canonical "What needs attention"
+// chrome used by GapsToFillCard + WinsToWidenCard on the AI Visibility
+// Tracker / Competitor Comparison pages — same 4px borderTop, same
+// gradient banner, same count pill, same compact accent-tile rows,
+// same click-through GapPlaybookModal. Only the data shape and the
+// title vocabulary change (prompt-themed instead of competitor-themed).
+function PromptThemesCard({
+  variant,
+  title,
+  info,
+  items,
 }: {
-  dir: "up" | "down";
-  onClick: () => void;
-  disabled: boolean;
+  variant: "wins" | "concerns";
+  title: string;
+  info: string;
+  items: InsightItemData[];
 }) {
-  const Icon = dir === "up" ? ChevronUp : ChevronDown;
-  const wrapperPad = dir === "up" ? "pt-2 pb-1" : "pt-1 pb-2";
-  return (
-    <div className={`flex justify-center ${wrapperPad}`}>
-      <button
-        type="button"
-        onClick={onClick}
-        disabled={disabled}
-        aria-label={dir === "up" ? "Show previous" : "Show next"}
-        className={
-          "rounded-full p-1 transition-colors " +
-          (disabled
-            ? "text-[var(--color-border)] cursor-default"
-            : "text-[var(--color-fg-secondary)] hover:text-[var(--color-fg)] hover:bg-[var(--color-surface-alt)] cursor-pointer")
-        }
-      >
-        <Icon className="h-5 w-5" />
-      </button>
-    </div>
-  );
-}
-
-function InsightCard({ variant, tag, title, summary, items }: InsightCardProps) {
-  const [page, setPage] = useState(0);
-  const totalPages = Math.max(1, Math.ceil(items.length / INSIGHT_PAGE_SIZE));
-  const visibleItems = items.slice(
-    page * INSIGHT_PAGE_SIZE,
-    page * INSIGHT_PAGE_SIZE + INSIGHT_PAGE_SIZE,
-  );
-
-  const palette =
+  const RUST = "#B54631";
+  const RUST_BG = "rgba(181,70,49,0.12)";
+  const SAGE = "#5E7250";
+  const SAGE_BG = "rgba(150,162,131,0.18)";
+  const accent = variant === "wins" ? SAGE : RUST;
+  const accentBg = variant === "wins" ? SAGE_BG : RUST_BG;
+  const HeaderIcon = variant === "wins" ? Trophy : AlertTriangle;
+  const headerGradient =
     variant === "wins"
-      ? {
-          accent: COLORS.primary,
-          accentText: TOK.greenFg,
-          gradient:
-            "linear-gradient(135deg, rgba(150,162,131,0.22) 0%, rgba(150,162,131,0.04) 100%)",
-          tileBg: "rgba(150,162,131,0.20)",
-          HeaderIcon: Sparkles,
-        }
-      : {
-          accent: "#C97B45",
-          accentText: TOK.amberFg,
-          gradient:
-            "linear-gradient(135deg, rgba(199,123,69,0.20) 0%, rgba(199,123,69,0.03) 100%)",
-          tileBg: "rgba(199,123,69,0.18)",
-          HeaderIcon: AlertTriangle,
-        };
-  const HeaderIcon = palette.HeaderIcon;
+      ? "linear-gradient(135deg, rgba(150,162,131,0.22) 0%, rgba(150,162,131,0.04) 100%)"
+      : "linear-gradient(135deg, rgba(181,70,49,0.18) 0%, rgba(181,70,49,0.04) 100%)";
+  const countLabel =
+    variant === "wins"
+      ? `${items.length} ${items.length === 1 ? "win" : "wins"}`
+      : `${items.length} ${items.length === 1 ? "gap" : "gaps"}`;
+
+  // Cap at 3 to match the canonical chrome — same slice GapsToFillCard does.
+  const visible = items.slice(0, 3);
+  const [activePlaybook, setActivePlaybook] = useState<GapPlaybook | null>(null);
+
+  // Per-icon "How to fix" suggestion for the concerns/gaps modal. Each
+  // iconKey maps to the kind of problem: target = zero/low coverage,
+  // trend-down = declining intent, alert = engine weakness or generic.
+  const FIX_SUGGESTION: Record<string, string> = {
+    target:
+      "Publish a dedicated page targeting this exact phrasing — title, H1, and opening paragraph should restate the question and answer it in 2–3 short sentences AI can quote verbatim. Add FAQ schema with the same question wording.",
+    "trend-down":
+      "Coverage is sliding — refresh the cited pages with new dateModified, add 2–3 fresh examples or stats, and push a new revision. AI engines deprioritize stale content fast.",
+    alert:
+      "Different engines weight different signals — ChatGPT leans on Reddit + editorial, Claude wants long-form + schema, Gemini reads Google reviews, Google AI follows organic search. Run the Website Audit for the exact engine-specific failing checks.",
+    crown:
+      "Audit the page that's already winning so you can replicate its structure (schema density, FAQ blocks, opening sentence framing) on your weaker prompts.",
+    check:
+      "Document what's working so the pattern survives team turnover. Bake the structure into a content template before you ship the next batch.",
+    "trend-up":
+      "Find the inflection point on the trend chart and identify what shipped right before — then repeat that play on the next-weakest intent.",
+  };
+
+  function buildPlaybook(item: InsightItemData): GapPlaybook {
+    if (variant === "concerns") {
+      const fix =
+        FIX_SUGGESTION[item.iconKey] ??
+        "Run the Website Audit for the highest-impact failing checks ranked by recoverable score points.";
+      return {
+        title: item.title,
+        body: (
+          <div className="space-y-3">
+            <p>{item.description}</p>
+            <div>
+              <p
+                className="text-[var(--color-fg)] font-semibold mb-1"
+                style={{ fontSize: 13 }}
+              >
+                How to fix
+              </p>
+              <p>{fix}</p>
+            </div>
+          </div>
+        ),
+        // Concerns ALWAYS route to /audit since that's where the actual
+        // diagnostic + recoverable-points list lives. Hash anchor scrolls
+        // straight to the "Fix these first" panel.
+        actionCta: {
+          label: "Open Website Audit to make the fixes",
+          href: "/audit#fix-these-first",
+        },
+        tone: "rust",
+        managedPlansCopy:
+          "fix the underlying issues — schema, content depth, and citation outreach on the leaking prompts.",
+      };
+    }
+    // Wins variant — keep the win-specific CTA and tone, no fix recipe needed.
+    return {
+      title: item.title,
+      body: item.description,
+      actionCta: { label: item.cta.label, href: item.cta.href },
+      tone: "sage",
+      managedPlansCopy:
+        "monitor these wins and replicate the pattern across your weaker prompts.",
+    };
+  }
 
   return (
-    <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col h-full overflow-hidden">
-      {/* Gradient header */}
+    <div
+      className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col h-full w-full min-w-0"
+      style={{ borderTop: `4px solid ${accent}` }}
+    >
+      {/* Banner header — same gradient + rounded corners pattern as
+          GapsToFillCard / WinsToWidenCard so all three "things to address"
+          surfaces across Surven read as a matched set. */}
       <div
-        className="p-5"
+        className="px-5 py-3 border-b border-[var(--color-border)] flex items-center justify-between gap-2"
         style={{
-          background: palette.gradient,
-          borderLeft: `4px solid ${palette.accent}`,
+          background: headerGradient,
+          borderTopLeftRadius: "calc(var(--radius-lg) - 4px)",
+          borderTopRightRadius: "calc(var(--radius-lg) - 4px)",
         }}
       >
-        <div className="flex items-center gap-2 mb-1.5">
-          <HeaderIcon className="h-4 w-4 shrink-0" style={{ color: palette.accent }} />
-          <p
-            className="uppercase font-semibold"
-            style={{ fontSize: 11, letterSpacing: "0.12em", color: palette.accentText }}
-          >
-            {tag}
-          </p>
+        <div className="flex items-center gap-2 min-w-0">
+          <HeaderIcon className="h-4 w-4 shrink-0" style={{ color: accent }} />
+          <SectionHeading text={title} info={info} />
         </div>
-        <h3
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: 28,
-            fontWeight: 500,
-            color: "var(--color-fg)",
-            letterSpacing: "-0.01em",
-            lineHeight: 1.1,
-          }}
-        >
-          {title}
-        </h3>
-        <p
-          className="mt-1.5 text-[var(--color-fg-secondary)]"
-          style={{ fontSize: 13, lineHeight: 1.5 }}
-        >
-          {summary}
-        </p>
+        <div className="shrink-0">
+          <span
+            className="inline-flex items-center text-xs font-semibold rounded-md px-2 py-0.5 whitespace-nowrap"
+            style={{ color: accent, backgroundColor: accentBg }}
+          >
+            {countLabel}
+          </span>
+        </div>
       </div>
 
-      {/* Sub-cards with up/down arrow paging */}
-      <div className="flex-1 flex flex-col px-4 pb-2">
-        <InsightNavArrow
-          dir="up"
-          onClick={() => setPage((p) => Math.max(0, p - 1))}
-          disabled={page === 0}
-        />
-
-        <motion.div
-          key={page}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, ease: EASE }}
-          className="space-y-3"
-        >
-          {visibleItems.map((item, idx) => {
-            const ItemIcon = INSIGHT_ICON[item.iconKey];
-            return (
+      <div className="flex-1 flex flex-col gap-2.5 p-5">
+        {visible.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center text-center px-4 py-6">
+            <div className="flex flex-col items-center gap-3 max-w-[240px]">
               <div
-                key={idx}
-                className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 flex items-start gap-3 hover:bg-[var(--color-surface-alt)]/40 transition-colors"
+                className="h-10 w-10 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: accentBg }}
               >
-                <div
-                  className="h-9 w-9 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: palette.tileBg }}
-                >
-                  <ItemIcon className="h-4 w-4" style={{ color: palette.accent }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: 17,
-                      fontWeight: 500,
-                      color: "var(--color-fg)",
-                      letterSpacing: "-0.01em",
-                      lineHeight: 1.2,
-                    }}
-                  >
-                    {item.title}
-                  </p>
-                  <p
-                    className="text-[var(--color-fg-muted)] mt-1"
-                    style={{ fontSize: 12.5, lineHeight: 1.5 }}
-                  >
-                    {item.description}
-                  </p>
-                  <a
-                    href={item.cta.href}
-                    className="group inline-flex items-center gap-1 mt-2 font-semibold transition-opacity hover:opacity-80"
-                    style={{ fontSize: 12.5, color: palette.accentText }}
-                  >
-                    {item.cta.label}
-                    <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-                  </a>
-                </div>
+                <Sparkles className="h-5 w-5" style={{ color: accent }} />
               </div>
-            );
-          })}
-        </motion.div>
-
-        <InsightNavArrow
-          dir="down"
-          onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-          disabled={page >= totalPages - 1}
-        />
+              <p
+                className="font-semibold"
+                style={{
+                  fontSize: 13.5,
+                  lineHeight: 1.3,
+                  color: "var(--color-fg)",
+                }}
+              >
+                {variant === "wins"
+                  ? "No clear wins yet"
+                  : "No gaps flagged this period"}
+              </p>
+              <p
+                className="text-[var(--color-fg-muted)]"
+                style={{ fontSize: 12, lineHeight: 1.5 }}
+              >
+                {variant === "wins"
+                  ? "You're middle-of-the-pack on prompt coverage. Pick one weak intent in the table above and ship a single fix — wins compound from there."
+                  : "Coverage is holding across the prompts you track. Defend the position by keeping fresh content flowing on your top intents."}
+              </p>
+            </div>
+          </div>
+        ) : (
+          visible.map((item, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setActivePlaybook(buildPlaybook(item))}
+              className="text-left rounded-[var(--radius-md)] border border-[var(--color-border)] p-2.5 flex items-start gap-2.5 cursor-pointer transition-colors"
+              style={{
+                background: "var(--color-surface-alt)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = `${accent}73`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "var(--color-border)";
+              }}
+            >
+              <div
+                className="h-7 w-7 rounded-md flex items-center justify-center shrink-0"
+                style={{ backgroundColor: accentBg }}
+              >
+                <HeaderIcon className="h-3.5 w-3.5" style={{ color: accent }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p
+                  className="text-[var(--color-fg)] font-semibold"
+                  style={{ fontSize: 12.5, lineHeight: 1.25 }}
+                >
+                  {item.title}
+                </p>
+                <p
+                  className="text-[var(--color-fg-secondary)] mt-0.5"
+                  style={{ fontSize: 11.5, lineHeight: 1.4 }}
+                >
+                  {item.description}
+                </p>
+              </div>
+              <ArrowRight
+                className="h-3.5 w-3.5 mt-1 shrink-0"
+                style={{ color: accent }}
+              />
+            </button>
+          ))
+        )}
+        {variant === "concerns" && visible.length > 0 && (
+          <p
+            className="text-[var(--color-fg-secondary)] text-center mt-1 italic font-semibold"
+            style={{ fontSize: 12.5, lineHeight: 1.4 }}
+          >
+            Click any row to see how to fix it
+          </p>
+        )}
       </div>
-    </section>
+      <GapPlaybookModal
+        open={activePlaybook != null}
+        onClose={() => setActivePlaybook(null)}
+        playbook={activePlaybook}
+      />
+    </div>
   );
 }
 
@@ -5556,12 +5803,9 @@ export function PromptsSection({ data: dataOverride }: { data?: PromptsData } = 
       {/* Divider */}
       <div className="border-t border-[var(--color-border)]" />
 
-      {/* Stat strip — clean 4-card grid (brand-sentiment style) */}
-      <motion.div {...reveal}>
-        <CleanStatStrip data={data} />
-      </motion.div>
-
-      {/* Chunk 2 — Prompts table (with branded callout inside) + Coverage by intent + Citation/Sentiment */}
+      {/* Chunk 2 — Prompts table (with branded callout inside) + Coverage by intent + Citation/Sentiment.
+          Stat strip moved BELOW the table so the page lands on the data first; the
+          KPI cards become a follow-up summary instead of a top-of-page anchor. */}
       <motion.div {...reveal}>
         <PromptsTable
           prompts={data.prompts}
@@ -5572,6 +5816,12 @@ export function PromptsSection({ data: dataOverride }: { data?: PromptsData } = 
           data={data}
           onSeeBranded={showBrandedPrompts}
         />
+      </motion.div>
+
+      {/* Stat strip — clean 4-card grid (brand-sentiment style). Sits
+          directly under the Tracked Prompts table as a post-table KPI summary. */}
+      <motion.div {...reveal}>
+        <CleanStatStrip data={data} />
       </motion.div>
 
       {/* Best-performing + Flagged prompts (50/50) */}
@@ -5585,20 +5835,24 @@ export function PromptsSection({ data: dataOverride }: { data?: PromptsData } = 
         <SentimentByTypeCard items={data.sentimentByType} />
       </motion.div>
 
-      {/* Chunk 3 — Insight cards: wins + concerns */}
-      <motion.div {...reveal} className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <InsightCard
+      {/* Chunk 3 — Prompt theme cards (wins + gaps). Same chrome as
+          GapsToFillCard / WinsToWidenCard on the Competitor Comparison
+          page so the "things to address" surfaces across Surven all read
+          as a matched set. */}
+      <motion.div
+        {...reveal}
+        className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch"
+      >
+        <PromptThemesCard
           variant="wins"
-          tag="What's working"
-          title={`${data.wins.length} ${data.wins.length === 1 ? "win" : "wins"} this period`}
-          summary="Patterns where you're outpacing the field — keep the pressure on."
+          title="Prompt wins to defend"
+          info="Prompt patterns where you're outpacing the field — intent themes you own, trends climbing, branded coverage holding. Tap any row for the playbook."
           items={data.wins}
         />
-        <InsightCard
+        <PromptThemesCard
           variant="concerns"
-          tag="What to watch"
-          title={`${data.concerns.length} ${data.concerns.length === 1 ? "leak" : "leaks"} costing visibility`}
-          summary="Highest-leverage fixes — these are where coverage is bleeding."
+          title="Prompt gaps to fix"
+          info="Highest-leverage prompt fixes from this scan — high-volume zero-coverage prompts, declining intents, weakest engines. Tap any row for the playbook."
           items={data.concerns}
         />
       </motion.div>

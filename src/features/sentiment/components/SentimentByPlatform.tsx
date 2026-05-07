@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { Info, ArrowRight } from "lucide-react";
+import { HelpCircle, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/atoms/Card";
 import { HoverHint } from "@/components/atoms/HoverHint";
@@ -75,7 +75,7 @@ export function SentimentByPlatform({ results }: Props) {
             Sentiment by AI engine
           </h3>
           <HoverHint hint="Each engine's mentions broken down by tone. Positive means favorable framing; negative means critical or dismissive language.">
-            <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+            <HelpCircle className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
           </HoverHint>
         </div>
         {best && worst && best.model !== worst.model && (

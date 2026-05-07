@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Radar, Info } from "lucide-react";
+import { Radar, HelpCircle } from "lucide-react";
 import { VisibilityScoreGauge } from "@/components/atoms/VisibilityScoreGauge";
 import { Button } from "@/components/atoms/Button";
 import { Badge } from "@/components/atoms/Badge";
@@ -117,7 +117,7 @@ export function GaugeSection({
             hint="Visibility score is the share of AI prompts (across ChatGPT, Claude, Gemini, Google AI) that mention your business. 50%+ is strong, 25–50% is moderate, under 25% is thin."
             placement="top"
           >
-            <Info className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
+            <HelpCircle className="h-3.5 w-3.5 text-[var(--color-fg-muted)] cursor-help opacity-60" />
           </HoverHint>
         </div>
 

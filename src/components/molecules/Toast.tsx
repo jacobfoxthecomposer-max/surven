@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, X, AlertTriangle, Info } from "lucide-react";
+import { Check, X, AlertTriangle, HelpCircle } from "lucide-react";
 import { cn } from "@/utils/cn";
 
 type ToastType = "success" | "error" | "warning" | "info";
@@ -29,7 +29,7 @@ const icons: Record<ToastType, ReactNode> = {
   success: <Check className="h-4 w-4" />,
   error: <X className="h-4 w-4" />,
   warning: <AlertTriangle className="h-4 w-4" />,
-  info: <Info className="h-4 w-4" />,
+  info: <HelpCircle className="h-4 w-4" />,
 };
 
 const styles: Record<ToastType, string> = {

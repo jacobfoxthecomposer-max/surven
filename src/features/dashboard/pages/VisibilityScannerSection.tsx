@@ -2885,7 +2885,7 @@ function NarrativeFeed({ data }: { data: ScannerData; treatment: Treatment }) {
     watch.push({
       title: `${weakEngine.label} is your weakest engine at ${weakEngine.today.toFixed(1)}%`,
       body: `You're only named in roughly ${Math.round(weakEngine.today)}% of its answers — every customer routed to ${weakEngine.label} is a missed shot at recommendation. Crawlability + schema fixes here move the needle fastest.`,
-      cta: "Run a site audit",
+      cta: "Optimize",
       href: "/site-audit",
     });
   }
@@ -2913,7 +2913,7 @@ function NarrativeFeed({ data }: { data: ScannerData; treatment: Treatment }) {
     watch.push({
       title: `${failingEngines.length} engines below 50% mention rate`,
       body: `${failingEngines.map((e) => e.label).join(", ")} are all citing you in fewer than half of their answers — a structural readability issue often hits multiple engines at once.`,
-      cta: "Run a site audit",
+      cta: "Optimize",
       href: "/site-audit",
     });
   }
@@ -3280,18 +3280,25 @@ function buildAISummaryText(data: ScannerData): string {
   const youSov = sovStats.find((s) => s.brand.isYou);
   const sovDelta = youSov?.delta ?? 0;
 
-  const s1 = leader.isYou
-    ? `You're leading the field at ${youCurr.toFixed(1)}% visibility — defend it by keeping fresh content flowing on ${worst.label}, your weakest engine at ${worst.today.toFixed(1)}%.`
-    : `You sit at ${youCurr.toFixed(1)}% visibility, #${data.youRank} behind ${leader.name} (${leaderScore.toFixed(1)}%) — a ${(leaderScore - youCurr).toFixed(1)}% gap that closes fastest by winning back ${worst.label} (${worst.today.toFixed(1)}%).`;
+  // Sandwich structure: GOOD → BAD → GOOD. Strongest engine + leadership
+  // framing first, then the weakest engine / behind-leader gap, then a
+  // forward-looking positive (share-of-voice trend or defensive note).
+  // Tight, data-first sandwich (good → bad → good). Each sentence
+  // leads with a number; advisory framing is stripped.
+  const s1 = `${best.label} cites you ${best.today.toFixed(1)}% — your strongest engine.`;
 
-  const s2 = `Your strongest channel is ${best.label} at ${best.today.toFixed(1)}% — keep that momentum, and watch ${worst.label}: it's the lever with the biggest upside if you double down on schema, citations, and direct answers.`;
+  const s2 = leader.isYou
+    ? `${worst.label} sits at ${worst.today.toFixed(1)}% — widest gap, fastest lever.`
+    : `${leader.name} leads at ${leaderScore.toFixed(1)}%, ${(leaderScore - youCurr).toFixed(1)}% ahead. ${worst.label} (${worst.today.toFixed(1)}%) is where the gap concentrates.`;
 
   const s3 =
     sovDelta > 0.5
-      ? `One bright spot: your share of voice grew ${sovDelta.toFixed(1)}% this period — momentum is on your side.`
-      : sovDelta < -0.5
-        ? `One thing to watch: share of voice slipped ${Math.abs(sovDelta).toFixed(1)}% — push fresh content to reclaim mention share before the next scan.`
-        : `One thing to watch: share of voice is flat — the brands publishing more frequently will quietly pull ahead this quarter.`;
+      ? `Share of voice up ${sovDelta.toFixed(1)}% this period — momentum is yours.`
+      : leader.isYou
+        ? `You hold #1 at ${youCurr.toFixed(1)}% overall — defend it.`
+        : sovDelta >= -0.5
+          ? `Share of voice steady — one fix on ${worst.label} moves the curve.`
+          : `${best.label} at ${best.today.toFixed(1)}% proves the playbook — repeat it on weaker pages.`;
 
   return `${s1} ${s2} ${s3}`;
 }
@@ -3308,8 +3315,8 @@ function buildAISummaryCTA(data: ScannerData): { label: string; href: string } {
   // If you're trailing the leader by a sizeable gap, frame the CTA as closing it.
   const label =
     !leader.isYou && gap > 8
-      ? `Run a site audit to start closing the gap on ${worst.label}`
-      : `Run a site audit to fix ${worst.label}`;
+      ? `Optimize to start closing the gap on ${worst.label}`
+      : `Optimize to fix ${worst.label}`;
 
   return { label, href: "/site-audit" };
 }
@@ -3356,7 +3363,7 @@ export function GapsToFillCard({ data }: { data: ScannerData }) {
     candidates.push({
       title: `${weakest.label} citing you ${weakest.today.toFixed(0)}%`,
       body: `Your weakest engine. Schema + crawlability fixes here move the needle fastest.`,
-      cta: "Run a site audit",
+      cta: "Optimize",
       icon: Target,
       playbook: {
         title: `Fix ${weakest.label} — your weakest engine at ${weakest.today.toFixed(1)}%`,
@@ -3395,7 +3402,7 @@ export function GapsToFillCard({ data }: { data: ScannerData }) {
     candidates.push({
       title: `${failing.length} engines under 50%`,
       body: `${failing.map((e) => e.label).join(", ")} all under-cite you. Often a single readability fix.`,
-      cta: "Run a site audit",
+      cta: "Optimize",
       icon: Layers,
       playbook: {
         title: `${failing.length} engines under 50% — likely a structural issue`,
@@ -3525,6 +3532,14 @@ export function GapsToFillCard({ data }: { data: ScannerData }) {
               </button>
             );
           })
+        )}
+        {gaps.length > 0 && (
+          <p
+            className="text-[var(--color-fg-secondary)] text-center mt-1 italic font-semibold"
+            style={{ fontSize: 12.5, lineHeight: 1.4 }}
+          >
+            Click any row to see how to fix it
+          </p>
         )}
       </div>
       <GapPlaybookModal
