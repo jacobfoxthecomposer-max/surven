@@ -131,7 +131,7 @@ export function FeaturesSection() {
 
   return (
     <section className="py-24 px-4 bg-[var(--color-bg)]">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <ScrollReveal className="text-center mb-4">
           <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-fg-muted)]">
             What Surven tracks
