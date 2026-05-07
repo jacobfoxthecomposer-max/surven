@@ -341,41 +341,47 @@ function DashboardPageContent() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, ease }}
         >
-          <AISummaryGenerator
-            getSummary={buildAiSummaryText}
-            getCTA={buildAiSummaryCTA}
-          />
-
-          <div className="flex items-start justify-between gap-6 flex-wrap mt-5">
-            <div className="min-w-0 flex-1">
-              <h1
-                style={{
-                  fontFamily: "var(--font-display)",
-                  fontSize: "clamp(36px, 4.6vw, 60px)",
-                  fontWeight: 600,
-                  // Tight line-height (1.0) trims the descender space below
-                  // the period so the filter row sits visually flush.
-                  lineHeight: 1.0,
-                  letterSpacing: "-0.01em",
-                  color: "var(--color-fg)",
-                }}
-              >
-                Your AI visibility is{" "}
-                <span style={{ color: hero.color, fontStyle: "italic" }}>
-                  {hero.word}
-                </span>
-                .
-              </h1>
-            </div>
-            <div className="shrink-0 mt-1">
+          {/* Top row: AISummaryGenerator (left) + NextScanCard (right).
+              Pulling NextScanCard out of the headline's flex row was the
+              actual fix for the "still a gap" — NextScanCard is ~110px
+              tall, headline is ~50px. With them in the same row + items-
+              start, the row stretched to NextScanCard's height and ~60px
+              of empty space lived inside the row, below the headline,
+              before the filter could even start. Now NextScanCard sits up
+              top, headline gets its own clean row, filter sits flush. */}
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <AISummaryGenerator
+              getSummary={buildAiSummaryText}
+              getCTA={buildAiSummaryCTA}
+            />
+            <div className="shrink-0">
               <NextScanCard />
             </div>
           </div>
 
-          {/* Filter row sits directly under the title baseline. mt-2 (8px)
-              pairs with the title's line-height: 1.0 above so the chips
-              read as "directly underneath" — no descender slack, no
-              decorative cream gap. */}
+          <h1
+            className="mt-5"
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(36px, 4.6vw, 60px)",
+              fontWeight: 600,
+              // Tight line-height (1.0) trims the descender slack below
+              // the period so the filter row sits visually flush.
+              lineHeight: 1.0,
+              letterSpacing: "-0.01em",
+              color: "var(--color-fg)",
+            }}
+          >
+            Your AI visibility is{" "}
+            <span style={{ color: hero.color, fontStyle: "italic" }}>
+              {hero.word}
+            </span>
+            .
+          </h1>
+
+          {/* Filter row sits directly under the title. mt-2 (8px) +
+              line-height 1.0 above = chips read as "directly underneath"
+              with no decorative cream gap. */}
           <div className="flex flex-wrap items-center gap-3 mt-2">
             <TimeRangeDropdown
               value={timeRange}
