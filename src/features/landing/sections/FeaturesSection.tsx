@@ -134,7 +134,7 @@ export function FeaturesSection() {
       <div className="max-w-5xl mx-auto">
         <ScrollReveal className="text-center mb-4">
           <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-fg-muted)]">
-            What we track
+            What Surven tracks
           </span>
         </ScrollReveal>
         <ScrollReveal className="text-center mb-16">
@@ -142,11 +142,11 @@ export function FeaturesSection() {
             className="text-3xl sm:text-4xl font-light"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            Complete AI visibility{" "}
-            <em className="italic font-normal text-[var(--color-primary)]">intelligence</em>
+            Every signal AI uses to{" "}
+            <em className="italic font-normal text-[var(--color-primary)]">recommend a business</em>
           </h2>
           <p className="mt-4 text-[var(--color-fg-secondary)] max-w-xl mx-auto text-sm sm:text-base">
-            Surven monitors every signal that determines whether AI recommends your business.{" "}
+            ChatGPT, Claude, Gemini, and Google AI each weigh different signals when deciding who to recommend. Surven monitors all of them.{" "}
             <span className="text-[var(--color-fg)] font-medium">Tap any icon to learn more.</span>
           </p>
         </ScrollReveal>

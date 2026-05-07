@@ -9,7 +9,7 @@ const steps = [
     number: "01",
     title: "Add your business",
     description:
-      "Enter your business name, industry, and location. Optionally add competitors you want to track alongside.",
+      "Enter your business name, industry, and location. Add up to 5 competitors to benchmark against and track them side-by-side.",
     icon: Building2,
   },
   {
@@ -23,7 +23,7 @@ const steps = [
     number: "03",
     title: "See your results",
     description:
-      "Get a Visibility Score, per-model breakdown, and the exact prompts that mentioned — or missed — your business.",
+      "Get your Visibility Score and see the exact moments a customer asked AI for a recommendation — and whether your business showed up or a competitor did.",
     icon: LineChart,
   },
 ];

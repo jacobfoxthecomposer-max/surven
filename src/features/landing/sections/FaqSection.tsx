@@ -8,7 +8,7 @@ import { ScrollReveal } from "@/components/molecules/ScrollReveal";
 const FAQS = [
   {
     q: "What does Surven track?",
-    a: "Surven tracks your visibility across ChatGPT, Claude, Gemini, and Google AI, showing you how often your business is recommended.",
+    a: "Surven tracks whether ChatGPT, Claude, Gemini, and Google AI mention your business when customers ask for recommendations in your industry. You see exactly which prompts you appeared in, which you missed, and what competitors showed up instead.",
   },
   {
     q: "How is Surven different from regular SEO?",
@@ -16,7 +16,7 @@ const FAQS = [
   },
   {
     q: "How does Surven help improve AI visibility?",
-    a: "Surven provides a visibility score and identifies where you're missing out compared to competitors, helping you understand and improve your AI presence.",
+    a: "Surven shows you the exact prompts where competitors appeared instead of you, which directories AI sources from that you're not listed on, and how AI describes your business in its answers. You get a clear picture of what's missing — so you know exactly where to focus first.",
   },
   {
     q: "Can I monitor my AI mentions over time with Surven?",

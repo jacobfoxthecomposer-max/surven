@@ -1,6 +1,5 @@
 import { LandingNav } from "@/features/landing/sections/LandingNav";
 import { HeroSection } from "@/features/landing/sections/HeroSection";
-import { ProductPreviewSection } from "@/features/landing/sections/ProductPreviewSection";
 import { FeaturesSection } from "@/features/landing/sections/FeaturesSection";
 import { ValuePropsSection } from "@/features/landing/sections/ValuePropsSection";
 import { HowItWorksSection } from "@/features/landing/sections/HowItWorksSection";
@@ -48,7 +47,6 @@ export default function LandingPage() {
     <>
       <LandingNav />
       <HeroSection />
-      <ProductPreviewSection />
       <FeaturesSection />
       <ValuePropsSection />
       <HowItWorksSection />

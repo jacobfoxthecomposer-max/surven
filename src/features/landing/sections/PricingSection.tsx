@@ -12,7 +12,7 @@ const plans = [
   {
     id: "plus",
     name: "Plus",
-    description: "For businesses serious about showing up in AI search.",
+    description: "For business owners who want to know exactly how visible they are across AI — and take action on what they find.",
     monthlyPrice: 49,
     yearlyPrice: 39,
     highlight: false,
@@ -30,7 +30,7 @@ const plans = [
   {
     id: "premium",
     name: "Premium",
-    description: "For agencies and teams tracking multiple clients.",
+    description: "For agencies who need full AI visibility data across every client — and proof that it's working.",
     monthlyPrice: 199,
     yearlyPrice: 159,
     highlight: true,
@@ -83,6 +83,9 @@ export function PricingSection() {
           </h2>
           <p className="text-[var(--color-fg-muted)] text-lg max-w-md">
             Every paid plan starts with a 7-day free trial. No credit card required.
+          </p>
+          <p className="text-sm text-[var(--color-fg-secondary)] max-w-sm">
+            Most businesses have no idea what AI is saying about them. That&apos;s your edge.
           </p>
 
           {/* Monthly / Yearly toggle */}

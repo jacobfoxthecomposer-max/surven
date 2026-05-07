@@ -7,42 +7,42 @@ const features = [
   {
     icon: Scan,
     title: "Scan",
-    description: "Query AI models with real consumer prompts about your industry and location.",
+    description: "See the exact questions your customers are asking AI — and find out if your name is in the answer.",
   },
   {
     icon: BarChart3,
     title: "Score",
-    description: "Get a 0–100 visibility score showing how often AI recommends your business.",
+    description: "A 0–100 score that shows exactly how visible your business is across every major AI engine.",
   },
   {
     icon: TrendingUp,
     title: "Improve",
-    description: "See where you're missing and what competitors are showing up instead.",
+    description: "See every gap where a competitor appeared instead of you — and know exactly what to fix.",
   },
   {
     icon: Eye,
     title: "Track",
-    description: "Monitor your AI mentions over time and catch visibility changes the moment they happen.",
+    description: "Watch your visibility trend over time and catch any change the moment it happens.",
   },
   {
     icon: GitCompare,
     title: "Compare",
-    description: "Head-to-head benchmarking against every competitor across each AI model.",
+    description: "See which AI engines favor your competitor — and by exactly how much.",
   },
   {
     icon: Bell,
     title: "Alerts",
-    description: "Automated weekly scans notify you when your visibility score shifts significantly.",
+    description: "Weekly scans run automatically — just log in and your latest results are already waiting for you.",
   },
   {
     icon: BrainCircuit,
     title: "Analyze",
-    description: "Sentiment and citation gap analysis reveals exactly how AI talks about your brand.",
+    description: "Find out whether AI describes your business positively, neutrally, or not at all.",
   },
   {
     icon: Download,
     title: "Export",
-    description: "Download full scan results as CSV for your reports, clients, or further analysis.",
+    description: "Take your data anywhere — for client reports, strategy sessions, or internal reviews.",
   },
 ];
 
@@ -57,12 +57,12 @@ export function ValuePropsSection() {
             className="text-3xl sm:text-4xl font-light"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            Everything you need to{" "}
-            <em className="italic font-normal text-[var(--color-primary)]">own AI search</em>
+            Stop losing customers{" "}
+            <em className="italic font-normal text-[var(--color-primary)]">you never knew you were losing</em>
           </h2>
           <p className="mt-4 text-[var(--color-fg-secondary)] max-w-xl mx-auto">
-            Track your visibility across every major AI engine, score every prompt,
-            spot every citation gap, and compare every competitor — from one dashboard.
+            Right now AI is directing customers in your city to businesses it trusts. Surven shows you
+            whether you&apos;re one of them — and what to do when you&apos;re not.
           </p>
         </ScrollReveal>
       </div>

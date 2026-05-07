@@ -1,24 +1,23 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   motion,
   useMotionValue,
-  useTransform,
   useMotionTemplate,
   useAnimationFrame,
 } from "framer-motion";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
-import { Button } from "@/components/atoms/Button";
+import { PreviewBrowserFrame } from "./ProductPreviewSection";
 
 const ROTATING_TEXTS = [
-  "your restaurant?",
-  "your law firm?",
-  "your dental practice?",
-  "your salon?",
-  "your agency?",
-  "your accountant?",
+  "your restaurant.",
+  "your law firm.",
+  "your dental practice.",
+  "your salon.",
+  "your agency.",
+  "your accountant.",
 ];
 
 function useTypewriter(texts: string[]) {
@@ -26,7 +25,6 @@ function useTypewriter(texts: string[]) {
   const [display, setDisplay] = useState("");
   const [deleting, setDeleting] = useState(false);
 
-  // Whether the word is fully typed and resting (used to steady the cursor).
   const isResting = !deleting && display === texts[index];
 
   useEffect(() => {
@@ -91,6 +89,8 @@ function GridPattern({
 
 export function HeroSection() {
   const { display: typed, isResting } = useTypewriter(ROTATING_TEXTS);
+  const [inputValue, setInputValue] = useState("");
+  const router = useRouter();
 
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
@@ -110,17 +110,24 @@ export function HeroSection() {
     mouseY.set(e.clientY - top);
   }
 
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = inputValue.trim();
+    if (!trimmed) return;
+    router.push(`/signup?business=${encodeURIComponent(trimmed)}`);
+  }
+
   return (
     <section
       onMouseMove={handleMouseMove}
-      className="relative min-h-screen flex flex-col items-center justify-center px-6 text-center bg-[var(--color-bg)] pt-14 overflow-hidden"
+      className="relative flex items-center px-6 bg-[var(--color-bg)] pt-14 overflow-hidden min-h-[90vh]"
     >
       {/* Static faint grid */}
       <div className="absolute inset-0 z-0" style={{ opacity: 0.06 }}>
         <GridPattern offsetX={gridOffsetX} offsetY={gridOffsetY} color="#1A1C1A" />
       </div>
 
-      {/* Mouse-reveal grid layer */}
+      {/* Mouse-reveal grid */}
       <motion.div
         className="absolute inset-0 z-0"
         style={{ maskImage, WebkitMaskImage: maskImage, opacity: 0.35 }}
@@ -130,7 +137,6 @@ export function HeroSection() {
 
       {/* Color blobs */}
       <div className="absolute inset-0 pointer-events-none z-0">
-        {/* Sage — top right */}
         <div
           className="absolute right-[-10%] top-[-15%] w-[40%] h-[45%] rounded-full blur-[130px]"
           style={{ backgroundColor: "rgba(150, 162, 131, 0.28)" }}
@@ -139,14 +145,13 @@ export function HeroSection() {
           className="absolute right-[8%] top-[-5%] w-[18%] h-[22%] rounded-full blur-[90px]"
           style={{ backgroundColor: "rgba(150, 162, 131, 0.18)" }}
         />
-        {/* Rubric Red — bottom left */}
         <div
           className="absolute left-[-8%] bottom-[-15%] w-[35%] h-[40%] rounded-full blur-[130px]"
           style={{ backgroundColor: "rgba(181, 70, 49, 0.18)" }}
         />
       </div>
 
-      {/* Bottom fade — blends hero grid into next section */}
+      {/* Bottom fade */}
       <div
         className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none"
         style={{
@@ -155,100 +160,129 @@ export function HeroSection() {
         }}
       />
 
-      {/* Content */}
-      <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center gap-10">
-        {/* Eyebrow */}
-        <motion.p
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-fg-muted)]"
-        >
-          Generative Engine Optimization
-        </motion.p>
+      {/* Two-column layout */}
+      <div className="relative z-10 w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-12 lg:gap-16 items-start pt-16 pb-12">
 
-        {/* Headline */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <h1
-            className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-light leading-[1.08] tracking-tight text-[var(--color-fg)]"
-            style={{ fontFamily: "var(--font-display)" }}
+        {/* LEFT: Copy */}
+        <div className="flex flex-col gap-7 mt-8">
+          {/* Eyebrow */}
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-fg-muted)]"
           >
-            Does AI recommend
-            <br />
-            <span className="relative mt-3 inline-block">
-              <span
-                className="absolute -z-10"
-                style={{
-                  inset: "-6px -14px",
-                  border: "2px dashed var(--color-primary)",
-                  borderRadius: "16px",
-                }}
-              />
-              <em
-                style={{
-                  fontFamily: "var(--font-display)",
-                  fontStyle: "italic",
-                  color: "var(--color-primary)",
-                }}
-              >
-                {typed}
+            Generative Engine Optimization
+          </motion.p>
+
+          {/* Headline */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <h1
+              className="text-5xl sm:text-6xl lg:text-6xl xl:text-7xl font-light leading-[1.08] tracking-tight text-[var(--color-fg)]"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              AI is ignoring
+              <br />
+              <span className="relative mt-3 inline-block">
                 <span
-                  className={`inline-block w-[2px] ml-1 align-middle ${isResting ? "" : "animate-pulse"}`}
+                  className="absolute -z-10"
                   style={{
-                    height: "0.85em",
-                    backgroundColor: "var(--color-primary)",
-                    opacity: isResting ? 0.85 : 0.7,
+                    inset: "-6px -14px",
+                    border: "2px dashed var(--color-primary)",
+                    borderRadius: "16px",
                   }}
                 />
-              </em>
-            </span>
-          </h1>
-        </motion.div>
+                <em
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontStyle: "italic",
+                    color: "var(--color-primary)",
+                  }}
+                >
+                  {typed}
+                  <span
+                    className={`inline-block w-[2px] ml-1 align-middle ${isResting ? "" : "animate-pulse"}`}
+                    style={{
+                      height: "0.85em",
+                      backgroundColor: "var(--color-primary)",
+                      opacity: isResting ? 0.85 : 0.7,
+                    }}
+                  />
+                </em>
+              </span>
+            </h1>
+          </motion.div>
 
-        {/* Subhead */}
-        <motion.p
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-          className="text-base sm:text-lg text-[var(--color-fg-secondary)] max-w-xl leading-relaxed"
-        >
-          Surven tracks your visibility across ChatGPT, Claude, Gemini, and Google AI —
-          and shows you exactly where you stand.
-        </motion.p>
+          {/* Subtext */}
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            className="text-base sm:text-lg text-[var(--color-fg-secondary)] max-w-lg leading-relaxed"
+          >
+            ChatGPT, Claude, Gemini, and Google AI answer millions of buying questions
+            every day. If your business isn&apos;t in their answers, your competitors
+            are getting those customers.
+          </motion.p>
 
-        {/* CTAs */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.35 }}
-          className="flex flex-col sm:flex-row items-center gap-3"
-        >
-          <Link href="/signup">
-            <Button size="lg" className="group gap-2 text-base px-9 py-3">
-              Track Your Visibility
+          {/* Input + CTA */}
+          <motion.form
+            onSubmit={handleSubmit}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.35 }}
+            className="flex flex-col sm:flex-row gap-3 max-w-lg"
+          >
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="Your business name or website..."
+              className="flex-1 px-4 py-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-fg)] placeholder:text-[var(--color-fg-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-sm"
+            />
+            <button
+              type="submit"
+              className="group flex items-center justify-center gap-2 bg-[var(--color-fg)] text-[var(--color-bg)] px-5 py-3 rounded-xl text-sm font-semibold whitespace-nowrap hover:opacity-90 transition-opacity"
+            >
+              Check AI Visibility
               <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-            </Button>
-          </Link>
-          <a href="#how-it-works">
-            <Button size="lg" variant="outline" className="text-base px-9 py-3">
-              See How It Works
-            </Button>
-          </a>
+            </button>
+          </motion.form>
+
+          {/* Microcopy */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+            className="text-xs text-[var(--color-fg-muted)]"
+          >
+            Free to start · No credit card required
+          </motion.p>
+        </div>
+
+        {/* RIGHT: Animation — desktop only */}
+        <motion.div
+          initial={{ opacity: 0, x: 24 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.9, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="hidden lg:block relative overflow-hidden"
+          style={{ maxHeight: "640px" }}
+        >
+          <PreviewBrowserFrame />
+          {/* Fade the bottom edge so the section bleeds naturally into what follows */}
+          <div
+            className="absolute bottom-0 left-0 right-0 pointer-events-none"
+            style={{
+              height: "80px",
+              background: "linear-gradient(to bottom, transparent, var(--color-bg))",
+            }}
+          />
         </motion.div>
 
-        {/* Micro copy */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-          className="text-xs text-[var(--color-fg-muted)]"
-        >
-          Free to start · No credit card required
-        </motion.p>
       </div>
     </section>
   );
