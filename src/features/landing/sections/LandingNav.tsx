@@ -171,7 +171,7 @@ export function LandingNav() {
       transition={{ duration: 0.4 }}
       className="fixed top-0 inset-x-0 z-50 bg-[var(--color-bg)] border-b border-[var(--color-border)]"
     >
-      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div className="max-w-[1500px] mx-auto px-6 h-16 flex items-center justify-between">
         {/* Left — logo */}
         <SurvenLogo size="lg" />
 
