@@ -233,11 +233,11 @@ export function HeroSection() {
               <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </Button>
           </Link>
-          <Link href="/login">
+          <a href="#how-it-works">
             <Button size="lg" variant="outline" className="text-base px-9 py-3">
-              Sign In
+              See How It Works
             </Button>
-          </Link>
+          </a>
         </motion.div>
 
         {/* Micro copy */}
