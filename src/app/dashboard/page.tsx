@@ -33,7 +33,6 @@ import { motion } from "framer-motion";
 import { Download } from "lucide-react";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Spinner } from "@/components/atoms/Spinner";
-import { AIOverview } from "@/components/atoms/AIOverview";
 import { AISummaryGenerator } from "@/components/atoms/AISummaryGenerator";
 import { NextScanCard } from "@/components/atoms/NextScanCard";
 import {
@@ -69,35 +68,6 @@ const MODEL_LABELS: Record<ScanResult["model_name"], string> = {
   gemini: "Gemini",
   google_ai: "Google AI",
 };
-
-function buildDashboardInsight(
-  results: ScanResult[],
-  businessName: string,
-  topCompetitor: { name: string; count: number } | null,
-): string | null {
-  if (results.length === 0) return null;
-  const byEngine = new Map<ScanResult["model_name"], { mentioned: number; total: number }>();
-  for (const r of results) {
-    const e = byEngine.get(r.model_name) ?? { mentioned: 0, total: 0 };
-    e.total += 1;
-    if (r.business_mentioned) e.mentioned += 1;
-    byEngine.set(r.model_name, e);
-  }
-  const ranked = [...byEngine.entries()]
-    .map(([model, s]) => ({ model, ...s, rate: s.total ? s.mentioned / s.total : 0 }))
-    .sort((a, b) => b.rate - a.rate);
-  if (ranked.length === 0) return null;
-  const best = ranked[0];
-
-  if (topCompetitor) {
-    return `${MODEL_LABELS[best.model]} mentions ${businessName} most — ${best.mentioned} of ${best.total} answers. ${topCompetitor.name} is the competitor to watch with ${topCompetitor.count} mentions.`;
-  }
-  if (ranked.length === 1) {
-    return `${MODEL_LABELS[best.model]} mentions ${businessName} in ${best.mentioned} of ${best.total} answers.`;
-  }
-  const worst = ranked[ranked.length - 1];
-  return `${MODEL_LABELS[best.model]} mentions ${businessName} most — ${best.mentioned} of ${best.total}. ${MODEL_LABELS[worst.model]} is the weak link at ${worst.mentioned} of ${worst.total}.`;
-}
 
 const ease = [0.16, 1, 0.3, 1] as const;
 const reveal = {
@@ -331,12 +301,6 @@ function DashboardPageContent() {
     return { name: ranked[0][0], count: ranked[0][1] };
   }, [results, competitorList]);
 
-  const insight = useMemo(
-    () =>
-      buildDashboardInsight(results, business?.name ?? "you", topMentionedCompetitorMemo),
-    [results, business?.name, topMentionedCompetitorMemo],
-  );
-
   // AI-summary text for the AISummaryGenerator pill — synthesizes the
   // page's headline finding in 2 sentences. Same shape the Tracker uses.
   function buildAiSummaryText(): string {
@@ -477,19 +441,11 @@ function DashboardPageContent() {
             <NextScanCard />
           </div>
 
-          {/* ─── KPI strip + page-level AIOverview live INSIDE the hero
-              block so the filter row flows straight into content with no
-              empty gap (Tracker-pattern equivalent of the trio that
-              follows the filter row there). */}
+          {/* KPI strip lives INSIDE the hero block so the filter row
+              flows straight into content with no empty gap. */}
           {hasScan && (
             <div className="mt-5">
               <DashboardKpiStrip results={results} competitors={competitorList} />
-            </div>
-          )}
-
-          {insight && (
-            <div className="mt-5">
-              <AIOverview text={insight} size="md" />
             </div>
           )}
         </motion.div>
