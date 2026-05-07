@@ -226,12 +226,8 @@ export function HeroSection() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-<<<<<<< HEAD
-            className="text-base sm:text-lg text-[var(--color-fg-secondary)] max-w-lg leading-relaxed"
-=======
             className="text-[var(--color-fg-secondary)] max-w-lg leading-relaxed"
             style={{ fontSize: "clamp(0.95rem, 0.4vw + 0.85rem, 1.2rem)" }}
->>>>>>> 8d9d4a6 (fix(hero): fluid typography + cursor wrap fix)
           >
             ChatGPT, Claude, Gemini, and Google AI answer millions of buying questions
             every day. If your business isn&apos;t in their answers, your competitors
