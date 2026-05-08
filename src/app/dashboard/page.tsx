@@ -29,9 +29,11 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { Download } from "lucide-react";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
+import { BadgeDelta } from "@/components/atoms/BadgeDelta";
 import { Spinner } from "@/components/atoms/Spinner";
 import { AISummaryGenerator } from "@/components/atoms/AISummaryGenerator";
 import { NextScanCard } from "@/components/atoms/NextScanCard";
@@ -46,10 +48,8 @@ import { useToast } from "@/components/molecules/Toast";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
 import { useScan } from "@/features/dashboard/hooks/useScan";
-import { VisibilityScoreGauge } from "@/components/atoms/VisibilityScoreGauge";
 import {
   ChartCard,
-  GapsToFillCard,
   MOCK_BRANDS,
   MOCK_DATES,
   MOCK_N,
@@ -68,7 +68,7 @@ import {
   CleanStatCard,
   type CleanStatCardSpec,
 } from "@/features/dashboard/pages/PromptsSection";
-import { Link2, Cpu } from "lucide-react";
+import { Link2, Cpu, ArrowRight } from "lucide-react";
 import { buildDashboardHero } from "@/features/dashboard/utils/heroSentence";
 import { exportScanResultsAsCsv } from "@/utils/csvExport";
 import { AI_MODELS } from "@/utils/constants";
@@ -489,33 +489,49 @@ function DashboardPageContent() {
             <NextScanCard />
           </div>
 
-          {/* Tracker-style trio — same 12-col layout the AI Visibility
-              Tracker page uses for its hero (gauge col-span-2, chart
-              col-span-7, gaps card col-span-3). All three cards stretch
-              to the tallest card's height via items-stretch + h-full. */}
+          {/* AthenaHQ-style hero stat row: 3 large stat tiles above the
+              over-time chart. Each tile = sentence-case label + big
+              Cormorant value + delta pill + "View all →" link to the
+              relevant deeper page. */}
           {hasScan && (
-            <div className="mt-5 grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
-              <div className="lg:col-span-2 min-w-0 flex">
-                <VisibilityScoreGauge
-                  score={scannerData.youToday}
-                  delta={scannerData.youDelta}
-                />
-              </div>
-              <div className="lg:col-span-7 min-w-0 flex">
-                <ChartCard
-                  data={scannerData}
-                  treatment={TREATMENT_STANDARD_LABEL}
-                  enabledBrandIds={enabledBrandIds}
-                  chartHeight={300}
-                  showInsight={false}
-                  showModeToggle
-                  defaultMode="focus"
-                  delta={scannerData.youDelta}
-                />
-              </div>
-              <div className="lg:col-span-3 min-w-0 flex">
-                <GapsToFillCard data={scannerData} />
-              </div>
+            <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <HeroStatTile
+                label="AI visibility"
+                value={`${Math.round(scannerData.youToday)}%`}
+                delta={scannerData.youDelta}
+                sub={`Across ${scannerData.dates.length} day${scannerData.dates.length === 1 ? "" : "s"}`}
+                href="/ai-visibility-tracker"
+              />
+              <HeroStatTile
+                label="Share of voice"
+                value={`${scannerData.sharePct.toFixed(1)}%`}
+                delta={scannerData.youDelta}
+                sub={`#${scannerData.youRank} of ${scannerData.scaledBrands.length} brands tracked`}
+                href="/competitor-comparison"
+              />
+              <HeroStatTile
+                label="Brand coverage"
+                value={scannerData.youMentions.toLocaleString()}
+                sub={`${scannerData.totalMentions.toLocaleString()} total mentions across ${scannerData.scaledBrands.length} brands`}
+                href="/prompts"
+              />
+            </div>
+          )}
+
+          {/* AI visibility over time — full-width chart card below the
+              stat row, mirroring AthenaHQ's "Brand Mentions" graph slot. */}
+          {hasScan && (
+            <div className="mt-4">
+              <ChartCard
+                data={scannerData}
+                treatment={TREATMENT_STANDARD_LABEL}
+                enabledBrandIds={enabledBrandIds}
+                chartHeight={320}
+                showInsight={false}
+                showModeToggle
+                defaultMode="focus"
+                delta={scannerData.youDelta}
+              />
             </div>
           )}
 
@@ -684,6 +700,87 @@ function DashboardStatStrip({ results }: { results: ScanResult[] }) {
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <CleanStatCard spec={citationSpec} />
       <CleanStatCard spec={enginesSpec} />
+    </div>
+  );
+}
+
+/* ── HeroStatTile — AthenaHQ-style stat box above the chart ───────── */
+/**
+ * Three of these sit in a 3-col row above the AI visibility over time
+ * chart (AthenaHQ Olympus pattern). Label top-left, "View all →"
+ * top-right deep-linking to the relevant tool page, big Cormorant value
+ * with optional delta pill, small subline below.
+ */
+function HeroStatTile({
+  label,
+  value,
+  delta,
+  sub,
+  href,
+}: {
+  label: string;
+  value: string;
+  delta?: number;
+  sub?: string;
+  href: string;
+}) {
+  const flat = delta == null || Math.abs(delta) <= 0.04;
+  const grew = (delta ?? 0) > 0;
+  const SAGE = "#5E7250";
+
+  return (
+    <div
+      className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 flex flex-col"
+      style={{ boxShadow: "var(--shadow-sm)" }}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <span
+          className="text-[var(--color-fg-secondary)]"
+          style={{ fontSize: 13, fontWeight: 600 }}
+        >
+          {label}
+        </span>
+        <Link
+          href={href}
+          className="inline-flex items-center gap-0.5 font-semibold opacity-70 hover:opacity-100 hover:gap-1 transition-all shrink-0"
+          style={{ fontSize: 11.5, color: SAGE }}
+          prefetch={false}
+        >
+          View all
+          <ArrowRight className="h-3 w-3" />
+        </Link>
+      </div>
+
+      <div className="mt-3 flex items-baseline gap-3 flex-wrap">
+        <span
+          className="font-semibold tabular-nums"
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: 40,
+            lineHeight: 1.05,
+            letterSpacing: "-0.01em",
+            color: "var(--color-fg)",
+          }}
+        >
+          {value}
+        </span>
+        {delta != null && (
+          <BadgeDelta
+            variant="solid"
+            deltaType={flat ? "neutral" : grew ? "increase" : "decrease"}
+            value={`${grew ? "+" : ""}${delta.toFixed(1)}%`}
+          />
+        )}
+      </div>
+
+      {sub && (
+        <p
+          className="text-[var(--color-fg-muted)] mt-1.5"
+          style={{ fontSize: 11.5, lineHeight: 1.4 }}
+        >
+          {sub}
+        </p>
+      )}
     </div>
   );
 }
