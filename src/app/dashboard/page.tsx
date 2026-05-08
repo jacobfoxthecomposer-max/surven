@@ -56,7 +56,10 @@ import {
   MOCK_BRANDS,
   MOCK_DATES,
   MOCK_N,
+  ShareOfVoiceCard,
   TREATMENT_STANDARD_LABEL,
+  buildSOVInsight,
+  buildSOVStats,
   useScannerData,
 } from "@/features/dashboard/pages/VisibilityScannerSection";
 import { ModelBreakdownSection } from "@/features/dashboard/pages/ModelBreakdownSection";
@@ -71,7 +74,7 @@ import {
   CleanStatCard,
   type CleanStatCardSpec,
 } from "@/features/dashboard/pages/PromptsSection";
-import { MessageSquare, Users, Link2, Cpu } from "lucide-react";
+import { MessageSquare, Link2, Cpu } from "lucide-react";
 import { buildDashboardHero } from "@/features/dashboard/utils/heroSentence";
 import { exportScanResultsAsCsv } from "@/utils/csvExport";
 import { AI_MODELS } from "@/utils/constants";
@@ -387,24 +390,12 @@ function DashboardPageContent() {
     [],
   );
 
-  // SoV brands derived from the same scannerData powering the chart, so
-  // the slim card's leaderboard + delta pills match the chart visually.
-  const sovBrands = useMemo(
-    () =>
-      scannerData.scaledBrands.map((b) => {
-        const current = b.data[b.data.length - 1] ?? 0;
-        const previous = b.data[0] ?? 0;
-        return {
-          id: b.id,
-          name: b.name,
-          isYou: b.isYou,
-          color: b.color,
-          current,
-          delta: Math.round((current - previous) * 10) / 10,
-        };
-      }),
-    [scannerData.scaledBrands],
-  );
+  // SoV stats + insight powering the canonical ShareOfVoiceCard. Same
+  // helpers /competitor-comparison uses, so the SoV pie card on the
+  // dashboard reads exactly like the one on that page (pie slices with
+  // %, leaderboard with hover-to-highlight, delta pill in the header).
+  const sovStats = useMemo(() => buildSOVStats(scannerData), [scannerData]);
+  const sovInsight = useMemo(() => buildSOVInsight(sovStats), [sovStats]);
 
   // Auth protection — early returns must come AFTER all hooks have
   // executed for this render so the hook order stays stable across
@@ -511,16 +502,26 @@ function DashboardPageContent() {
             <NextScanCard />
           </div>
 
-          {/* 2-col row: AI Visibility gauge on the left + brand-sentiment
-              donut card on the right. Both stretch to the taller card's
-              height. Below lg breakpoint they stack vertically. */}
+          {/* 3-col row: AI Visibility gauge | brand-sentiment donut |
+              share-of-voice pie. Each card stretches to the tallest
+              card's height. Stacks vertically below lg breakpoint.
+              ShareOfVoiceCard is the SAME atom /competitor-comparison
+              uses (donut + leaderboard + hover-to-highlight) — chart
+              hidden via showChart={false} since this slot is narrow. */}
           {hasScan && (
-            <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+            <div className="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
               <VisibilityScoreGauge
                 score={scannerData.youToday}
                 delta={scannerData.youDelta}
               />
               <SentimentDonutCard results={results} />
+              <ShareOfVoiceCard
+                data={scannerData}
+                stats={sovStats}
+                insight={sovInsight}
+                pieMode="donut-center"
+                showChart={false}
+              />
             </div>
           )}
 
@@ -541,18 +542,12 @@ function DashboardPageContent() {
             </div>
           )}
 
-          {/* 3-card stat strip — same chrome as the Tracked Prompts row,
-              just 3 cards instead of 4 since Sentiment is now owned by
-              the donut card to the right of the chart above. */}
+          {/* Stat strip: Citation rate + Engines covered. Sentiment and
+              Share of voice now live in the row above as full cards with
+              their own pie/donut chrome. */}
           {hasScan && (
             <div className="mt-4">
-              <DashboardStatStrip
-                results={results}
-                competitors={competitorList}
-                sovDelta={scannerData.youDelta}
-                sovShare={scannerData.sharePct}
-                sovBrands={sovBrands}
-              />
+              <DashboardStatStrip results={results} />
             </div>
           )}
         </motion.div>
@@ -664,44 +659,14 @@ function DashboardPageContent() {
   );
 }
 
-/* ── Dashboard stat strip — SoV / Citation rate / Engines covered ────── */
+/* ── Dashboard stat strip — Citation rate / Engines covered ──────────── */
 /**
- * 3-card CleanStatCard row, identical chrome to the strip on the
- * Tracked Prompts page. Sentiment lives in the donut card alongside the
- * chart now, so this row covers the other three category-standard KPIs.
+ * 2-card CleanStatCard row. Sentiment + SoV now live as full cards in
+ * the row above the chart, so this strip covers the remaining KPIs.
  */
-function DashboardStatStrip({
-  results,
-  competitors,
-  sovDelta,
-  sovShare,
-  sovBrands,
-}: {
-  results: ScanResult[];
-  competitors: { name: string }[];
-  sovDelta: number;
-  sovShare: number;
-  sovBrands: { name: string; isYou: boolean; current: number }[];
-}) {
+function DashboardStatStrip({ results }: { results: ScanResult[] }) {
   const total = results.length;
   const mentioned = results.filter((r) => r.business_mentioned).length;
-
-  const topCompetitor = (() => {
-    if (results.length === 0 || competitors.length === 0) return null;
-    const counts = new Map<string, number>();
-    for (const c of competitors) counts.set(c.name, 0);
-    for (const r of results) {
-      for (const [name, present] of Object.entries(r.competitor_mentions ?? {})) {
-        if (!present) continue;
-        if (!counts.has(name)) continue;
-        counts.set(name, (counts.get(name) ?? 0) + 1);
-      }
-    }
-    const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]);
-    if (ranked.length === 0 || ranked[0][1] === 0) return null;
-    return { name: ranked[0][0], count: ranked[0][1] };
-  })();
-  const topSovBrand = [...sovBrands].sort((a, b) => b.current - a.current)[0];
 
   const mentionedResults = results.filter((r) => r.business_mentioned);
   const cited = mentionedResults.filter(
@@ -715,26 +680,6 @@ function DashboardStatStrip({
   const engineSet = new Set<string>();
   for (const r of results) if (r.business_mentioned) engineSet.add(r.model_name);
   const enginesCovered = engineSet.size;
-
-  const sovSubline = topCompetitor
-    ? `${topCompetitor.name} leads competitors with ${topCompetitor.count} mentions`
-    : topSovBrand && !topSovBrand.isYou
-      ? `${topSovBrand.name} leads at ${topSovBrand.current.toFixed(1)}%`
-      : competitors.length === 0
-        ? "Add competitors to compare"
-        : "You're leading the field";
-
-  const sovSpec: CleanStatCardSpec = {
-    icon: Users,
-    label: "Share of voice",
-    hint: "Your share of every brand mention across the prompts we tracked. Higher = AI names you more often than competitors.",
-    value: `${Math.round(sovShare)}%`,
-    sub: sovSubline,
-    delta: {
-      direction: sovDelta > 0.04 ? "up" : sovDelta < -0.04 ? "down" : "flat",
-      pct: sovDelta,
-    },
-  };
 
   const citationSpec: CleanStatCardSpec = {
     icon: Link2,
@@ -759,8 +704,7 @@ function DashboardStatStrip({
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      <CleanStatCard spec={sovSpec} />
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <CleanStatCard spec={citationSpec} />
       <CleanStatCard spec={enginesSpec} />
     </div>
