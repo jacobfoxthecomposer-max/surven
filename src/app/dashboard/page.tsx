@@ -31,7 +31,6 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Download } from "lucide-react";
-import { summarizeSentiment } from "@/features/dashboard/utils/heroSentence";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Spinner } from "@/components/atoms/Spinner";
 import { AISummaryGenerator } from "@/components/atoms/AISummaryGenerator";
@@ -43,9 +42,6 @@ import {
 import { EngineIcon } from "@/components/atoms/EngineIcon";
 import { HoverHint } from "@/components/atoms/HoverHint";
 import { Button } from "@/components/atoms/Button";
-import { BadgeDelta } from "@/components/atoms/BadgeDelta";
-import { SectionHeading } from "@/components/atoms/SectionHeading";
-import { SURVEN_SEMANTIC } from "@/utils/brandColors";
 import { useToast } from "@/components/molecules/Toast";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
@@ -53,13 +49,11 @@ import { useScan } from "@/features/dashboard/hooks/useScan";
 import { VisibilityScoreGauge } from "@/components/atoms/VisibilityScoreGauge";
 import {
   ChartCard,
+  GapsToFillCard,
   MOCK_BRANDS,
   MOCK_DATES,
   MOCK_N,
-  ShareOfVoiceCard,
   TREATMENT_STANDARD_LABEL,
-  buildSOVInsight,
-  buildSOVStats,
   useScannerData,
 } from "@/features/dashboard/pages/VisibilityScannerSection";
 import { ModelBreakdownSection } from "@/features/dashboard/pages/ModelBreakdownSection";
@@ -74,7 +68,7 @@ import {
   CleanStatCard,
   type CleanStatCardSpec,
 } from "@/features/dashboard/pages/PromptsSection";
-import { MessageSquare, Link2, Cpu } from "lucide-react";
+import { Link2, Cpu } from "lucide-react";
 import { buildDashboardHero } from "@/features/dashboard/utils/heroSentence";
 import { exportScanResultsAsCsv } from "@/utils/csvExport";
 import { AI_MODELS } from "@/utils/constants";
@@ -390,13 +384,6 @@ function DashboardPageContent() {
     [],
   );
 
-  // SoV stats + insight powering the canonical ShareOfVoiceCard. Same
-  // helpers /competitor-comparison uses, so the SoV pie card on the
-  // dashboard reads exactly like the one on that page (pie slices with
-  // %, leaderboard with hover-to-highlight, delta pill in the header).
-  const sovStats = useMemo(() => buildSOVStats(scannerData), [scannerData]);
-  const sovInsight = useMemo(() => buildSOVInsight(sovStats), [sovStats]);
-
   // Auth protection — early returns must come AFTER all hooks have
   // executed for this render so the hook order stays stable across
   // mounts (React's Rules of Hooks).
@@ -502,43 +489,33 @@ function DashboardPageContent() {
             <NextScanCard />
           </div>
 
-          {/* 3-col row: AI Visibility gauge | brand-sentiment donut |
-              share-of-voice pie. Each card stretches to the tallest
-              card's height. Stacks vertically below lg breakpoint.
-              ShareOfVoiceCard is the SAME atom /competitor-comparison
-              uses (donut + leaderboard + hover-to-highlight) — chart
-              hidden via showChart={false} since this slot is narrow. */}
+          {/* Tracker-style trio — same 12-col layout the AI Visibility
+              Tracker page uses for its hero (gauge col-span-2, chart
+              col-span-7, gaps card col-span-3). All three cards stretch
+              to the tallest card's height via items-stretch + h-full. */}
           {hasScan && (
-            <div className="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
-              <VisibilityScoreGauge
-                score={scannerData.youToday}
-                delta={scannerData.youDelta}
-              />
-              <SentimentDonutCard results={results} />
-              <ShareOfVoiceCard
-                data={scannerData}
-                stats={sovStats}
-                insight={sovInsight}
-                pieMode="donut-center"
-                showChart={false}
-              />
-            </div>
-          )}
-
-          {/* Visibility over time chart — full width row below the
-              gauge + sentiment pair. */}
-          {hasScan && (
-            <div className="mt-4">
-              <ChartCard
-                data={scannerData}
-                treatment={TREATMENT_STANDARD_LABEL}
-                enabledBrandIds={enabledBrandIds}
-                chartHeight={300}
-                showInsight={false}
-                showOptimizationMarkers={false}
-                showPromptChangeMarkers={false}
-                delta={scannerData.youDelta}
-              />
+            <div className="mt-5 grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+              <div className="lg:col-span-2 min-w-0 flex">
+                <VisibilityScoreGauge
+                  score={scannerData.youToday}
+                  delta={scannerData.youDelta}
+                />
+              </div>
+              <div className="lg:col-span-7 min-w-0 flex">
+                <ChartCard
+                  data={scannerData}
+                  treatment={TREATMENT_STANDARD_LABEL}
+                  enabledBrandIds={enabledBrandIds}
+                  chartHeight={300}
+                  showInsight={false}
+                  showModeToggle
+                  defaultMode="focus"
+                  delta={scannerData.youDelta}
+                />
+              </div>
+              <div className="lg:col-span-3 min-w-0 flex">
+                <GapsToFillCard data={scannerData} />
+              </div>
             </div>
           )}
 
@@ -708,240 +685,6 @@ function DashboardStatStrip({ results }: { results: ScanResult[] }) {
       <CleanStatCard spec={citationSpec} />
       <CleanStatCard spec={enginesSpec} />
     </div>
-  );
-}
-
-/* ── SentimentDonutCard — sentiment donut + verdict pill + legend ─── */
-/**
- * Brand-sentiment box that sits to the right of the AI visibility chart.
- * Same visual identity as the Sentiment ring on /sentiment (ring +
- * verdict pill + 3-row breakdown legend with deltas) but sized to match
- * ChartCard's height so the two cards line up flush in their 2-col row.
- */
-function SentimentDonutCard({ results }: { results: ScanResult[] }) {
-  const summary = summarizeSentiment(results);
-
-  if (summary.total === 0) {
-    return (
-      <div
-        className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 flex flex-col items-center justify-center text-center"
-        style={{ boxShadow: "var(--shadow-sm)", minHeight: 380 }}
-      >
-        <p
-          className="font-semibold mb-1"
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: 18,
-            color: "var(--color-fg)",
-          }}
-        >
-          No sentiment data yet
-        </p>
-        <p
-          className="text-[var(--color-fg-muted)] max-w-[260px]"
-          style={{ fontSize: 12.5, lineHeight: 1.45 }}
-        >
-          Run a scan and AI sentiment will appear here.
-        </p>
-      </div>
-    );
-  }
-
-  const positivePct = Math.round((summary.positive / summary.total) * 100);
-  const neutralPct = Math.round((summary.neutral / summary.total) * 100);
-  const negativePct = Math.max(0, 100 - positivePct - neutralPct);
-
-  // Synthesized period-over-period deltas — there's no real previous-scan
-  // sentiment history wired yet, so derive from a deterministic hash of
-  // the breakdown so the numbers feel stable without churning per render.
-  const seed = (positivePct * 31 + neutralPct * 17 + negativePct * 11) | 0;
-  const positiveDelta = ((seed % 9) - 4) * 1.0;
-  const neutralDelta = (((seed >> 3) % 9) - 4) * 1.0;
-  const negativeDelta = (((seed >> 6) % 9) - 4) * 1.0;
-
-  const ringR = 56;
-  const ringStroke = 14;
-  const c = 2 * Math.PI * ringR;
-  const positiveDash = (positivePct / 100) * c;
-  const neutralDash = (neutralPct / 100) * c;
-  const negativeDash = (negativePct / 100) * c;
-  const positiveOffset = c / 4;
-  const neutralOffset = positiveOffset - positiveDash;
-  const negativeOffset = neutralOffset - neutralDash;
-
-  return (
-    <div
-      className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 flex flex-col h-full w-full"
-      style={{ boxShadow: "var(--shadow-sm)" }}
-    >
-      <div className="flex items-center justify-between gap-2 mb-3 pb-2 border-b border-[var(--color-border)]">
-        <SectionHeading
-          text="Sentiment"
-          info="Share of positive vs neutral vs negative AI mentions in the latest scan. Verdict pill flips to Concerning when negatives ≥ 20% (or outweigh positives)."
-        />
-        <span
-          className="inline-flex items-center font-semibold rounded-md px-2 py-0.5 whitespace-nowrap capitalize shrink-0"
-          style={{
-            fontSize: 11,
-            color: summary.color,
-            backgroundColor: `${summary.color}1F`,
-          }}
-          title={`Overall sentiment verdict: ${summary.verdict}.`}
-        >
-          {summary.verdict}
-        </span>
-      </div>
-
-      <div className="flex-1 flex items-center justify-center py-3">
-        <div className="relative" style={{ width: 160, height: 160 }}>
-          <svg width="160" height="160" viewBox="0 0 160 160">
-            <circle
-              cx="80"
-              cy="80"
-              r={ringR}
-              fill="none"
-              stroke="var(--color-surface-alt)"
-              strokeWidth={ringStroke}
-            />
-            <circle
-              cx="80"
-              cy="80"
-              r={ringR}
-              fill="none"
-              stroke={SURVEN_SEMANTIC.good}
-              strokeWidth={ringStroke}
-              strokeDasharray={`${positiveDash} ${c - positiveDash}`}
-              strokeDashoffset={positiveOffset}
-              transform="rotate(-90 80 80) scale(1 -1) translate(0 -160)"
-            />
-            <circle
-              cx="80"
-              cy="80"
-              r={ringR}
-              fill="none"
-              stroke={SURVEN_SEMANTIC.neutral}
-              strokeWidth={ringStroke}
-              strokeDasharray={`${neutralDash} ${c - neutralDash}`}
-              strokeDashoffset={neutralOffset}
-              transform="rotate(-90 80 80) scale(1 -1) translate(0 -160)"
-            />
-            <circle
-              cx="80"
-              cy="80"
-              r={ringR}
-              fill="none"
-              stroke={SURVEN_SEMANTIC.bad}
-              strokeWidth={ringStroke}
-              strokeDasharray={`${negativeDash} ${c - negativeDash}`}
-              strokeDashoffset={negativeOffset}
-              transform="rotate(-90 80 80) scale(1 -1) translate(0 -160)"
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span
-              className="font-semibold tabular-nums"
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: 36,
-                lineHeight: 1,
-                color: "var(--color-fg)",
-              }}
-            >
-              {positivePct}%
-            </span>
-            <span
-              className="text-[var(--color-fg-muted)] uppercase tracking-wide mt-1"
-              style={{ fontSize: 10, letterSpacing: "0.06em" }}
-            >
-              Positive
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <ul className="space-y-1.5 pt-3 border-t border-[var(--color-border)]">
-        <SentimentLegendRow
-          color={SURVEN_SEMANTIC.good}
-          label="positive"
-          count={summary.positive}
-          pct={positivePct}
-          delta={positiveDelta}
-          invert={false}
-        />
-        <SentimentLegendRow
-          color={SURVEN_SEMANTIC.neutral}
-          label="neutral"
-          count={summary.neutral}
-          pct={neutralPct}
-          delta={neutralDelta}
-          invert={false}
-          alwaysNeutral
-        />
-        <SentimentLegendRow
-          color={SURVEN_SEMANTIC.bad}
-          label="negative"
-          count={summary.negative}
-          pct={negativePct}
-          delta={negativeDelta}
-          invert
-        />
-      </ul>
-    </div>
-  );
-}
-
-function SentimentLegendRow({
-  color,
-  label,
-  count,
-  pct,
-  delta,
-  invert,
-  alwaysNeutral,
-}: {
-  color: string;
-  label: string;
-  count: number;
-  pct: number;
-  delta: number;
-  invert: boolean;
-  alwaysNeutral?: boolean;
-}) {
-  const flat = Math.abs(delta) <= 0.04;
-  const grew = delta > 0;
-  const deltaType = alwaysNeutral || flat
-    ? ("neutral" as const)
-    : invert
-      ? grew
-        ? ("decrease" as const) // negative going up = bad
-        : ("increase" as const)
-      : grew
-        ? ("increase" as const)
-        : ("decrease" as const);
-
-  return (
-    <li className="flex items-center gap-2">
-      <span
-        className="rounded-full shrink-0"
-        style={{ width: 8, height: 8, backgroundColor: color }}
-      />
-      <span
-        className="tabular-nums text-[var(--color-fg)] font-semibold"
-        style={{ fontSize: 12.5 }}
-      >
-        {count}
-      </span>
-      <span className="text-[var(--color-fg-secondary)]" style={{ fontSize: 12 }}>
-        {label} · {pct}%
-      </span>
-      <span className="ml-auto shrink-0">
-        <BadgeDelta
-          variant="solid"
-          deltaType={deltaType}
-          value={`${grew ? "+" : ""}${delta.toFixed(0)}%`}
-        />
-      </span>
-    </li>
   );
 }
 
