@@ -511,26 +511,23 @@ function DashboardPageContent() {
             <NextScanCard />
           </div>
 
-          {/* Visibility gauge centered above the over-time chart. Width
-              clamped at 320 — the atom's default w-full would stretch it
-              across the entire content column, way too tall. */}
+          {/* 2-col row: AI Visibility gauge on the left + brand-sentiment
+              donut card on the right. Both stretch to the taller card's
+              height. Below lg breakpoint they stack vertically. */}
           {hasScan && (
-            <div className="mt-5 flex justify-center">
+            <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
               <VisibilityScoreGauge
                 score={scannerData.youToday}
                 delta={scannerData.youDelta}
-                width={320}
               />
+              <SentimentDonutCard results={results} />
             </div>
           )}
 
-          {/* 2-col row: visibility chart on the left + brand-sentiment
-              donut card on the right. Sized so the chart owns most of
-              the width (1fr) and the sentiment card sits at ~360px on
-              desktop. Below lg breakpoint the sentiment card stacks
-              under the chart. */}
+          {/* Visibility over time chart — full width row below the
+              gauge + sentiment pair. */}
           {hasScan && (
-            <div className="mt-4 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)] gap-4 items-stretch">
+            <div className="mt-4">
               <ChartCard
                 data={scannerData}
                 treatment={TREATMENT_STANDARD_LABEL}
@@ -541,7 +538,6 @@ function DashboardPageContent() {
                 showPromptChangeMarkers={false}
                 delta={scannerData.youDelta}
               />
-              <SentimentDonutCard results={results} />
             </div>
           )}
 
@@ -831,7 +827,7 @@ function SentimentDonutCard({ results }: { results: ScanResult[] }) {
 
   return (
     <div
-      className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 flex flex-col"
+      className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 flex flex-col h-full w-full"
       style={{ boxShadow: "var(--shadow-sm)" }}
     >
       <div className="flex items-center justify-between gap-2 mb-3 pb-2 border-b border-[var(--color-border)]">
